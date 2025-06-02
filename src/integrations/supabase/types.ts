@@ -225,6 +225,53 @@ export type Database = {
         }
         Relationships: []
       }
+      permit_approvals: {
+        Row: {
+          approval_order: number
+          approved_at: string | null
+          approver_id: string | null
+          approver_role: string
+          created_at: string
+          id: string
+          notes: string | null
+          permit_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approval_order: number
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          permit_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_order?: number
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          permit_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_approvals_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "student_permits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -367,6 +414,187 @@ export type Database = {
           },
         ]
       }
+      student_achievements: {
+        Row: {
+          achievement_date: string
+          achievement_type_id: string
+          certificate_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          point_reward: number
+          recorded_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          achievement_date: string
+          achievement_type_id: string
+          certificate_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          point_reward?: number
+          recorded_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          achievement_date?: string
+          achievement_type_id?: string
+          certificate_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          point_reward?: number
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_achievements_achievement_type_id_fkey"
+            columns: ["achievement_type_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_achievements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_attendances: {
+        Row: {
+          attendance_date: string
+          class_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_at: string
+          recorded_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_date: string
+          class_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_date?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_attendances_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_discipline_points: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          discipline_status: string
+          final_score: number
+          id: string
+          last_updated: string
+          semester_id: string | null
+          student_id: string
+          total_achievement_points: number
+          total_violation_points: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          discipline_status?: string
+          final_score?: number
+          id?: string
+          last_updated?: string
+          semester_id?: string | null
+          student_id: string
+          total_achievement_points?: number
+          total_violation_points?: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          discipline_status?: string
+          final_score?: number
+          id?: string
+          last_updated?: string
+          semester_id?: string | null
+          student_id?: string
+          total_achievement_points?: number
+          total_violation_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_discipline_points_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_discipline_points_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semesters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_discipline_points_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_enrollments: {
         Row: {
           academic_year_id: string | null
@@ -418,6 +646,131 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_permits: {
+        Row: {
+          approval_letter_url: string | null
+          created_at: string
+          end_date: string
+          id: string
+          permit_type: string
+          reason: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          student_id: string
+          submitted_at: string
+          supporting_document_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          approval_letter_url?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          permit_type: string
+          reason: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: string
+          student_id: string
+          submitted_at?: string
+          supporting_document_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approval_letter_url?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          permit_type?: string
+          reason?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          supporting_document_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_permits_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_violations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          point_deduction: number
+          reported_by: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+          violation_date: string
+          violation_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          point_deduction?: number
+          reported_by?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          violation_date: string
+          violation_type_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          point_deduction?: number
+          reported_by?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          violation_date?: string
+          violation_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_violations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_violations_violation_type_id_fkey"
+            columns: ["violation_type_id"]
+            isOneToOne: false
+            referencedRelation: "violation_types"
             referencedColumns: ["id"]
           },
         ]
@@ -570,6 +923,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      recalculate_discipline_points: {
+        Args: {
+          _student_id: string
+          _academic_year_id: string
+          _semester_id?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

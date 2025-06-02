@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,11 @@ import StudentManagement from "./pages/StudentManagement";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 import MasterData from "./pages/MasterData";
+import AttendanceManagement from "./pages/AttendanceManagement";
+import ViolationManagement from "./pages/ViolationManagement";
+import AchievementManagement from "./pages/AchievementManagement";
+import DisciplinePointsManagement from "./pages/DisciplinePointsManagement";
+import PermitManagement from "./pages/PermitManagement";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +49,41 @@ const App = () => (
               <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan', 'kepala_sekolah']}>
                 <AppLayout>
                   <StudentManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/presensi" element={
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan']}>
+                <AppLayout>
+                  <AttendanceManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/pelanggaran" element={
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan']}>
+                <AppLayout>
+                  <ViolationManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/prestasi" element={
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'waka_kesiswaan']}>
+                <AppLayout>
+                  <AchievementManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/poin-disiplin" element={
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan', 'kepala_sekolah']}>
+                <AppLayout>
+                  <DisciplinePointsManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/perizinan" element={
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan', 'kepala_sekolah', 'siswa']}>
+                <AppLayout>
+                  <PermitManagement />
                 </AppLayout>
               </ProtectedRoute>
             } />
