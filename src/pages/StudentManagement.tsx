@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +47,7 @@ export default function StudentManagement() {
           *,
           student_enrollments!inner (
             id,
+            student_id,
             class_id,
             academic_year_id,
             enrollment_date,
