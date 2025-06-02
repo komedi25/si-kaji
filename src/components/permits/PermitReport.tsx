@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,10 +92,9 @@ const PermitReport = () => {
 
   const getPermitTypeBadge = (type: string) => {
     const typeConfig = {
-      sick: { label: 'Sakit', variant: 'outline' as const },
-      family_emergency: { label: 'Keperluan Keluarga', variant: 'outline' as const },
-      medical_checkup: { label: 'Pemeriksaan Kesehatan', variant: 'outline' as const },
-      competition: { label: 'Lomba/Kompetisi', variant: 'outline' as const },
+      sick_leave: { label: 'Sakit', variant: 'outline' as const },
+      family_leave: { label: 'Keperluan Keluarga', variant: 'outline' as const },
+      school_activity: { label: 'Kegiatan Sekolah', variant: 'outline' as const },
       other: { label: 'Lainnya', variant: 'outline' as const }
     };
     
@@ -204,10 +202,9 @@ const PermitReport = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Semua Jenis</SelectItem>
-                  <SelectItem value="sick">Sakit</SelectItem>
-                  <SelectItem value="family_emergency">Keperluan Keluarga</SelectItem>
-                  <SelectItem value="medical_checkup">Pemeriksaan Kesehatan</SelectItem>
-                  <SelectItem value="competition">Lomba/Kompetisi</SelectItem>
+                  <SelectItem value="sick_leave">Sakit</SelectItem>
+                  <SelectItem value="family_leave">Keperluan Keluarga</SelectItem>
+                  <SelectItem value="school_activity">Kegiatan Sekolah</SelectItem>
                   <SelectItem value="other">Lainnya</SelectItem>
                 </SelectContent>
               </Select>

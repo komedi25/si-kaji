@@ -137,10 +137,9 @@ export const PermitLetter = ({ permit }: PermitLetterProps) => {
                 <tr>
                   <td>Jenis Izin</td>
                   <td>:</td>
-                  <td>${permit.permit_type === 'sick' ? 'Sakit' : 
-                       permit.permit_type === 'family_emergency' ? 'Keperluan Keluarga' :
-                       permit.permit_type === 'medical_checkup' ? 'Pemeriksaan Kesehatan' :
-                       permit.permit_type === 'competition' ? 'Lomba/Kompetisi' :
+                  <td>${permit.permit_type === 'sick_leave' ? 'Sakit' : 
+                       permit.permit_type === 'family_leave' ? 'Keperluan Keluarga' :
+                       permit.permit_type === 'school_activity' ? 'Kegiatan Sekolah' :
                        permit.permit_type === 'other' ? 'Lainnya' : permit.permit_type}</td>
                 </tr>
                 <tr>
