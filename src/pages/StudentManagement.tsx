@@ -94,6 +94,7 @@ export default function StudentManagement() {
       // Transform the data with proper type casting
       const transformedStudents: StudentWithClass[] = studentsData.map(student => ({
         ...student,
+        gender: student.gender as 'L' | 'P',
         status: student.status as 'active' | 'graduated' | 'transferred' | 'dropped',
         current_enrollment: student.student_enrollments[0] ? {
           ...student.student_enrollments[0],
