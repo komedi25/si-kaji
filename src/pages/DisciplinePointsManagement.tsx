@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -115,9 +116,9 @@ const DisciplinePointsManagement = () => {
         ...point,
         student: {
           ...point.student,
-          current_class: point.student?.current_enrollment?.[0]?.class
+          current_class: point.student?.current_enrollment?.[0]?.class || null
         }
-      })) as StudentDisciplinePoint[];
+      })) as (StudentDisciplinePoint & { student: any })[];
     },
     enabled: !!selectedAcademicYearId && (searchQuery === '' || searchQuery.length >= 3)
   });

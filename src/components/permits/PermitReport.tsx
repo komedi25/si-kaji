@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,9 +76,9 @@ export const PermitReport = () => {
         ...permit,
         student: {
           ...permit.student,
-          current_class: permit.student?.current_enrollment?.[0]?.class
+          current_class: permit.student?.current_enrollment?.[0]?.class || null
         }
-      })) as (StudentPermit & { approvals: any[] })[];
+      })) as (StudentPermit & { approvals: any[]; student: any })[];
     },
     enabled: !!startDate && !!endDate && (searchQuery === '' || searchQuery.length >= 3)
   });
