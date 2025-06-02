@@ -39,6 +39,42 @@ export type Database = {
         }
         Relationships: []
       }
+      achievement_types: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level: string
+          name: string
+          point_reward: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: string
+          name: string
+          point_reward?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: string
+          name?: string
+          point_reward?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       classes: {
         Row: {
           academic_year_id: string | null
@@ -92,6 +128,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      extracurriculars: {
+        Row: {
+          coach_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          max_participants: number | null
+          name: string
+          schedule_day: string | null
+          schedule_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          coach_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          max_participants?: number | null
+          name: string
+          schedule_day?: string | null
+          schedule_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          max_participants?: number | null
+          name?: string
+          schedule_day?: string | null
+          schedule_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       majors: {
         Row: {
@@ -202,6 +280,89 @@ export type Database = {
             columns: ["permission_id"]
             isOneToOne: false
             referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_facilities: {
+        Row: {
+          capacity: number | null
+          condition: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          maintenance_schedule: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          maintenance_schedule?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          maintenance_schedule?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      semesters: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          semester_number: number
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          semester_number: number
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          semester_number?: number
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "semesters_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
             referencedColumns: ["id"]
           },
         ]
@@ -354,6 +515,39 @@ export type Database = {
           is_active?: boolean | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      violation_types: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          point_deduction: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          point_deduction?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          point_deduction?: number
+          updated_at?: string
         }
         Relationships: []
       }

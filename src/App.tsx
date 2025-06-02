@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +12,7 @@ import UserManagement from "./pages/UserManagement";
 import StudentManagement from "./pages/StudentManagement";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
+import MasterData from "./pages/MasterData";
 
 const queryClient = new QueryClient();
 
@@ -97,16 +97,7 @@ const App = () => (
             <Route path="/master-data" element={
               <ProtectedRoute requiredRoles={['admin_sistem']}>
                 <AppLayout>
-                  <ComingSoon 
-                    title="Master Data"
-                    description="Modul manajemen master data sedang dalam pengembangan"
-                    features={[
-                      "Tahun ajaran",
-                      "Data semester",
-                      "Kelas dan jurusan",
-                      "Mata pelajaran"
-                    ]}
-                  />
+                  <MasterData />
                 </AppLayout>
               </ProtectedRoute>
             } />
