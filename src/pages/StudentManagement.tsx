@@ -52,20 +52,37 @@ export default function StudentManagement() {
             academic_year_id,
             enrollment_date,
             status,
+            created_at,
+            updated_at,
             classes (
               id,
               name,
               grade,
+              major_id,
+              academic_year_id,
+              homeroom_teacher_id,
+              max_students,
+              is_active,
+              created_at,
+              updated_at,
               majors (
                 id,
                 code,
-                name
+                name,
+                description,
+                is_active,
+                created_at,
+                updated_at
               )
             ),
             academic_years (
               id,
               name,
-              is_active
+              year_start,
+              year_end,
+              is_active,
+              created_at,
+              updated_at
             )
           )
         `)
