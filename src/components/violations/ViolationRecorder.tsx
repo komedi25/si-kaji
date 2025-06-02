@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +38,9 @@ export const ViolationRecorder = () => {
               id,
               name,
               grade,
+              is_active,
+              created_at,
+              updated_at,
               major:majors(name)
             )
           )
@@ -54,7 +56,7 @@ export const ViolationRecorder = () => {
         ...student,
         current_class: student.current_enrollment?.[0]?.classes,
         current_enrollment: student.current_enrollment?.[0]
-      }));
+      })) as StudentWithClass[];
     },
     enabled: searchQuery.length >= 3
   });
@@ -102,7 +104,7 @@ export const ViolationRecorder = () => {
     setSearchQuery('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedStudent || !selectedViolationType) {
@@ -116,13 +118,15 @@ export const ViolationRecorder = () => {
 
     const violationType = violationTypes?.find(vt => vt.id === selectedViolationType);
     
+    const { data: userData } = await supabase.auth.getUser();
+    
     const data = {
       student_id: selectedStudent.id,
       violation_type_id: selectedViolationType,
       violation_date: violationDate,
       description: description || null,
       point_deduction: violationType?.point_deduction || 0,
-      reported_by: supabase.auth.getUser() ? supabase.auth.getUser().data.user?.id : null
+      reported_by: userData.user?.id || null
     };
 
     createViolationMutation.mutate(data);

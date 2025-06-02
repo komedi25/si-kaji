@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,7 +63,10 @@ export const PermitApproval = () => {
             class:classes(
               id, 
               name,
-              grade
+              grade,
+              is_active,
+              created_at,
+              updated_at
             )
           )),
           approvals:permit_approvals(*)
@@ -82,7 +84,7 @@ export const PermitApproval = () => {
           const nextApproval = sortedApprovals.find(a => a.status === 'pending');
           
           // If there's no next approval or user doesn't have the required role, can't approve
-          return nextApproval && roles.includes(nextApproval.approver_role);
+          return nextApproval && roles.includes(nextApproval.approver_role as any);
         })
         .map(permit => ({
           ...permit,
@@ -108,7 +110,10 @@ export const PermitApproval = () => {
             class:classes(
               id, 
               name,
-              grade
+              grade,
+              is_active,
+              created_at,
+              updated_at
             )
           )),
           approvals:permit_approvals(*)
@@ -156,7 +161,7 @@ export const PermitApproval = () => {
       // Find the next pending approval that matches user's role
       const sortedApprovals = permit.approvals.sort((a, b) => a.approval_order - b.approval_order);
       const approval = sortedApprovals.find(a => 
-        a.status === 'pending' && roles.includes(a.approver_role)
+        a.status === 'pending' && roles.includes(a.approver_role as any)
       );
       
       if (!approval) throw new Error('No pending approval found for your role');

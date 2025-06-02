@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -81,6 +80,9 @@ const DisciplinePointsManagement = () => {
               id, 
               name,
               grade,
+              is_active,
+              created_at,
+              updated_at,
               major:majors(name)
             )
           ))
@@ -119,7 +121,7 @@ const DisciplinePointsManagement = () => {
     const statusConfig = {
       excellent: { label: 'Sangat Baik', variant: 'default' as const },
       good: { label: 'Baik', variant: 'secondary' as const },
-      warning: { label: 'Peringatan', variant: 'warning' as const, color: 'bg-yellow-100 text-yellow-800' },
+      warning: { label: 'Peringatan', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800' },
       probation: { label: 'Masa Percobaan', variant: 'destructive' as const },
       critical: { label: 'Kritis', variant: 'destructive' as const }
     };
@@ -128,7 +130,7 @@ const DisciplinePointsManagement = () => {
     return config ? (
       <Badge 
         variant={config.variant} 
-        className={config.color ? config.color : ''}
+        className={config.className || ''}
       >
         {config.label}
       </Badge>

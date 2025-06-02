@@ -1,4 +1,3 @@
-
 export interface AcademicYear {
   id: string;
   year_start: number;
@@ -74,4 +73,16 @@ export interface StudentEnrollment {
 export interface StudentWithClass extends Student {
   current_class?: Class;
   current_enrollment?: StudentEnrollment;
+}
+
+export interface Semester {
+  id: string;
+  name: string;
+  semester_number: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  academic_year_id: string;
+  created_at: string;
+  updated_at: string;
 }

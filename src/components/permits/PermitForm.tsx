@@ -38,6 +38,9 @@ export const PermitForm = () => {
               id,
               name,
               grade,
+              is_active,
+              created_at,
+              updated_at,
               major:majors(name)
             )
           )
@@ -53,7 +56,7 @@ export const PermitForm = () => {
         ...student,
         current_class: student.current_enrollment?.[0]?.classes,
         current_enrollment: student.current_enrollment?.[0]
-      }));
+      })) as StudentWithClass[];
     },
     enabled: searchQuery.length >= 3
   });

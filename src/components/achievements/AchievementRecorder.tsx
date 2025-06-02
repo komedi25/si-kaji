@@ -39,6 +39,9 @@ export const AchievementRecorder = () => {
               id,
               name,
               grade,
+              is_active,
+              created_at,
+              updated_at,
               major:majors(name)
             )
           )
@@ -54,7 +57,7 @@ export const AchievementRecorder = () => {
         ...student,
         current_class: student.current_enrollment?.[0]?.classes,
         current_enrollment: student.current_enrollment?.[0]
-      }));
+      })) as StudentWithClass[];
     },
     enabled: searchQuery.length >= 3
   });
@@ -102,7 +105,7 @@ export const AchievementRecorder = () => {
     setSearchQuery('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedStudent || !selectedAchievementType) {
@@ -116,13 +119,15 @@ export const AchievementRecorder = () => {
 
     const achievementType = achievementTypes?.find(at => at.id === selectedAchievementType);
     
+    const { data: userData } = await supabase.auth.getUser();
+    
     const data = {
       student_id: selectedStudent.id,
       achievement_type_id: selectedAchievementType,
       achievement_date: achievementDate,
       description: description || null,
       point_reward: achievementType?.point_reward || 0,
-      recorded_by: supabase.auth.getUser() ? supabase.auth.getUser().data.user?.id : null
+      recorded_by: userData.user?.id || null
     };
 
     createAchievementMutation.mutate(data);
@@ -146,8 +151,8 @@ export const AchievementRecorder = () => {
       sekolah: { variant: 'outline' as const },
       kecamatan: { variant: 'secondary' as const },
       kabupaten: { variant: 'default' as const },
-      provinsi: { variant: 'purple' as const, className: 'bg-purple-100 text-purple-800' },
-      nasional: { variant: 'blue' as const, className: 'bg-blue-100 text-blue-800' },
+      provinsi: { variant: 'secondary' as const, className: 'bg-purple-100 text-purple-800' },
+      nasional: { variant: 'secondary' as const, className: 'bg-blue-100 text-blue-800' },
       internasional: { variant: 'destructive' as const }
     };
     
