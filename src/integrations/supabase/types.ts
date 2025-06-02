@@ -75,6 +75,112 @@ export type Database = {
         }
         Relationships: []
       }
+      case_activities: {
+        Row: {
+          activity_type: string
+          case_id: string
+          created_at: string
+          description: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          activity_type: string
+          case_id: string
+          created_at?: string
+          description: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          activity_type?: string
+          case_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_activities_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_activities_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          assigned_to: string
+          case_id: string
+          completed_at: string | null
+          handler_type: Database["public"]["Enums"]["case_handler_type"]
+          id: string
+          is_active: boolean
+          notes: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assigned_to: string
+          case_id: string
+          completed_at?: string | null
+          handler_type: Database["public"]["Enums"]["case_handler_type"]
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          assigned_to?: string
+          case_id?: string
+          completed_at?: string | null
+          handler_type?: Database["public"]["Enums"]["case_handler_type"]
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_assignments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classes: {
         Row: {
           academic_year_id: string | null
@@ -125,6 +231,82 @@ export type Database = {
             columns: ["major_id"]
             isOneToOne: false
             referencedRelation: "majors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counseling_sessions: {
+        Row: {
+          case_id: string | null
+          counselor_id: string
+          created_at: string
+          duration_minutes: number | null
+          follow_up_date: string | null
+          follow_up_required: boolean | null
+          id: string
+          notes_encrypted: string | null
+          session_date: string
+          session_time: string
+          session_type: string
+          status: string
+          student_id: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_id?: string | null
+          counselor_id: string
+          created_at?: string
+          duration_minutes?: number | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          notes_encrypted?: string | null
+          session_date: string
+          session_time: string
+          session_type: string
+          status?: string
+          student_id: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string | null
+          counselor_id?: string
+          created_at?: string
+          duration_minutes?: number | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          notes_encrypted?: string | null
+          session_date?: string
+          session_time?: string
+          session_type?: string
+          status?: string
+          student_id?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counseling_sessions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counseling_sessions_counselor_id_fkey"
+            columns: ["counselor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counseling_sessions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -200,6 +382,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      parent_access: {
+        Row: {
+          access_level: string
+          created_at: string
+          id: string
+          is_active: boolean
+          parent_user_id: string
+          relationship: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          parent_user_id: string
+          relationship: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          parent_user_id?: string
+          relationship?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_access_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {
@@ -525,6 +748,115 @@ export type Database = {
           {
             foreignKeyName: "student_attendances_student_id_fkey"
             columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_cases: {
+        Row: {
+          assigned_handler:
+            | Database["public"]["Enums"]["case_handler_type"]
+            | null
+          assigned_to: string | null
+          case_number: string
+          category: Database["public"]["Enums"]["case_category"]
+          created_at: string
+          description: string
+          evidence_urls: string[] | null
+          id: string
+          incident_date: string | null
+          incident_location: string | null
+          is_anonymous: boolean
+          priority: Database["public"]["Enums"]["case_priority"]
+          reported_by: string | null
+          reported_student_class: string | null
+          reported_student_id: string | null
+          reported_student_name: string | null
+          reporter_contact: string | null
+          reporter_name: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["case_status"]
+          title: string
+          updated_at: string
+          witnesses: string | null
+        }
+        Insert: {
+          assigned_handler?:
+            | Database["public"]["Enums"]["case_handler_type"]
+            | null
+          assigned_to?: string | null
+          case_number: string
+          category: Database["public"]["Enums"]["case_category"]
+          created_at?: string
+          description: string
+          evidence_urls?: string[] | null
+          id?: string
+          incident_date?: string | null
+          incident_location?: string | null
+          is_anonymous?: boolean
+          priority?: Database["public"]["Enums"]["case_priority"]
+          reported_by?: string | null
+          reported_student_class?: string | null
+          reported_student_id?: string | null
+          reported_student_name?: string | null
+          reporter_contact?: string | null
+          reporter_name?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          title: string
+          updated_at?: string
+          witnesses?: string | null
+        }
+        Update: {
+          assigned_handler?:
+            | Database["public"]["Enums"]["case_handler_type"]
+            | null
+          assigned_to?: string | null
+          case_number?: string
+          category?: Database["public"]["Enums"]["case_category"]
+          created_at?: string
+          description?: string
+          evidence_urls?: string[] | null
+          id?: string
+          incident_date?: string | null
+          incident_location?: string | null
+          is_anonymous?: boolean
+          priority?: Database["public"]["Enums"]["case_priority"]
+          reported_by?: string | null
+          reported_student_class?: string | null
+          reported_student_id?: string | null
+          reported_student_name?: string | null
+          reporter_contact?: string | null
+          reporter_name?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          title?: string
+          updated_at?: string
+          witnesses?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_cases_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_cases_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_cases_reported_student_id_fkey"
+            columns: ["reported_student_id"]
             isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
@@ -909,6 +1241,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_case_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -949,6 +1285,24 @@ export type Database = {
         | "siswa"
         | "orang_tua"
         | "penanggung_jawab_sarpras"
+      case_category:
+        | "bullying"
+        | "kekerasan"
+        | "narkoba"
+        | "pergaulan_bebas"
+        | "tawuran"
+        | "pencurian"
+        | "vandalisme"
+        | "lainnya"
+      case_handler_type: "tppk" | "arps" | "p4gn" | "guru_bk" | "waka_kesiswaan"
+      case_priority: "low" | "medium" | "high" | "critical"
+      case_status:
+        | "pending"
+        | "under_review"
+        | "investigating"
+        | "escalated"
+        | "resolved"
+        | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1079,6 +1433,26 @@ export const Constants = {
         "siswa",
         "orang_tua",
         "penanggung_jawab_sarpras",
+      ],
+      case_category: [
+        "bullying",
+        "kekerasan",
+        "narkoba",
+        "pergaulan_bebas",
+        "tawuran",
+        "pencurian",
+        "vandalisme",
+        "lainnya",
+      ],
+      case_handler_type: ["tppk", "arps", "p4gn", "guru_bk", "waka_kesiswaan"],
+      case_priority: ["low", "medium", "high", "critical"],
+      case_status: [
+        "pending",
+        "under_review",
+        "investigating",
+        "escalated",
+        "resolved",
+        "closed",
       ],
     },
   },
