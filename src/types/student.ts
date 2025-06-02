@@ -67,8 +67,8 @@ export interface StudentEnrollment {
   created_at: string;
   updated_at: string;
   student?: Student;
-  class?: Class;
-  academic_year?: AcademicYear;
+  classes?: Class;
+  academic_years?: AcademicYear;
 }
 
 export interface StudentWithClass extends Student {
