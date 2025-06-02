@@ -5,11 +5,9 @@ import { DashboardHome } from '@/components/dashboard/DashboardHome';
 
 const Dashboard = () => {
   return (
-    <ProtectedRoute>
-      <DashboardLayout>
-        <DashboardHome />
-      </DashboardLayout>
-    </ProtectedRoute>
+    <DashboardLayout>
+      <DashboardHome />
+    </DashboardLayout>
   );
 };
 
