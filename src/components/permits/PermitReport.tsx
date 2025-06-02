@@ -36,18 +36,23 @@ export const PermitReport = () => {
         .from('student_permits')
         .select(`
           *,
-          student:students(id, full_name, nis, current_enrollment:student_enrollments(
+          student:students(
             id, 
-            class:classes(
+            full_name, 
+            nis, 
+            current_enrollment:student_enrollments(
               id, 
-              name,
-              grade,
-              is_active,
-              created_at,
-              updated_at,
-              major:majors(name)
+              class:classes(
+                id, 
+                name,
+                grade,
+                is_active,
+                created_at,
+                updated_at,
+                major:majors(name)
+              )
             )
-          )),
+          ),
           approvals:permit_approvals(*)
         `)
         .gte('start_date', startDate)

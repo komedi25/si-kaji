@@ -74,18 +74,23 @@ const DisciplinePointsManagement = () => {
         .from('student_discipline_points')
         .select(`
           *,
-          student:students(id, full_name, nis, current_enrollment:student_enrollments(
+          student:students(
             id, 
-            class:classes(
+            full_name, 
+            nis, 
+            current_enrollment:student_enrollments(
               id, 
-              name,
-              grade,
-              is_active,
-              created_at,
-              updated_at,
-              major:majors(name)
+              class:classes(
+                id, 
+                name,
+                grade,
+                is_active,
+                created_at,
+                updated_at,
+                major:majors(name)
+              )
             )
-          ))
+          )
         `)
         .eq('academic_year_id', selectedAcademicYearId);
         
@@ -121,16 +126,18 @@ const DisciplinePointsManagement = () => {
     const statusConfig = {
       excellent: { label: 'Sangat Baik', variant: 'default' as const },
       good: { label: 'Baik', variant: 'secondary' as const },
-      warning: { label: 'Peringatan', variant: 'secondary' as const, className: 'bg-yellow-100 text-yellow-800' },
+      warning: { label: 'Peringatan', variant: 'secondary' as const },
       probation: { label: 'Masa Percobaan', variant: 'destructive' as const },
       critical: { label: 'Kritis', variant: 'destructive' as const }
     };
     
     const config = statusConfig[status as keyof typeof statusConfig];
+    const className = status === 'warning' ? 'bg-yellow-100 text-yellow-800' : '';
+    
     return config ? (
       <Badge 
         variant={config.variant} 
-        className={config.className || ''}
+        className={className}
       >
         {config.label}
       </Badge>

@@ -110,16 +110,19 @@ export const AchievementReport = () => {
       sekolah: { variant: 'outline' as const },
       kecamatan: { variant: 'secondary' as const },
       kabupaten: { variant: 'default' as const },
-      provinsi: { variant: 'purple' as const, className: 'bg-purple-100 text-purple-800' },
-      nasional: { variant: 'blue' as const, className: 'bg-blue-100 text-blue-800' },
+      provinsi: { variant: 'secondary' as const },
+      nasional: { variant: 'secondary' as const },
       internasional: { variant: 'destructive' as const }
     };
     
     const config = levelConfig[level as keyof typeof levelConfig];
+    const className = level === 'provinsi' ? 'bg-purple-100 text-purple-800' : 
+                    level === 'nasional' ? 'bg-blue-100 text-blue-800' : '';
+    
     return config ? (
       <Badge 
         variant={config.variant}
-        className={config.className}
+        className={className}
       >
         {level}
       </Badge>

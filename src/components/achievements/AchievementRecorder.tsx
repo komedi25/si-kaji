@@ -119,7 +119,15 @@ export const AchievementRecorder = () => {
 
     const achievementType = achievementTypes?.find(at => at.id === selectedAchievementType);
     
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData, error } = await supabase.auth.getUser();
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Gagal mendapatkan data pengguna',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     const data = {
       student_id: selectedStudent.id,
@@ -151,17 +159,14 @@ export const AchievementRecorder = () => {
       sekolah: { variant: 'outline' as const },
       kecamatan: { variant: 'secondary' as const },
       kabupaten: { variant: 'default' as const },
-      provinsi: { variant: 'secondary' as const, className: 'bg-purple-100 text-purple-800' },
-      nasional: { variant: 'secondary' as const, className: 'bg-blue-100 text-blue-800' },
+      provinsi: { variant: 'secondary' as const },
+      nasional: { variant: 'secondary' as const },
       internasional: { variant: 'destructive' as const }
     };
     
     const config = levelConfig[level as keyof typeof levelConfig];
     return config ? (
-      <Badge 
-        variant={config.variant}
-        className={config.className}
-      >
+      <Badge variant={config.variant}>
         {level}
       </Badge>
     ) : null;
