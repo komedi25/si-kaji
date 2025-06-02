@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,13 +68,13 @@ export default function UserManagement() {
       if (rolesError) throw rolesError;
 
       // Fetch auth users to get email
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) throw authError;
 
       // Combine the data
       const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const authUser = authUsers.users.find(u => u.id === profile.id);
+        const authUser = authData.users?.find(u => u.id === profile.id);
         const roles = userRoles
           .filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole);
