@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Download, Printer } from 'lucide-react';
-import { StudentPermit } from '@/types/student';
+import { StudentPermit } from '@/types/attendance';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 

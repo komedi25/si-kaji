@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CalendarIcon, Search, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { StudentPermit } from '@/types/student';
+import { StudentPermit } from '@/types/attendance';
 import { PermitLetter } from './PermitLetter';
 
 const PermitReport = () => {

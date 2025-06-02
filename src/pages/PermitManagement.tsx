@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +8,7 @@ import {
 } from 'lucide-react';
 import { PermitForm } from '@/components/permits/PermitForm';
 import { PermitApproval } from '@/components/permits/PermitApproval';
-import { PermitReport } from '@/components/permits/PermitReport';
+import PermitReport from '@/components/permits/PermitReport';
 
 const PermitManagement = () => {
   return (
