@@ -1,18 +1,16 @@
+
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, parseISO } from 'date-fns';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Major, Class, StudentWithClass } from '@/types/student';
+import { Loader2 } from 'lucide-react';
+import { StudentWithClass, Major, Class } from '@/types/student';
+import { StudentPhotoUpload } from './StudentPhotoUpload';
 
 interface EditStudentDialogProps {
   open: boolean;
@@ -23,118 +21,74 @@ interface EditStudentDialogProps {
   classes: Class[];
 }
 
-export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majors, classes }: EditStudentDialogProps) {
-  const { toast } = useToast();
+export const EditStudentDialog = ({
+  open,
+  onOpenChange,
+  student,
+  onSuccess,
+  majors,
+  classes
+}: EditStudentDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [birthDate, setBirthDate] = useState<Date>();
+  const [photoUrl, setPhotoUrl] = useState(student.photo_url || '');
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
-    nis: '',
-    nisn: '',
-    full_name: '',
-    gender: '',
-    birth_place: '',
-    religion: '',
-    address: '',
-    phone: '',
-    parent_name: '',
-    parent_phone: '',
-    parent_address: '',
-    status: '',
-    class_id: ''
+    nis: student.nis,
+    nisn: student.nisn || '',
+    full_name: student.full_name,
+    gender: student.gender,
+    birth_place: student.birth_place || '',
+    birth_date: student.birth_date || '',
+    religion: student.religion || '',
+    address: student.address || '',
+    phone: student.phone || '',
+    parent_name: student.parent_name || '',
+    parent_phone: student.parent_phone || '',
+    parent_address: student.parent_address || '',
+    status: student.status
   });
 
   useEffect(() => {
-    if (student) {
-      setFormData({
-        nis: student.nis || '',
-        nisn: student.nisn || '',
-        full_name: student.full_name || '',
-        gender: student.gender || '',
-        birth_place: student.birth_place || '',
-        religion: student.religion || '',
-        address: student.address || '',
-        phone: student.phone || '',
-        parent_name: student.parent_name || '',
-        parent_phone: student.parent_phone || '',
-        parent_address: student.parent_address || '',
-        status: student.status || '',
-        class_id: student.current_class?.id || ''
-      });
-
-      if (student.birth_date) {
-        setBirthDate(parseISO(student.birth_date));
-      }
-    }
-  }, [student]);
+    setPhotoUrl(student.photo_url || '');
+  }, [student.photo_url]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.nis || !formData.full_name || !formData.gender) {
-      toast({
-        title: "Error",
-        description: "Harap lengkapi semua field yang wajib diisi",
-        variant: "destructive"
-      });
-      return;
-    }
+    setLoading(true);
 
     try {
-      setLoading(true);
-
-      // Update student data
-      const { error: studentError } = await supabase
+      const { error } = await supabase
         .from('students')
         .update({
-          nis: formData.nis,
-          nisn: formData.nisn || null,
-          full_name: formData.full_name,
-          gender: formData.gender as 'L' | 'P',
-          birth_place: formData.birth_place || null,
-          birth_date: birthDate ? format(birthDate, 'yyyy-MM-dd') : null,
-          religion: formData.religion || null,
-          address: formData.address || null,
-          phone: formData.phone || null,
-          parent_name: formData.parent_name || null,
-          parent_phone: formData.parent_phone || null,
-          parent_address: formData.parent_address || null,
-          status: formData.status
+          ...formData,
+          photo_url: photoUrl || null,
+          updated_at: new Date().toISOString()
         })
         .eq('id', student.id);
 
-      if (studentError) throw studentError;
-
-      // Update enrollment if class changed
-      if (formData.class_id && formData.class_id !== student.current_class?.id) {
-        const { error: enrollmentError } = await supabase
-          .from('student_enrollments')
-          .update({
-            class_id: formData.class_id
-          })
-          .eq('student_id', student.id)
-          .eq('status', 'active');
-
-        if (enrollmentError) throw enrollmentError;
-      }
+      if (error) throw error;
 
       toast({
         title: "Berhasil",
-        description: "Data siswa berhasil diperbarui"
+        description: "Data siswa berhasil diperbarui",
       });
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating student:', error);
       toast({
         title: "Error",
-        description: error.message === 'duplicate key value violates unique constraint "students_nis_key"'
-          ? "NIS sudah digunakan oleh siswa lain"
-          : "Gagal memperbarui data siswa",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Gagal memperbarui data siswa",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -143,19 +97,24 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
         <DialogHeader>
           <DialogTitle>Edit Data Siswa</DialogTitle>
           <DialogDescription>
-            Perbarui informasi data siswa
+            Perbarui informasi siswa di bawah ini
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <StudentPhotoUpload
+            student={student}
+            onPhotoUploaded={setPhotoUrl}
+            currentPhotoUrl={photoUrl}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="nis">NIS *</Label>
               <Input
                 id="nis"
                 value={formData.nis}
-                onChange={(e) => setFormData({ ...formData, nis: e.target.value })}
-                placeholder="Nomor Induk Siswa"
+                onChange={(e) => handleInputChange('nis', e.target.value)}
                 required
               />
             </div>
@@ -164,8 +123,7 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
               <Input
                 id="nisn"
                 value={formData.nisn}
-                onChange={(e) => setFormData({ ...formData, nisn: e.target.value })}
-                placeholder="Nomor Induk Siswa Nasional"
+                onChange={(e) => handleInputChange('nisn', e.target.value)}
               />
             </div>
           </div>
@@ -175,18 +133,17 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
             <Input
               id="full_name"
               value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              placeholder="Nama lengkap siswa"
+              onChange={(e) => handleInputChange('full_name', e.target.value)}
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="gender">Jenis Kelamin *</Label>
-              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+              <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih jenis kelamin" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="L">Laki-laki</SelectItem>
@@ -195,78 +152,28 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
               </Select>
             </div>
             <div>
-              <Label htmlFor="class_id">Kelas</Label>
-              <Select value={formData.class_id} onValueChange={(value) => setFormData({ ...formData, class_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((classItem) => (
-                    <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.name} - {classItem.major?.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Aktif</SelectItem>
-                  <SelectItem value="graduated">Lulus</SelectItem>
-                  <SelectItem value="transferred">Pindah</SelectItem>
-                  <SelectItem value="dropped">Keluar</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="birth_date">Tanggal Lahir</Label>
+              <Input
+                id="birth_date"
+                type="date"
+                value={formData.birth_date}
+                onChange={(e) => handleInputChange('birth_date', e.target.value)}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="birth_place">Tempat Lahir</Label>
               <Input
                 id="birth_place"
                 value={formData.birth_place}
-                onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
-                placeholder="Tempat lahir"
+                onChange={(e) => handleInputChange('birth_place', e.target.value)}
               />
             </div>
             <div>
-              <Label>Tanggal Lahir</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !birthDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {birthDate ? format(birthDate, "dd/MM/yyyy") : "Pilih tanggal"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={birthDate}
-                    onSelect={setBirthDate}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
               <Label htmlFor="religion">Agama</Label>
-              <Select value={formData.religion} onValueChange={(value) => setFormData({ ...formData, religion: value })}>
+              <Select value={formData.religion} onValueChange={(value) => handleInputChange('religion', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih agama" />
                 </SelectTrigger>
@@ -280,15 +187,6 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="phone">No. Telepon</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Nomor telepon siswa"
-              />
-            </div>
           </div>
 
           <div>
@@ -296,55 +194,74 @@ export function EditStudentDialog({ open, onOpenChange, student, onSuccess, majo
             <Textarea
               id="address"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Alamat lengkap siswa"
+              onChange={(e) => handleInputChange('address', e.target.value)}
               rows={2}
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="parent_name">Nama Orang Tua</Label>
-              <Input
-                id="parent_name"
-                value={formData.parent_name}
-                onChange={(e) => setFormData({ ...formData, parent_name: e.target.value })}
-                placeholder="Nama orang tua/wali"
-              />
-            </div>
-            <div>
-              <Label htmlFor="parent_phone">No. Telepon Orang Tua</Label>
-              <Input
-                id="parent_phone"
-                value={formData.parent_phone}
-                onChange={(e) => setFormData({ ...formData, parent_phone: e.target.value })}
-                placeholder="Nomor telepon orang tua"
-              />
-            </div>
           </div>
 
           <div>
-            <Label htmlFor="parent_address">Alamat Orang Tua</Label>
+            <Label htmlFor="phone">Nomor Telepon</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="parent_name">Nama Orang Tua/Wali</Label>
+            <Input
+              id="parent_name"
+              value={formData.parent_name}
+              onChange={(e) => handleInputChange('parent_name', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="parent_phone">Telepon Orang Tua/Wali</Label>
+            <Input
+              id="parent_phone"
+              value={formData.parent_phone}
+              onChange={(e) => handleInputChange('parent_phone', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="parent_address">Alamat Orang Tua/Wali</Label>
             <Textarea
               id="parent_address"
               value={formData.parent_address}
-              onChange={(e) => setFormData({ ...formData, parent_address: e.target.value })}
-              placeholder="Alamat orang tua/wali"
+              onChange={(e) => handleInputChange('parent_address', e.target.value)}
               rows={2}
             />
           </div>
 
-          <DialogFooter>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Aktif</SelectItem>
+                <SelectItem value="graduated">Lulus</SelectItem>
+                <SelectItem value="transferred">Pindah</SelectItem>
+                <SelectItem value="dropped">Keluar</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Simpan Perubahan
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+};

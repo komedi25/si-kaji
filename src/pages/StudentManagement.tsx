@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +16,16 @@ import { useToast } from '@/hooks/use-toast';
 import { AddStudentDialog } from '@/components/student/AddStudentDialog';
 import { EditStudentDialog } from '@/components/student/EditStudentDialog';
 import { StudentFilters } from '@/components/student/StudentFilters';
+import { ExcelExport } from '@/components/student/ExcelExport';
+import { ExcelImport } from '@/components/student/ExcelImport';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function StudentManagement() {
   const { user, hasRole } = useAuth();
@@ -31,6 +42,7 @@ export default function StudentManagement() {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentWithClass | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   const canManageStudents = hasRole('admin_sistem') || hasRole('admin_kesiswaan');
   const canViewStudents = canManageStudents || hasRole('wali_kelas') || hasRole('guru_bk') || 
@@ -240,14 +252,29 @@ export default function StudentManagement() {
         <div className="flex gap-2">
           {canManageStudents && (
             <>
-              <Button variant="outline">
-                <Upload className="h-4 w-4 mr-2" />
-                Import Data
-              </Button>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
+              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Data
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Import Data Siswa</DialogTitle>
+                    <DialogDescription>
+                      Import data siswa dari file CSV
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ExcelImport onImportComplete={() => {
+                    fetchStudents();
+                    setShowImportDialog(false);
+                  }} />
+                </DialogContent>
+              </Dialog>
+              
+              <ExcelExport students={filteredStudents} />
+              
               <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Tambah Siswa
