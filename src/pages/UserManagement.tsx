@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Plus, Edit, Trash2, UserPlus } from 'lucide-react';
 import { AppRole, UserProfile, UserRole } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
+import { User } from '@supabase/supabase-js';
 
 interface UserWithRoles extends UserProfile {
   email?: string;
@@ -74,7 +75,7 @@ export default function UserManagement() {
 
       // Combine the data
       const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const authUser = authData.users?.find(u => u.id === profile.id);
+        const authUser: User | undefined = authData.users?.find((u: User) => u.id === profile.id);
         const roles = userRoles
           .filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole);
