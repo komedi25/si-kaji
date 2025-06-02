@@ -9,6 +9,120 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          year_end: number
+          year_start: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          year_end: number
+          year_start: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          year_end?: number
+          year_start?: number
+        }
+        Relationships: []
+      }
+      classes: {
+        Row: {
+          academic_year_id: string | null
+          created_at: string
+          grade: number
+          homeroom_teacher_id: string | null
+          id: string
+          is_active: boolean
+          major_id: string | null
+          max_students: number | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          created_at?: string
+          grade: number
+          homeroom_teacher_id?: string | null
+          id?: string
+          is_active?: boolean
+          major_id?: string | null
+          max_students?: number | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          created_at?: string
+          grade?: number
+          homeroom_teacher_id?: string | null
+          id?: string
+          is_active?: boolean
+          major_id?: string | null
+          max_students?: number | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_major_id_fkey"
+            columns: ["major_id"]
+            isOneToOne: false
+            referencedRelation: "majors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      majors: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           action: string
@@ -91,6 +205,130 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_enrollments: {
+        Row: {
+          academic_year_id: string | null
+          class_id: string | null
+          created_at: string
+          enrollment_date: string
+          id: string
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          enrollment_date?: string
+          id?: string
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string | null
+          class_id?: string | null
+          created_at?: string
+          enrollment_date?: string
+          id?: string
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_enrollments_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          address: string | null
+          admission_date: string
+          birth_date: string | null
+          birth_place: string | null
+          created_at: string
+          full_name: string
+          gender: string
+          graduation_date: string | null
+          id: string
+          nis: string
+          nisn: string | null
+          parent_address: string | null
+          parent_name: string | null
+          parent_phone: string | null
+          phone: string | null
+          photo_url: string | null
+          religion: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          admission_date?: string
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string
+          full_name: string
+          gender: string
+          graduation_date?: string | null
+          id?: string
+          nis: string
+          nisn?: string | null
+          parent_address?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          religion?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          admission_date?: string
+          birth_date?: string | null
+          birth_place?: string | null
+          created_at?: string
+          full_name?: string
+          gender?: string
+          graduation_date?: string | null
+          id?: string
+          nis?: string
+          nisn?: string | null
+          parent_address?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          religion?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

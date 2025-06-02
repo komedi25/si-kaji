@@ -10,6 +10,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
+import StudentManagement from "./pages/StudentManagement";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
@@ -39,18 +40,9 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/siswa" element={
-              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk']}>
+              <ProtectedRoute requiredRoles={['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'waka_kesiswaan', 'kepala_sekolah']}>
                 <AppLayout>
-                  <ComingSoon 
-                    title="Data Siswa"
-                    description="Modul manajemen data siswa sedang dalam pengembangan"
-                    features={[
-                      "CRUD data siswa",
-                      "Import/export data",
-                      "Pencarian dan filter",
-                      "Riwayat akademik"
-                    ]}
-                  />
+                  <StudentManagement />
                 </AppLayout>
               </ProtectedRoute>
             } />
