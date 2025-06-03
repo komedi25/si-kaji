@@ -22,7 +22,7 @@ import UserManagement from './pages/UserManagement';
 import MasterData from './pages/MasterData';
 import ComingSoon from './pages/ComingSoon';
 import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { NotificationProvider } from '@/hooks/useNotifications';
 
 function App() {
