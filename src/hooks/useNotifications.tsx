@@ -52,7 +52,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         .limit(50);
 
       if (error) throw error;
-      setNotifications(data || []);
+      
+      // Cast the data to match our interface
+      const typedData: Notification[] = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'info' | 'success' | 'warning' | 'error'
+      }));
+      
+      setNotifications(typedData);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
@@ -74,8 +81,12 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            const newNotification = payload.new as Notification;
-            setNotifications(prev => [newNotification, ...prev]);
+            const newNotification = payload.new as any;
+            const typedNotification: Notification = {
+              ...newNotification,
+              type: newNotification.type as 'info' | 'success' | 'warning' | 'error'
+            };
+            setNotifications(prev => [typedNotification, ...prev]);
             
             // Show toast notification
             toast(newNotification.title, {
