@@ -55,15 +55,15 @@ export const CaseManagement = () => {
       }
 
       if (statusFilter) {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as any);
       }
 
       if (categoryFilter) {
-        query = query.eq('category', categoryFilter);
+        query = query.eq('category', categoryFilter as any);
       }
 
       if (priorityFilter) {
-        query = query.eq('priority', priorityFilter);
+        query = query.eq('priority', priorityFilter as any);
       }
 
       const { data, error } = await query;

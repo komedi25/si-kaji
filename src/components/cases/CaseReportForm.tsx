@@ -53,14 +53,24 @@ export const CaseReportForm = () => {
     setIsSubmitting(true);
     try {
       const caseData = {
-        ...data,
-        reported_by: data.is_anonymous ? null : user?.id,
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        priority: data.priority,
+        is_anonymous: data.is_anonymous,
+        reporter_name: data.reporter_name || null,
+        reporter_contact: data.reporter_contact || null,
+        reported_student_name: data.reported_student_name || null,
+        reported_student_class: data.reported_student_class || null,
         incident_date: data.incident_date ? format(data.incident_date, 'yyyy-MM-dd') : null,
+        incident_location: data.incident_location || null,
+        witnesses: data.witnesses || null,
+        reported_by: data.is_anonymous ? null : user?.id,
       };
 
       const { error } = await supabase
         .from('student_cases')
-        .insert([caseData]);
+        .insert(caseData);
 
       if (error) throw error;
 

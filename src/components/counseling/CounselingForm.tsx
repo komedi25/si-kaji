@@ -82,9 +82,14 @@ export const CounselingForm = ({ onSuccess }: CounselingFormProps) => {
     setIsSubmitting(true);
     try {
       const sessionData = {
-        ...data,
-        counselor_id: user?.id,
+        student_id: data.student_id,
+        counselor_id: user?.id!,
         session_date: format(data.session_date, 'yyyy-MM-dd'),
+        session_time: data.session_time,
+        duration_minutes: data.duration_minutes,
+        session_type: data.session_type,
+        topic: data.topic || null,
+        follow_up_required: data.follow_up_required,
         follow_up_date: data.follow_up_required && data.follow_up_date 
           ? format(data.follow_up_date, 'yyyy-MM-dd') 
           : null,
@@ -93,7 +98,7 @@ export const CounselingForm = ({ onSuccess }: CounselingFormProps) => {
 
       const { error } = await supabase
         .from('counseling_sessions')
-        .insert([sessionData]);
+        .insert(sessionData);
 
       if (error) throw error;
 
