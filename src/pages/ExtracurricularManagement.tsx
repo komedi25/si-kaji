@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { ExtracurricularEnrollment } from '@/components/extracurricular/ExtracurricularEnrollment';
 import { CoachActivityLog } from '@/components/extracurricular/CoachActivityLog';
+import { CoachAttendance } from '@/components/extracurricular/CoachAttendance';
 import { ExtracurricularManager } from '@/components/masterData/ExtracurricularManager';
 
 const ExtracurricularManagement = () => {
@@ -22,8 +23,8 @@ const ExtracurricularManagement = () => {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="enrollment">Pendaftaran Siswa</TabsTrigger>
               <TabsTrigger value="activity-log">Jurnal Pelatih</TabsTrigger>
-              <TabsTrigger value="master-data">Data Ekstrakurikuler</TabsTrigger>
               <TabsTrigger value="attendance">Presensi Pelatih</TabsTrigger>
+              <TabsTrigger value="master-data">Data Ekstrakurikuler</TabsTrigger>
             </TabsList>
 
             <TabsContent value="enrollment" className="space-y-4">
@@ -34,14 +35,12 @@ const ExtracurricularManagement = () => {
               <CoachActivityLog />
             </TabsContent>
 
-            <TabsContent value="master-data" className="space-y-4">
-              <ExtracurricularManager />
+            <TabsContent value="attendance" className="space-y-4">
+              <CoachAttendance />
             </TabsContent>
 
-            <TabsContent value="attendance" className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Fitur presensi pelatih akan segera hadir</p>
-              </div>
+            <TabsContent value="master-data" className="space-y-4">
+              <ExtracurricularManager />
             </TabsContent>
           </Tabs>
         </div>

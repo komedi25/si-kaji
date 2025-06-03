@@ -3,6 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { LetterRequestForm } from '@/components/letters/LetterRequestForm';
+import { StudentMutation } from '@/components/documents/StudentMutation';
+import { LetterTemplates } from '@/components/documents/LetterTemplates';
 
 const DocumentManagement = () => {
   return (
@@ -28,15 +30,11 @@ const DocumentManagement = () => {
             </TabsContent>
 
             <TabsContent value="mutations" className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Fitur mutasi siswa akan segera hadir</p>
-              </div>
+              <StudentMutation />
             </TabsContent>
 
             <TabsContent value="templates" className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Fitur template surat akan segera hadir</p>
-              </div>
+              <LetterTemplates />
             </TabsContent>
           </Tabs>
         </div>
