@@ -507,6 +507,139 @@ export type Database = {
           },
         ]
       }
+      document_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          parent_category_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_category_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_category_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "document_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_repository: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          document_type: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_active: boolean
+          is_public: boolean
+          tags: string[] | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_active?: boolean
+          is_public?: boolean
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
+      document_versions: {
+        Row: {
+          changes_description: string | null
+          created_at: string
+          document_id: string
+          file_url: string
+          id: string
+          uploaded_by: string | null
+          version_number: number
+        }
+        Insert: {
+          changes_description?: string | null
+          created_at?: string
+          document_id: string
+          file_url: string
+          id?: string
+          uploaded_by?: string | null
+          version_number: number
+        }
+        Update: {
+          changes_description?: string | null
+          created_at?: string
+          document_id?: string
+          file_url?: string
+          id?: string
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurricular_enrollments: {
         Row: {
           created_at: string
@@ -596,6 +729,98 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      homeroom_journals: {
+        Row: {
+          activity_description: string
+          attachments: Json | null
+          attendance_summary: string | null
+          behavioral_notes: string | null
+          class_id: string
+          created_at: string
+          follow_up_actions: string | null
+          homeroom_teacher_id: string
+          id: string
+          journal_date: string
+          learning_progress: string | null
+          student_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_description: string
+          attachments?: Json | null
+          attendance_summary?: string | null
+          behavioral_notes?: string | null
+          class_id: string
+          created_at?: string
+          follow_up_actions?: string | null
+          homeroom_teacher_id: string
+          id?: string
+          journal_date: string
+          learning_progress?: string | null
+          student_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_description?: string
+          attachments?: Json | null
+          attendance_summary?: string | null
+          behavioral_notes?: string | null
+          class_id?: string
+          created_at?: string
+          follow_up_actions?: string | null
+          homeroom_teacher_id?: string
+          id?: string
+          journal_date?: string
+          learning_progress?: string | null
+          student_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      journal_student_entries: {
+        Row: {
+          academic_progress: string | null
+          behavior_rating: number | null
+          created_at: string
+          id: string
+          individual_notes: string | null
+          journal_id: string
+          special_notes: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_progress?: string | null
+          behavior_rating?: number | null
+          created_at?: string
+          id?: string
+          individual_notes?: string | null
+          journal_id: string
+          special_notes?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_progress?: string | null
+          behavior_rating?: number | null
+          created_at?: string
+          id?: string
+          individual_notes?: string | null
+          journal_id?: string
+          special_notes?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_student_entries_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "homeroom_journals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       letter_requests: {
         Row: {
