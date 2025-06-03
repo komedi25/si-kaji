@@ -177,9 +177,9 @@ export const DocumentRepository = () => {
                           {getFileTypeIcon(doc.documentType)}
                           <span className="font-medium">{doc.title}</span>
                           {doc.isPublic ? (
-                            <Globe className="w-3 h-3 text-green-500" title="Dokumen Publik" />
+                            <Globe className="w-3 h-3 text-green-500" />
                           ) : (
-                            <Lock className="w-3 h-3 text-gray-500" title="Dokumen Terbatas" />
+                            <Lock className="w-3 h-3 text-gray-500" />
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1">
