@@ -3,6 +3,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useNotificationSystem } from './useNotificationSystem';
 
 interface Notification {
   id: string;
@@ -20,6 +21,7 @@ interface NotificationContextType {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   refreshNotifications: () => void;
+  sendNotification: (templateName: string, userId: string, variables?: Record<string, any>) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -38,6 +40,7 @@ interface NotificationProviderProps {
 
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
   const { user } = useAuth();
+  const { sendNotificationFromTemplate } = useNotificationSystem();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const fetchNotifications = async () => {
@@ -53,7 +56,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
       if (error) throw error;
       
-      // Cast the data to match our interface
       const typedData: Notification[] = (data || []).map(item => ({
         ...item,
         type: item.type as 'info' | 'success' | 'warning' | 'error'
@@ -62,6 +64,15 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       setNotifications(typedData);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const sendNotification = async (templateName: string, userId: string, variables: Record<string, any> = {}) => {
+    try {
+      await sendNotificationFromTemplate(templateName, userId, variables);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      throw error;
     }
   };
 
@@ -141,7 +152,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     unreadCount,
     markAsRead,
     markAllAsRead,
-    refreshNotifications: fetchNotifications
+    refreshNotifications: fetchNotifications,
+    sendNotification
   };
 
   return (

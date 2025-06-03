@@ -953,6 +953,134 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_channels: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_queue: {
+        Row: {
+          attempts: number
+          channel_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          metadata: Json | null
+          notification_id: string | null
+          recipient: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          channel_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          metadata?: Json | null
+          notification_id?: string | null
+          recipient: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          channel_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          metadata?: Json | null
+          notification_id?: string | null
+          recipient?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          channels: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          message_template: string
+          name: string
+          title_template: string
+          type: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          message_template: string
+          name: string
+          title_template: string
+          type?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          name?: string
+          title_template?: string
+          type?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -1891,6 +2019,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notification_preferences: {
+        Row: {
+          channels: string[]
+          created_at: string
+          id: string
+          is_enabled: boolean
+          notification_type: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channels?: string[]
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          notification_type: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channels?: string[]
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          notification_type?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string | null
@@ -2019,6 +2183,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      send_multi_channel_notification: {
+        Args: {
+          _user_id: string
+          _title: string
+          _message: string
+          _type?: string
+          _data?: Json
+          _channels?: string[]
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
@@ -2036,6 +2211,7 @@ export type Database = {
         | "siswa"
         | "orang_tua"
         | "penanggung_jawab_sarpras"
+        | "admin"
       case_category:
         | "bullying"
         | "kekerasan"
@@ -2184,6 +2360,7 @@ export const Constants = {
         "siswa",
         "orang_tua",
         "penanggung_jawab_sarpras",
+        "admin",
       ],
       case_category: [
         "bullying",
