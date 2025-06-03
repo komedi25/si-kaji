@@ -82,6 +82,7 @@ export type Database = {
           approval_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          attachment_urls: string[] | null
           budget_breakdown: Json | null
           budget_estimation: number | null
           created_at: string
@@ -110,6 +111,7 @@ export type Database = {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          attachment_urls?: string[] | null
           budget_breakdown?: Json | null
           budget_estimation?: number | null
           created_at?: string
@@ -138,6 +140,7 @@ export type Database = {
           approval_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          attachment_urls?: string[] | null
           budget_breakdown?: Json | null
           budget_estimation?: number | null
           created_at?: string
@@ -597,6 +600,7 @@ export type Database = {
       letter_requests: {
         Row: {
           additional_notes: string | null
+          attachment_urls: string[] | null
           created_at: string
           id: string
           issued_at: string | null
@@ -614,6 +618,7 @@ export type Database = {
         }
         Insert: {
           additional_notes?: string | null
+          attachment_urls?: string[] | null
           created_at?: string
           id?: string
           issued_at?: string | null
@@ -631,6 +636,7 @@ export type Database = {
         }
         Update: {
           additional_notes?: string | null
+          attachment_urls?: string[] | null
           created_at?: string
           id?: string
           issued_at?: string | null
@@ -719,6 +725,42 @@ export type Database = {
           is_active?: boolean
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1689,6 +1731,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          _user_id: string
+          _title: string
+          _message: string
+          _type?: string
+          _data?: Json
+        }
+        Returns: string
+      }
       generate_case_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1713,6 +1765,24 @@ export type Database = {
         Args: {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      process_letter_approval: {
+        Args: {
+          _request_id: string
+          _processor_id: string
+          _status: string
+          _notes?: string
+        }
+        Returns: boolean
+      }
+      process_proposal_approval: {
+        Args: {
+          _proposal_id: string
+          _approver_id: string
+          _status: string
+          _notes?: string
         }
         Returns: boolean
       }

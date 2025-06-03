@@ -1,7 +1,9 @@
-
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User, Bell } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,104 +11,188 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuShortcut,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
+import { GraduationCap, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { QueryClient } from '@tanstack/react-query';
 
-export const Header = () => {
+import { AppLayout } from './AppLayout';
+import { NotificationBell } from './NotificationBell';
+
+const Header = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  const getRoleDisplayName = (role: string) => {
-    const roleNames: Record<string, string> = {
-      'admin_sistem': 'Admin Sistem',
-      'admin_kesiswaan': 'Admin Kesiswaan',
-      'kepala_sekolah': 'Kepala Sekolah',
-      'tppk': 'TPPK',
-      'arps': 'ARPS',
-      'p4gn': 'P4GN',
-      'koordinator_ekstrakurikuler': 'Koordinator Ekstrakurikuler',
-      'wali_kelas': 'Wali Kelas',
-      'guru_bk': 'Guru BK',
-      'waka_kesiswaan': 'Waka Kesiswaan',
-      'pelatih_ekstrakurikuler': 'Pelatih Ekstrakurikuler',
-      'siswa': 'Siswa',
-      'orang_tua': 'Orang Tua',
-      'penanggung_jawab_sarpras': 'Penanggung Jawab Sarpras'
-    };
-    return roleNames[role] || role;
-  };
-
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     await signOut();
+    navigate('/auth');
   };
 
   return (
-    <header className="bg-white shadow-sm border-b">
-      <div className="px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-xl font-semibold text-gray-900">
-              SMK Negeri 1 Kendal - Sistem Kesiswaan
-            </h1>
-            <Badge variant="secondary" className="ml-3 text-xs">
-              Phase 1
-            </Badge>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <Button variant="ghost" size="sm">
-              <Bell className="h-5 w-5" />
-            </Button>
-
-            {/* User Menu */}
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 hidden md:flex">
+          <Link className="mr-6 flex items-center space-x-2" to="/">
+            <GraduationCap className="h-6 w-6" />
+            <span className="hidden font-bold sm:inline-block">
+              SIAKAD SMK
+            </span>
+          </Link>
+          <nav className="flex items-center space-x-6 text-sm font-medium">
+            <Link
+              to="/dashboard"
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Dashboard
+            </Link>
+            <Link
+              to="/student-management"
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Siswa
+            </Link>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden md:block">
-                    {user?.profile?.full_name || user?.email}
-                  </span>
-                </Button>
+              <DropdownMenuTrigger className="flex items-center transition-colors hover:text-foreground/80 text-foreground/60">
+                Akademik
+                <ChevronDown className="ml-1 h-3 w-3" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1 text-sm text-gray-600">
-                  <div className="font-medium">{user?.profile?.full_name}</div>
-                  <div className="text-xs text-gray-500">{user?.email}</div>
-                  {user?.profile?.nip && (
-                    <div className="text-xs text-gray-500">NIP: {user.profile.nip}</div>
-                  )}
-                  {user?.profile?.nis && (
-                    <div className="text-xs text-gray-500">NIS: {user.profile.nis}</div>
-                  )}
-                  {user?.roles && user.roles.length > 0 && (
-                    <div className="mt-2">
-                      <div className="text-xs font-medium text-gray-700">Role:</div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {user.roles.map((role, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {getRoleDisplayName(role)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Profil Saya
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/attendance-management">Presensi</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Keluar
+                <DropdownMenuItem asChild>
+                  <Link to="/violation-management">Pelanggaran</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/achievement-management">Prestasi</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/discipline-points-management">Poin Disiplin</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center transition-colors hover:text-foreground/80 text-foreground/60">
+                Kegiatan
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/activity-proposal">Proposal Kegiatan</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/extracurricular-management">Ekstrakurikuler</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/document-management">Dokumen & Surat</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center transition-colors hover:text-foreground/80 text-foreground/60">
+                Konseling
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/counseling-management">Sesi Konseling</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/case-management">Manajemen Kasus</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center transition-colors hover:text-foreground/80 text-foreground/60">
+                Lainnya
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild>
+                  <Link to="/permit-management">Perizinan</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/parent-portal">Portal Orang Tua</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/user-management">Manajemen User</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/master-data">Data Master</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+        </div>
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            <Button
+              variant="outline"
+              className="inline-flex items-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 relative w-full justify-start text-sm text-muted-foreground sm:pr-12 md:w-40 lg:w-64"
+            >
+              <span className="hidden lg:inline-flex">Search...</span>
+              <span className="inline-flex lg:hidden">Search...</span>
+              <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
           </div>
+          <nav className="flex items-center space-x-2">
+            <NotificationBell />
+            <ThemeToggle />
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/avatars/01.png" alt="@user" />
+                      <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.email}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                      Profile
+                      <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Settings
+                      <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </nav>
         </div>
       </div>
     </header>
   );
 };
+
+export default Header;

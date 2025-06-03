@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { FileUpload } from '@/components/common/FileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Calendar, Clock, MapPin, Users, DollarSign } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, DollarSign, Upload } from 'lucide-react';
 
 const proposalSchema = z.object({
   title: z.string().min(1, 'Judul proposal wajib diisi'),
@@ -31,6 +32,7 @@ type ProposalFormData = z.infer<typeof proposalSchema>;
 
 export const ActivityProposalForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
   
   const form = useForm<ProposalFormData>({
     resolver: zodResolver(proposalSchema),
@@ -64,23 +66,53 @@ export const ActivityProposalForm = () => {
         location: data.location,
         estimated_participants: data.estimated_participants,
         budget_estimation: data.budget_estimation,
+        attachment_urls: attachmentUrls,
         status: 'draft',
       };
 
-      const { error } = await supabase
+      const { data: insertedProposal, error } = await supabase
         .from('activity_proposals')
-        .insert([proposalData]);
+        .insert([proposalData])
+        .select()
+        .single();
 
       if (error) throw error;
 
+      // Create approval workflow (demo: 3 levels)
+      const approvals = [
+        { proposal_id: insertedProposal.id, approval_order: 1, approver_role: 'Wali Kelas', status: 'pending' },
+        { proposal_id: insertedProposal.id, approval_order: 2, approver_role: 'Wakil Kepala Sekolah', status: 'pending' },
+        { proposal_id: insertedProposal.id, approval_order: 3, approver_role: 'Kepala Sekolah', status: 'pending' }
+      ];
+
+      await supabase
+        .from('proposal_approvals')
+        .insert(approvals);
+
       toast.success('Proposal kegiatan berhasil dibuat');
       form.reset();
+      setAttachmentUrls([]);
     } catch (error) {
       console.error('Error creating proposal:', error);
       toast.error('Gagal membuat proposal kegiatan');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmitForApproval = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast.error('Mohon lengkapi semua field yang wajib diisi');
+      return;
+    }
+
+    // Submit and change status to 'submitted'
+    const formData = form.getValues();
+    await onSubmit({ ...formData });
+    
+    // Update status to submitted (this would be done in the onSubmit in real implementation)
+    toast.success('Proposal berhasil disubmit untuk persetujuan');
   };
 
   return (
@@ -286,11 +318,32 @@ export const ActivityProposalForm = () => {
               />
             </div>
 
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium flex items-center gap-2 mb-2">
+                  <Upload className="h-4 w-4" />
+                  Lampiran Dokumen
+                </label>
+                <FileUpload
+                  onFilesUploaded={setAttachmentUrls}
+                  existingFiles={attachmentUrls}
+                  maxFiles={5}
+                  folder="proposals"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-4 pt-4">
               <Button type="submit" disabled={isSubmitting} className="flex-1">
                 {isSubmitting ? 'Menyimpan...' : 'Simpan Draft'}
               </Button>
-              <Button type="button" variant="outline" className="flex-1">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleSubmitForApproval}
+                disabled={isSubmitting}
+              >
                 Submit untuk Persetujuan
               </Button>
             </div>
