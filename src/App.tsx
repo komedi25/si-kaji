@@ -1,5 +1,5 @@
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { QueryClient } from './hooks/useQueryClient';
 import { Toaster } from '@/components/ui/sonner';
@@ -37,7 +37,7 @@ function App() {
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Index />} />
                 
-                <Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/student-management" element={<StudentManagement />} />
                   <Route path="/attendance-management" element={<AttendanceManagement />} />
