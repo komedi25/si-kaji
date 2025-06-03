@@ -72,8 +72,14 @@ export const useNotificationSystem = () => {
       if (error) throw error;
       
       const typedTemplates: NotificationTemplate[] = (data || []).map(item => ({
-        ...item,
-        type: item.type as 'info' | 'success' | 'warning' | 'error'
+        id: item.id,
+        name: item.name,
+        title_template: item.title_template,
+        message_template: item.message_template,
+        type: item.type as 'info' | 'success' | 'warning' | 'error',
+        channels: item.channels,
+        variables: Array.isArray(item.variables) ? item.variables : [],
+        is_active: item.is_active
       }));
       
       setTemplates(typedTemplates);
@@ -93,9 +99,11 @@ export const useNotificationSystem = () => {
       if (error) throw error;
       
       const typedChannels: NotificationChannel[] = (data || []).map(item => ({
-        ...item,
+        id: item.id,
+        name: item.name,
         type: item.type as 'email' | 'whatsapp' | 'sms' | 'push',
-        config: item.config as any
+        config: item.config as any,
+        is_active: item.is_active
       }));
       
       setChannels(typedChannels);
@@ -203,7 +211,15 @@ export const useNotificationSystem = () => {
     try {
       const { error } = await supabase
         .from('notification_templates')
-        .insert(template);
+        .insert({
+          name: template.name,
+          title_template: template.title_template,
+          message_template: template.message_template,
+          type: template.type,
+          channels: template.channels,
+          variables: template.variables,
+          is_active: template.is_active
+        });
 
       if (error) throw error;
       
@@ -218,9 +234,18 @@ export const useNotificationSystem = () => {
   // Update template (admin only)
   const updateTemplate = async (id: string, updates: Partial<NotificationTemplate>) => {
     try {
+      const updateData: any = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.title_template !== undefined) updateData.title_template = updates.title_template;
+      if (updates.message_template !== undefined) updateData.message_template = updates.message_template;
+      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.channels !== undefined) updateData.channels = updates.channels;
+      if (updates.variables !== undefined) updateData.variables = updates.variables;
+      if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+
       const { error } = await supabase
         .from('notification_templates')
-        .update(updates)
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -236,16 +261,23 @@ export const useNotificationSystem = () => {
   // Create/update channel (admin only)
   const createOrUpdateChannel = async (channel: Omit<NotificationChannel, 'id'> & { id?: string }) => {
     try {
+      const channelData = {
+        name: channel.name,
+        type: channel.type,
+        config: channel.config as any,
+        is_active: channel.is_active
+      };
+
       if (channel.id) {
         const { error } = await supabase
           .from('notification_channels')
-          .update(channel)
+          .update(channelData)
           .eq('id', channel.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('notification_channels')
-          .insert(channel);
+          .insert(channelData);
         if (error) throw error;
       }
       
