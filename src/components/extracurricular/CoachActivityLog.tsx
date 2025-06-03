@@ -39,7 +39,7 @@ interface ActivityLog {
   session_topic: string;
   session_description: string;
   attendance_count: number;
-  extracurricular: { name: string };
+  extracurriculars: { name: string };
 }
 
 export const CoachActivityLog = () => {
@@ -340,7 +340,7 @@ export const CoachActivityLog = () => {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-2">
-                    {log.extracurricular?.name}
+                    {log.extracurriculars?.name}
                   </p>
                   {log.session_description && (
                     <p className="text-sm">{log.session_description}</p>
