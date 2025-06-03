@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { QueryClient } from './hooks/useQueryClient';
@@ -52,7 +53,7 @@ function App() {
                   <Route path="/parent-portal" element={<ParentPortal />} />
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/master-data" element={<MasterData />} />
-                  <Route path="/coming-soon" element={<ComingSoon />} />
+                  <Route path="/coming-soon" element={<ComingSoon title="Coming Soon" description="This feature is under development" />} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />

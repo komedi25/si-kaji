@@ -71,10 +71,17 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
         .order('approval_order');
 
       if (error) throw error;
-      setApprovals(data || []);
+      
+      // Cast the data to match our interface
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'pending' | 'approved' | 'rejected'
+      }));
+      
+      setApprovals(typedData);
 
       // Find current user's approval
-      const userApproval = data?.find(a => a.approver_id === user.id);
+      const userApproval = typedData.find(a => a.approver_id === user.id);
       setCurrentUserApproval(userApproval || null);
     } catch (error) {
       console.error('Error fetching approvals:', error);
