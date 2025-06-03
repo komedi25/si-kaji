@@ -75,6 +75,93 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_proposals: {
+        Row: {
+          activity_report: string | null
+          activity_type: string
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          budget_breakdown: Json | null
+          budget_estimation: number | null
+          created_at: string
+          description: string | null
+          documentation_urls: string[] | null
+          end_date: string
+          end_time: string | null
+          estimated_participants: number | null
+          facility_requests: string[] | null
+          id: string
+          location: string | null
+          organizer_id: string | null
+          organizer_name: string | null
+          proposal_number: string
+          rejected_reason: string | null
+          start_date: string
+          start_time: string | null
+          status: string
+          submitted_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          activity_report?: string | null
+          activity_type?: string
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_breakdown?: Json | null
+          budget_estimation?: number | null
+          created_at?: string
+          description?: string | null
+          documentation_urls?: string[] | null
+          end_date: string
+          end_time?: string | null
+          estimated_participants?: number | null
+          facility_requests?: string[] | null
+          id?: string
+          location?: string | null
+          organizer_id?: string | null
+          organizer_name?: string | null
+          proposal_number: string
+          rejected_reason?: string | null
+          start_date: string
+          start_time?: string | null
+          status?: string
+          submitted_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          activity_report?: string | null
+          activity_type?: string
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          budget_breakdown?: Json | null
+          budget_estimation?: number | null
+          created_at?: string
+          description?: string | null
+          documentation_urls?: string[] | null
+          end_date?: string
+          end_time?: string | null
+          estimated_participants?: number | null
+          facility_requests?: string[] | null
+          id?: string
+          location?: string | null
+          organizer_id?: string | null
+          organizer_name?: string | null
+          proposal_number?: string
+          rejected_reason?: string | null
+          start_date?: string
+          start_time?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       case_activities: {
         Row: {
           activity_type: string
@@ -235,6 +322,112 @@ export type Database = {
           },
         ]
       }
+      coach_activity_logs: {
+        Row: {
+          attendance_count: number | null
+          coach_id: string
+          created_at: string
+          extracurricular_id: string
+          id: string
+          log_date: string
+          materials_used: string | null
+          next_session_plan: string | null
+          session_description: string | null
+          session_topic: string
+          student_progress_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_count?: number | null
+          coach_id: string
+          created_at?: string
+          extracurricular_id: string
+          id?: string
+          log_date: string
+          materials_used?: string | null
+          next_session_plan?: string | null
+          session_description?: string | null
+          session_topic: string
+          student_progress_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_count?: number | null
+          coach_id?: string
+          created_at?: string
+          extracurricular_id?: string
+          id?: string
+          log_date?: string
+          materials_used?: string | null
+          next_session_plan?: string | null
+          session_description?: string | null
+          session_topic?: string
+          student_progress_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_activity_logs_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_attendances: {
+        Row: {
+          activities_conducted: string | null
+          attendance_date: string
+          coach_id: string
+          created_at: string
+          end_time: string | null
+          extracurricular_id: string
+          id: string
+          notes: string | null
+          participant_count: number | null
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activities_conducted?: string | null
+          attendance_date: string
+          coach_id: string
+          created_at?: string
+          end_time?: string | null
+          extracurricular_id: string
+          id?: string
+          notes?: string | null
+          participant_count?: number | null
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          activities_conducted?: string | null
+          attendance_date?: string
+          coach_id?: string
+          created_at?: string
+          end_time?: string | null
+          extracurricular_id?: string
+          id?: string
+          notes?: string | null
+          participant_count?: number | null
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_attendances_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counseling_sessions: {
         Row: {
           case_id: string | null
@@ -311,6 +504,54 @@ export type Database = {
           },
         ]
       }
+      extracurricular_enrollments: {
+        Row: {
+          created_at: string
+          enrollment_date: string
+          extracurricular_id: string
+          id: string
+          notes: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enrollment_date?: string
+          extracurricular_id: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enrollment_date?: string
+          extracurricular_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracurricular_enrollments_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracurricular_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurriculars: {
         Row: {
           coach_id: string | null
@@ -350,6 +591,104 @@ export type Database = {
           schedule_day?: string | null
           schedule_time?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      letter_requests: {
+        Row: {
+          additional_notes: string | null
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          letter_type: string
+          letter_url: string | null
+          processed_at: string | null
+          processed_by: string | null
+          purpose: string
+          rejection_reason: string | null
+          request_number: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          letter_type: string
+          letter_url?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          purpose: string
+          rejection_reason?: string | null
+          request_number: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          letter_type?: string
+          letter_url?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          purpose?: string
+          rejection_reason?: string | null
+          request_number?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_requests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      letter_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          letter_type: string
+          template_content: string
+          template_name: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          letter_type: string
+          template_content: string
+          template_name: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          letter_type?: string
+          template_content?: string
+          template_name?: string
+          updated_at?: string
+          variables?: Json | null
         }
         Relationships: []
       }
@@ -527,6 +866,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      proposal_approvals: {
+        Row: {
+          approval_order: number
+          approved_at: string | null
+          approver_id: string | null
+          approver_role: string
+          created_at: string
+          id: string
+          notes: string | null
+          proposal_id: string
+          status: string
+        }
+        Insert: {
+          approval_order: number
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proposal_id: string
+          status?: string
+        }
+        Update: {
+          approval_order?: number
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proposal_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_approvals_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "activity_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -982,6 +1365,71 @@ export type Database = {
           },
         ]
       }
+      student_mutations: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string
+          destination_school: string | null
+          documents_required: string[] | null
+          documents_submitted: string[] | null
+          id: string
+          mutation_date: string
+          mutation_type: string
+          notes: string | null
+          origin_school: string | null
+          reason: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          destination_school?: string | null
+          documents_required?: string[] | null
+          documents_submitted?: string[] | null
+          id?: string
+          mutation_date: string
+          mutation_type: string
+          notes?: string | null
+          origin_school?: string | null
+          reason: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          destination_school?: string | null
+          documents_required?: string[] | null
+          documents_submitted?: string[] | null
+          id?: string
+          mutation_date?: string
+          mutation_type?: string
+          notes?: string | null
+          origin_school?: string | null
+          reason?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_mutations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_permits: {
         Row: {
           approval_letter_url: string | null
@@ -1242,6 +1690,14 @@ export type Database = {
     }
     Functions: {
       generate_case_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_proposal_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_request_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
