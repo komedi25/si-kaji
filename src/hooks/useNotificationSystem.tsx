@@ -19,8 +19,29 @@ interface NotificationChannel {
   id: string;
   name: string;
   type: 'email' | 'whatsapp' | 'sms' | 'push';
-  config: any;
+  config: EmailConfig | WhatsAppConfig | SMSConfig | PushConfig;
   is_active: boolean;
+}
+
+interface EmailConfig {
+  smtp_host?: string;
+  smtp_port?: number;
+  use_tls?: boolean;
+}
+
+interface WhatsAppConfig {
+  api_url?: string;
+  business_number?: string;
+}
+
+interface SMSConfig {
+  provider?: string;
+  api_key?: string;
+}
+
+interface PushConfig {
+  fcm_server_key?: string;
+  vapid_public_key?: string;
 }
 
 interface UserNotificationPreference {
@@ -49,7 +70,13 @@ export const useNotificationSystem = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-      setTemplates(data || []);
+      
+      const typedTemplates: NotificationTemplate[] = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'info' | 'success' | 'warning' | 'error'
+      }));
+      
+      setTemplates(typedTemplates);
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
@@ -64,7 +91,14 @@ export const useNotificationSystem = () => {
         .eq('is_active', true);
       
       if (error) throw error;
-      setChannels(data || []);
+      
+      const typedChannels: NotificationChannel[] = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'email' | 'whatsapp' | 'sms' | 'push',
+        config: item.config as any
+      }));
+      
+      setChannels(typedChannels);
     } catch (error) {
       console.error('Error fetching channels:', error);
     }

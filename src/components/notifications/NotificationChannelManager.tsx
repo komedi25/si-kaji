@@ -11,14 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit, Settings } from 'lucide-react';
 import { useNotificationSystem } from '@/hooks/useNotificationSystem';
 
+type ChannelType = 'email' | 'whatsapp' | 'sms' | 'push';
+
+interface ChannelConfig {
+  [key: string]: any;
+}
+
 export const NotificationChannelManager = () => {
   const { channels, createOrUpdateChannel } = useNotificationSystem();
-  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedChannel, setSelectedChannel] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    type: 'email',
-    config: {}
+    type: 'email' as ChannelType,
+    config: {} as ChannelConfig
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,8 +45,8 @@ export const NotificationChannelManager = () => {
   const resetForm = () => {
     setFormData({
       name: '',
-      type: 'email',
-      config: {}
+      type: 'email' as ChannelType,
+      config: {} as ChannelConfig
     });
     setSelectedChannel(null);
   };
@@ -49,14 +55,14 @@ export const NotificationChannelManager = () => {
     setSelectedChannel(channel);
     setFormData({
       name: channel.name,
-      type: channel.type,
-      config: channel.config
+      type: channel.type as ChannelType,
+      config: channel.config as ChannelConfig
     });
     setIsDialogOpen(true);
   };
 
   const renderConfigFields = () => {
-    const { type } = formData;
+    const { type, config } = formData;
     
     switch (type) {
       case 'email':
@@ -65,10 +71,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>SMTP Host</Label>
               <Input
-                value={formData.config.smtp_host || ''}
+                value={(config as any).smtp_host || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, smtp_host: e.target.value }
+                  config: { ...config, smtp_host: e.target.value }
                 })}
                 placeholder="smtp.gmail.com"
               />
@@ -77,10 +83,10 @@ export const NotificationChannelManager = () => {
               <Label>SMTP Port</Label>
               <Input
                 type="number"
-                value={formData.config.smtp_port || ''}
+                value={(config as any).smtp_port || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, smtp_port: parseInt(e.target.value) }
+                  config: { ...config, smtp_port: parseInt(e.target.value) || 587 }
                 })}
                 placeholder="587"
               />
@@ -88,10 +94,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>Use TLS</Label>
               <Select
-                value={formData.config.use_tls ? 'true' : 'false'}
+                value={(config as any).use_tls ? 'true' : 'false'}
                 onValueChange={(value) => setFormData({
                   ...formData,
-                  config: { ...formData.config, use_tls: value === 'true' }
+                  config: { ...config, use_tls: value === 'true' }
                 })}
               >
                 <SelectTrigger>
@@ -112,10 +118,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>API URL</Label>
               <Input
-                value={formData.config.api_url || ''}
+                value={(config as any).api_url || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, api_url: e.target.value }
+                  config: { ...config, api_url: e.target.value }
                 })}
                 placeholder="https://api.whatsapp.com/send"
               />
@@ -123,10 +129,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>Business Number</Label>
               <Input
-                value={formData.config.business_number || ''}
+                value={(config as any).business_number || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, business_number: e.target.value }
+                  config: { ...config, business_number: e.target.value }
                 })}
                 placeholder="+62xxx"
               />
@@ -140,10 +146,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>Provider</Label>
               <Select
-                value={formData.config.provider || 'twilio'}
+                value={(config as any).provider || 'twilio'}
                 onValueChange={(value) => setFormData({
                   ...formData,
-                  config: { ...formData.config, provider: value }
+                  config: { ...config, provider: value }
                 })}
               >
                 <SelectTrigger>
@@ -159,10 +165,10 @@ export const NotificationChannelManager = () => {
               <Label>API Key</Label>
               <Input
                 type="password"
-                value={formData.config.api_key || ''}
+                value={(config as any).api_key || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, api_key: e.target.value }
+                  config: { ...config, api_key: e.target.value }
                 })}
                 placeholder="API Key"
               />
@@ -177,10 +183,10 @@ export const NotificationChannelManager = () => {
               <Label>FCM Server Key</Label>
               <Input
                 type="password"
-                value={formData.config.fcm_server_key || ''}
+                value={(config as any).fcm_server_key || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, fcm_server_key: e.target.value }
+                  config: { ...config, fcm_server_key: e.target.value }
                 })}
                 placeholder="FCM Server Key"
               />
@@ -188,10 +194,10 @@ export const NotificationChannelManager = () => {
             <div>
               <Label>VAPID Public Key</Label>
               <Input
-                value={formData.config.vapid_public_key || ''}
+                value={(config as any).vapid_public_key || ''}
                 onChange={(e) => setFormData({
                   ...formData,
-                  config: { ...formData.config, vapid_public_key: e.target.value }
+                  config: { ...config, vapid_public_key: e.target.value }
                 })}
                 placeholder="VAPID Public Key"
               />
@@ -246,7 +252,7 @@ export const NotificationChannelManager = () => {
 
                 <div>
                   <Label htmlFor="type">Tipe Channel</Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value, config: {} })}>
+                  <Select value={formData.type} onValueChange={(value: ChannelType) => setFormData({ ...formData, type: value, config: {} })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

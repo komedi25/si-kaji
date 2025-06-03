@@ -13,15 +13,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import { useNotificationSystem } from '@/hooks/useNotificationSystem';
 
+type NotificationType = 'info' | 'success' | 'warning' | 'error';
+
 export const NotificationTemplateManager = () => {
   const { templates, channels, createTemplate, updateTemplate } = useNotificationSystem();
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     title_template: '',
     message_template: '',
-    type: 'info',
+    type: 'info' as NotificationType,
     channels: ['app'],
     variables: []
   });
@@ -49,7 +51,7 @@ export const NotificationTemplateManager = () => {
       name: '',
       title_template: '',
       message_template: '',
-      type: 'info',
+      type: 'info' as NotificationType,
       channels: ['app'],
       variables: []
     });
@@ -62,7 +64,7 @@ export const NotificationTemplateManager = () => {
       name: template.name,
       title_template: template.title_template,
       message_template: template.message_template,
-      type: template.type,
+      type: template.type as NotificationType,
       channels: template.channels,
       variables: template.variables
     });
@@ -133,7 +135,7 @@ export const NotificationTemplateManager = () => {
 
                 <div>
                   <Label htmlFor="type">Tipe Notifikasi</Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <Select value={formData.type} onValueChange={(value: NotificationType) => setFormData({ ...formData, type: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
