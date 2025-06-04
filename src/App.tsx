@@ -20,6 +20,7 @@ import DocumentManagement from './pages/DocumentManagement';
 import ParentPortal from './pages/ParentPortal';
 import UserManagement from './pages/UserManagement';
 import MasterData from './pages/MasterData';
+import Settings from './pages/Settings';
 import ComingSoon from './pages/ComingSoon';
 import NotFound from './pages/NotFound';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -53,6 +54,7 @@ function App() {
                   <Route path="/parent-portal" element={<ParentPortal />} />
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/master-data" element={<MasterData />} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="/coming-soon" element={<ComingSoon title="Coming Soon" description="This feature is under development" />} />
                 </Route>
                 
