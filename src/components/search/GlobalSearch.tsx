@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,7 @@ export const GlobalSearch = () => {
       const mockResults: SearchResult[] = [
         {
           id: '1',
-          type: 'student',
+          type: 'student' as const,
           title: 'Ahmad Wijaya',
           subtitle: 'XII RPL 1',
           description: 'NIS: 123456, NISN: 0123456789',
@@ -46,7 +45,7 @@ export const GlobalSearch = () => {
         },
         {
           id: '2',
-          type: 'document',
+          type: 'document' as const,
           title: 'Surat Edaran Disiplin',
           subtitle: 'Kebijakan Sekolah',
           description: 'Peraturan terbaru tentang tata tertib sekolah',
@@ -55,7 +54,7 @@ export const GlobalSearch = () => {
         },
         {
           id: '3',
-          type: 'achievement',
+          type: 'achievement' as const,
           title: 'Juara 1 Lomba Programming',
           subtitle: 'Ahmad Wijaya - XII RPL 1',
           description: 'Kompetisi tingkat provinsi',
@@ -64,7 +63,7 @@ export const GlobalSearch = () => {
         },
         {
           id: '4',
-          type: 'violation',
+          type: 'violation' as const,
           title: 'Pelanggaran Terlambat',
           subtitle: 'Siti Nurhaliza - XI TKJ 2',
           description: 'Terlambat masuk kelas jam pertama',
@@ -73,7 +72,7 @@ export const GlobalSearch = () => {
         },
         {
           id: '5',
-          type: 'case',
+          type: 'case' as const,
           title: 'Kasus Bullying - CASE-2024-001',
           subtitle: 'Status: In Progress',
           description: 'Laporan bullying di lingkungan sekolah',
@@ -82,7 +81,7 @@ export const GlobalSearch = () => {
         },
         {
           id: '6',
-          type: 'activity',
+          type: 'activity' as const,
           title: 'Kegiatan Pramuka Wajib',
           subtitle: 'Proposal OSIS',
           description: 'Kegiatan rutin pramuka untuk kelas X',
