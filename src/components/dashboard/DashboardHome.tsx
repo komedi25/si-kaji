@@ -1,7 +1,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Trophy, FileText } from 'lucide-react';
 
 export const DashboardHome = () => {
   const { user } = useAuth();
@@ -14,14 +14,14 @@ export const DashboardHome = () => {
       'tppk': 'TPPK',
       'arps': 'ARPS',
       'p4gn': 'P4GN',
-      'koordinator_ekstrakurikuler': 'Koordinator Ekstrakurikuler',
+      'koordinator_eskul': 'Koordinator Ekstrakurikuler',
       'wali_kelas': 'Wali Kelas',
       'guru_bk': 'Guru BK',
       'waka_kesiswaan': 'Waka Kesiswaan',
-      'pelatih_ekstrakurikuler': 'Pelatih Ekstrakurikuler',
+      'pelatih_eskul': 'Pelatih Ekstrakurikuler',
       'siswa': 'Siswa',
       'orang_tua': 'Orang Tua',
-      'penanggung_jawab_sarpras': 'Penanggung Jawab Sarpras'
+      'pj_sarpras': 'Penanggung Jawab Sarpras'
     };
     return roleNames[role] || role;
   };
@@ -46,7 +46,7 @@ export const DashboardHome = () => {
     // Admin actions
     if (roles.includes('admin_sistem')) {
       actions.push(
-        { title: 'Manajemen Pengguna', description: 'Kelola user dan role', icon: Users, href: '/users' },
+        { title: 'Manajemen Pengguna', description: 'Kelola user dan role', icon: Users, href: '/user-management' },
         { title: 'Master Data', description: 'Kelola data master sistem', icon: School, href: '/master-data' }
       );
     }
@@ -54,29 +54,103 @@ export const DashboardHome = () => {
     // Kesiswaan actions
     if (roles.includes('admin_kesiswaan') || roles.includes('waka_kesiswaan')) {
       actions.push(
-        { title: 'Data Siswa', description: 'Kelola data siswa', icon: Users, href: '/siswa' },
-        { title: 'Laporan', description: 'Lihat laporan kesiswaan', icon: BarChart3, href: '/laporan' }
+        { title: 'Data Siswa', description: 'Kelola data siswa', icon: Users, href: '/student-management' },
+        { title: 'Laporan', description: 'Lihat laporan kesiswaan', icon: BarChart3, href: '/reports' }
       );
     }
 
     // Ekstrakurikuler actions
-    if (roles.includes('koordinator_ekstrakurikuler') || roles.includes('pelatih_ekstrakurikuler')) {
+    if (roles.includes('koordinator_eskul') || roles.includes('pelatih_eskul')) {
       actions.push(
-        { title: 'Ekstrakurikuler', description: 'Kelola kegiatan ekstrakurikuler', icon: BookOpen, href: '/ekstrakurikuler' }
+        { title: 'Ekstrakurikuler', description: 'Kelola kegiatan ekstrakurikuler', icon: BookOpen, href: '/extracurricular-management' }
       );
     }
 
     // TPPK/Security actions
     if (roles.includes('tppk') || roles.includes('arps') || roles.includes('p4gn') || roles.includes('guru_bk')) {
       actions.push(
-        { title: 'Kasus & BK', description: 'Kelola kasus dan konseling', icon: Shield, href: '/kasus' }
+        { title: 'Kasus & BK', description: 'Kelola kasus dan konseling', icon: Shield, href: '/case-management' }
+      );
+    }
+
+    // Wali Kelas actions
+    if (roles.includes('wali_kelas')) {
+      actions.push(
+        { title: 'Presensi Kelas', description: 'Input dan monitor presensi', icon: Calendar, href: '/attendance-management' },
+        { title: 'Pelanggaran', description: 'Catat pelanggaran siswa', icon: AlertTriangle, href: '/violation-management' },
+        { title: 'Prestasi', description: 'Catat prestasi siswa', icon: Trophy, href: '/achievement-management' }
+      );
+    }
+
+    // PJ Sarpras actions
+    if (roles.includes('pj_sarpras')) {
+      actions.push(
+        { title: 'Kelola Fasilitas', description: 'Manajemen peminjaman fasilitas', icon: School, href: '/facility-management' }
+      );
+    }
+
+    // Siswa actions
+    if (roles.includes('siswa')) {
+      actions.push(
+        { title: 'Ajukan Izin', description: 'Buat permohonan izin', icon: FileText, href: '/permit-management' },
+        { title: 'Konseling BK', description: 'Jadwalkan sesi konseling', icon: Shield, href: '/counseling-management' }
       );
     }
 
     return actions;
   };
 
+  const getDashboardStats = () => {
+    if (!user?.roles || user.roles.length === 0) return [];
+
+    const roles = user.roles;
+    const stats = [];
+
+    // Admin sistem stats
+    if (roles.includes('admin_sistem')) {
+      stats.push(
+        { title: 'Total Pengguna', value: '-', icon: Users, description: 'Akan tersedia setelah implementasi lengkap' },
+        { title: 'Sistem Aktif', value: '✓', icon: CheckCircle, description: 'Semua modul berjalan normal' }
+      );
+    }
+
+    // Kesiswaan stats  
+    if (roles.includes('admin_kesiswaan') || roles.includes('waka_kesiswaan')) {
+      stats.push(
+        { title: 'Siswa Aktif', value: '-', icon: School, description: 'Data siswa dalam pengembangan' },
+        { title: 'Kasus Pending', value: '-', icon: AlertTriangle, description: 'Kasus menunggu penanganan' }
+      );
+    }
+
+    // Wali kelas stats
+    if (roles.includes('wali_kelas')) {
+      stats.push(
+        { title: 'Siswa Perwalian', value: '-', icon: Users, description: 'Total siswa dalam kelas' },
+        { title: 'Hadir Hari Ini', value: '-', icon: Calendar, description: 'Presensi hari ini' }
+      );
+    }
+
+    // TPPK/BK stats
+    if (roles.includes('tppk') || roles.includes('guru_bk') || roles.includes('arps') || roles.includes('p4gn')) {
+      stats.push(
+        { title: 'Kasus Aktif', value: '-', icon: Shield, description: 'Kasus dalam penanganan' },
+        { title: 'Sesi Konseling', value: '-', icon: Shield, description: 'Jadwal konseling minggu ini' }
+      );
+    }
+
+    // Koordinator eskul stats
+    if (roles.includes('koordinator_eskul')) {
+      stats.push(
+        { title: 'Ekstrakurikuler', value: '-', icon: BookOpen, description: 'Total kegiatan ekstrakurikuler' },
+        { title: 'Peserta Aktif', value: '-', icon: Users, description: 'Siswa yang mengikuti eskul' }
+      );
+    }
+
+    return stats;
+  };
+
   const quickActions = getQuickActions();
+  const dashboardStats = getDashboardStats();
 
   return (
     <div className="space-y-6">
@@ -96,60 +170,25 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pengguna</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              Akan tersedia setelah implementasi lengkap
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Siswa Aktif</CardTitle>
-            <School className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              Data siswa dalam pengembangan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ekstrakurikuler</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              Modul dalam pengembangan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kasus Aktif</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">-</div>
-            <p className="text-xs text-muted-foreground">
-              Sistem BK dalam pengembangan
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Role-specific Stats Cards */}
+      {dashboardStats.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {dashboardStats.map((stat, index) => (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <stat.icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* User Profile Info */}
       {user?.profile && (
@@ -264,6 +303,13 @@ export const DashboardHome = () => {
               <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
                 <span className="text-sm font-medium">Navigation & Layout</span>
+              </div>
+              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-sm font-medium">Permission Matrix & RLS</span>
               </div>
               <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
             </div>

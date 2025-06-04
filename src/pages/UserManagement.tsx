@@ -35,14 +35,14 @@ export default function UserManagement() {
     { value: 'tppk', label: 'TPPK' },
     { value: 'arps', label: 'ARPS' },
     { value: 'p4gn', label: 'P4GN' },
-    { value: 'koordinator_ekstrakurikuler', label: 'Koordinator Ekstrakurikuler' },
+    { value: 'koordinator_eskul', label: 'Koordinator Ekstrakurikuler' },
     { value: 'wali_kelas', label: 'Wali Kelas' },
     { value: 'guru_bk', label: 'Guru BK' },
     { value: 'waka_kesiswaan', label: 'Waka Kesiswaan' },
-    { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
+    { value: 'pelatih_eskul', label: 'Pelatih Ekstrakurikuler' },
     { value: 'siswa', label: 'Siswa' },
     { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' }
+    { value: 'pj_sarpras', label: 'Penanggung Jawab Sarpras' }
   ];
 
   const getRoleLabel = (role: AppRole) => {

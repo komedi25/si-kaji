@@ -6,14 +6,14 @@ export type AppRole =
   | 'tppk'
   | 'arps'
   | 'p4gn'
-  | 'koordinator_ekstrakurikuler'
+  | 'koordinator_eskul'
   | 'wali_kelas'
   | 'guru_bk'
   | 'waka_kesiswaan'
-  | 'pelatih_ekstrakurikuler'
+  | 'pelatih_eskul'
   | 'siswa'
   | 'orang_tua'
-  | 'penanggung_jawab_sarpras';
+  | 'pj_sarpras';
 
 export interface UserProfile {
   id: string;
