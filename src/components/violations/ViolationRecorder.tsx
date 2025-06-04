@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -71,7 +72,8 @@ export const ViolationRecorder = () => {
         .order('name');
       
       if (error) throw error;
-      return data as ViolationType[];
+      // Filter out any items with empty or invalid IDs
+      return (data as ViolationType[]).filter(type => type.id && type.id.trim() !== '');
     }
   });
 
@@ -197,12 +199,15 @@ export const ViolationRecorder = () => {
             <SelectContent>
               {violationTypes?.map((type) => (
                 <SelectItem key={type.id} value={type.id}>
-                  <div className="flex justify-between">
-                    <span>{type.name}</span>
-                    <Badge variant={
-                      type.category === 'ringan' ? 'outline' : 
-                      type.category === 'sedang' ? 'secondary' : 'destructive'
-                    }>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="flex-1">{type.name}</span>
+                    <Badge 
+                      variant={
+                        type.category === 'ringan' ? 'outline' : 
+                        type.category === 'sedang' ? 'secondary' : 'destructive'
+                      }
+                      className="ml-2"
+                    >
                       {type.point_deduction} poin
                     </Badge>
                   </div>
