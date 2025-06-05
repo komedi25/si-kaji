@@ -55,6 +55,11 @@ function App() {
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/master-data" element={<MasterData />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/notifications" element={<Settings />} />
+                  <Route path="/settings/analytics" element={<Settings />} />
+                  <Route path="/settings/search" element={<Settings />} />
+                  <Route path="/settings/export" element={<Settings />} />
+                  <Route path="/settings/preferences" element={<Settings />} />
                   <Route path="/coming-soon" element={<ComingSoon title="Coming Soon" description="This feature is under development" />} />
                 </Route>
                 

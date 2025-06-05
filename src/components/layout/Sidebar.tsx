@@ -22,7 +22,12 @@ import {
   Heart,
   FolderOpen,
   UsersIcon,
-  Database
+  Database,
+  Bell,
+  LineChart,
+  Search,
+  Download,
+  Sliders
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -149,10 +154,9 @@ export const Sidebar = () => {
       ],
     },
     {
-      title: 'Manajemen Sistem',
+      title: 'Sistem & Pengaturan',
       href: '#',
       icon: Settings,
-      requiredRoles: ['admin_sistem'],
       children: [
         {
           title: 'Manajemen User',
@@ -166,12 +170,32 @@ export const Sidebar = () => {
           icon: Database,
           requiredRoles: ['admin_sistem'],
         },
+        {
+          title: 'Notifikasi',
+          href: '/settings/notifications',
+          icon: Bell,
+        },
+        {
+          title: 'Analytics',
+          href: '/settings/analytics',
+          icon: LineChart,
+        },
+        {
+          title: 'Global Search',
+          href: '/settings/search',
+          icon: Search,
+        },
+        {
+          title: 'Export System',
+          href: '/settings/export',
+          icon: Download,
+        },
+        {
+          title: 'Preferensi',
+          href: '/settings/preferences',
+          icon: Sliders,
+        },
       ],
-    },
-    {
-      title: 'Pengaturan',
-      href: '/settings',
-      icon: Settings,
     },
   ];
 
@@ -190,7 +214,7 @@ export const Sidebar = () => {
     return children.some(child => isItemActive(child.href));
   };
 
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan']);
 
   const toggleExpand = (title: string) => {
     setExpandedItems(prev => 
