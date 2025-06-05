@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Trophy, FileText } from 'lucide-react';
@@ -14,14 +13,14 @@ export const DashboardHome = () => {
       'tppk': 'TPPK',
       'arps': 'ARPS',
       'p4gn': 'P4GN',
-      'koordinator_eskul': 'Koordinator Ekstrakurikuler',
+      'koordinator_ekstrakurikuler': 'Koordinator Ekstrakurikuler',
       'wali_kelas': 'Wali Kelas',
       'guru_bk': 'Guru BK',
       'waka_kesiswaan': 'Waka Kesiswaan',
-      'pelatih_eskul': 'Pelatih Ekstrakurikuler',
+      'pelatih_ekstrakurikuler': 'Pelatih Ekstrakurikuler',
       'siswa': 'Siswa',
       'orang_tua': 'Orang Tua',
-      'pj_sarpras': 'Penanggung Jawab Sarpras'
+      'penanggung_jawab_sarpras': 'Penanggung Jawab Sarpras'
     };
     return roleNames[role] || role;
   };
@@ -60,7 +59,7 @@ export const DashboardHome = () => {
     }
 
     // Ekstrakurikuler actions
-    if (roles.includes('koordinator_eskul') || roles.includes('pelatih_eskul')) {
+    if (roles.includes('koordinator_ekstrakurikuler') || roles.includes('pelatih_ekstrakurikuler')) {
       actions.push(
         { title: 'Ekstrakurikuler', description: 'Kelola kegiatan ekstrakurikuler', icon: BookOpen, href: '/extracurricular-management' }
       );
@@ -83,7 +82,7 @@ export const DashboardHome = () => {
     }
 
     // PJ Sarpras actions
-    if (roles.includes('pj_sarpras')) {
+    if (roles.includes('penanggung_jawab_sarpras')) {
       actions.push(
         { title: 'Kelola Fasilitas', description: 'Manajemen peminjaman fasilitas', icon: School, href: '/facility-management' }
       );
@@ -139,7 +138,7 @@ export const DashboardHome = () => {
     }
 
     // Koordinator eskul stats
-    if (roles.includes('koordinator_eskul')) {
+    if (roles.includes('koordinator_ekstrakurikuler')) {
       stats.push(
         { title: 'Ekstrakurikuler', value: '-', icon: BookOpen, description: 'Total kegiatan ekstrakurikuler' },
         { title: 'Peserta Aktif', value: '-', icon: Users, description: 'Siswa yang mengikuti eskul' }

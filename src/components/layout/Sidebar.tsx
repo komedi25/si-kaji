@@ -94,13 +94,13 @@ export const Sidebar = () => {
           title: 'Proposal Kegiatan',
           href: '/activity-proposal',
           icon: ClipboardList,
-          requiredRoles: ['koordinator_eskul', 'admin_kesiswaan'],
+          requiredRoles: ['koordinator_ekstrakurikuler', 'admin_kesiswaan'],
         },
         {
           title: 'Ekstrakurikuler',
           href: '/extracurricular-management',
           icon: BookOpen,
-          requiredRoles: ['koordinator_eskul', 'pelatih_eskul'],
+          requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
         },
         {
           title: 'Dokumen & Surat',
