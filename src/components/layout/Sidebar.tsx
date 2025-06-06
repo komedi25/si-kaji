@@ -107,19 +107,19 @@ export const Sidebar = () => {
           icon: BookOpen,
           requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
         },
-        {
-          title: 'Dokumen & Surat',
-          href: '/document-management',
-          icon: FileText,
-          requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
-        },
       ],
     },
     {
-      title: 'Konseling & BK',
+      title: 'Perwalian & BK',
       href: '#',
       icon: Heart,
       children: [
+        {
+          title: 'Jurnal Perwalian',
+          href: '/homeroom-journal',
+          icon: BookOpen,
+          requiredRoles: ['wali_kelas'],
+        },
         {
           title: 'Sesi Konseling',
           href: '/counseling-management',
@@ -144,6 +144,18 @@ export const Sidebar = () => {
           href: '/permit-management',
           icon: MapPin,
           requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+        },
+        {
+          title: 'Dokumen & Surat',
+          href: '/document-management',
+          icon: FileText,
+          requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+        },
+        {
+          title: 'Repositori Dokumen',
+          href: '/document-repository',
+          icon: FolderOpen,
+          requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
         },
         {
           title: 'Portal Orang Tua',

@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { QueryClient } from './hooks/useQueryClient';
@@ -25,6 +24,8 @@ import ComingSoon from './pages/ComingSoon';
 import NotFound from './pages/NotFound';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { NotificationProvider } from '@/hooks/useNotifications';
+import HomeroomJournalManagement from './pages/HomeroomJournalManagement';
+import DocumentRepositoryManagement from './pages/DocumentRepositoryManagement';
 
 function App() {
   return (
@@ -51,6 +52,8 @@ function App() {
                   <Route path="/extracurricular-management" element={<ExtracurricularManagement />} />
                   <Route path="/activity-proposal" element={<ActivityProposal />} />
                   <Route path="/document-management" element={<DocumentManagement />} />
+                  <Route path="/homeroom-journal" element={<HomeroomJournalManagement />} />
+                  <Route path="/document-repository" element={<DocumentRepositoryManagement />} />
                   <Route path="/parent-portal" element={<ParentPortal />} />
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/master-data" element={<MasterData />} />
