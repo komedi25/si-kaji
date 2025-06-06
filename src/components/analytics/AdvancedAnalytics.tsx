@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +18,11 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
-  Area,
-  AreaChart
+  AreaChart,
+  Area
 } from 'recharts';
 import { 
   TrendingUp, 
@@ -33,9 +31,6 @@ import {
   Calendar, 
   AlertTriangle, 
   Award,
-  BookOpen,
-  Clock,
-  Target,
   Brain,
   Download,
   Filter,
@@ -91,20 +86,20 @@ export const AdvancedAnalytics = () => {
       const { data: attendance } = await supabase
         .from('student_attendances')
         .select('*')
-        .gte('date', dateRange.from.toISOString())
-        .lte('date', dateRange.to.toISOString());
+        .gte('attendance_date', dateRange.from.toISOString().split('T')[0])
+        .lte('attendance_date', dateRange.to.toISOString().split('T')[0]);
 
       const { data: violations } = await supabase
         .from('student_violations')
         .select('*')
-        .gte('violation_date', dateRange.from.toISOString())
-        .lte('violation_date', dateRange.to.toISOString());
+        .gte('violation_date', dateRange.from.toISOString().split('T')[0])
+        .lte('violation_date', dateRange.to.toISOString().split('T')[0]);
 
       const { data: achievements } = await supabase
         .from('student_achievements')
         .select('*')
-        .gte('achievement_date', dateRange.from.toISOString())
-        .lte('achievement_date', dateRange.to.toISOString());
+        .gte('achievement_date', dateRange.from.toISOString().split('T')[0])
+        .lte('achievement_date', dateRange.to.toISOString().split('T')[0]);
 
       const totalStudents = students?.length || 0;
       const attendanceRate = attendance?.length ? 
@@ -125,14 +120,14 @@ export const AdvancedAnalytics = () => {
     queryFn: async (): Promise<AttendanceData[]> => {
       const { data } = await supabase
         .from('student_attendances')
-        .select('date, status')
-        .gte('date', dateRange.from.toISOString())
-        .lte('date', dateRange.to.toISOString())
-        .order('date');
+        .select('attendance_date, status')
+        .gte('attendance_date', dateRange.from.toISOString().split('T')[0])
+        .lte('attendance_date', dateRange.to.toISOString().split('T')[0])
+        .order('attendance_date');
 
       // Group by date and count statuses
       const groupedData = data?.reduce((acc: any, curr) => {
-        const date = new Date(curr.date).toLocaleDateString('id-ID');
+        const date = new Date(curr.attendance_date).toLocaleDateString('id-ID');
         if (!acc[date]) {
           acc[date] = { date, present: 0, absent: 0, late: 0 };
         }
@@ -150,12 +145,18 @@ export const AdvancedAnalytics = () => {
     queryFn: async (): Promise<ViolationData[]> => {
       const { data } = await supabase
         .from('student_violations')
-        .select('violation_type, violation_date')
-        .gte('violation_date', dateRange.from.toISOString())
-        .lte('violation_date', dateRange.to.toISOString());
+        .select(`
+          violation_date,
+          violation_types (
+            name
+          )
+        `)
+        .gte('violation_date', dateRange.from.toISOString().split('T')[0])
+        .lte('violation_date', dateRange.to.toISOString().split('T')[0]);
 
-      const violationCounts = data?.reduce((acc: any, curr) => {
-        acc[curr.violation_type] = (acc[curr.violation_type] || 0) + 1;
+      const violationCounts = data?.reduce((acc: any, curr: any) => {
+        const typeName = curr.violation_types?.name || 'Unknown';
+        acc[typeName] = (acc[typeName] || 0) + 1;
         return acc;
       }, {});
 
@@ -174,9 +175,9 @@ export const AdvancedAnalytics = () => {
       const { data: classes } = await supabase
         .from('classes')
         .select('*')
-        .eq('status', 'active');
+        .eq('is_active', true);
 
-      // Mock class performance data
+      // Mock class performance data for now
       return classes?.map((cls) => ({
         className: cls.name,
         attendance: Math.floor(Math.random() * 20) + 80,
