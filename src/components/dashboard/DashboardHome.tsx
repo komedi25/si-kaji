@@ -1,6 +1,7 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Clock, AlertTriangle, Calendar, Trophy, FileText } from 'lucide-react';
+import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Calendar, Trophy, FileText } from 'lucide-react';
 
 export const DashboardHome = () => {
   const { user } = useAuth();
@@ -76,8 +77,9 @@ export const DashboardHome = () => {
     if (roles.includes('wali_kelas')) {
       actions.push(
         { title: 'Presensi Kelas', description: 'Input dan monitor presensi', icon: Calendar, href: '/attendance-management' },
-        { title: 'Pelanggaran', description: 'Catat pelanggaran siswa', icon: AlertTriangle, href: '/violation-management' },
-        { title: 'Prestasi', description: 'Catat prestasi siswa', icon: Trophy, href: '/achievement-management' }
+        { title: 'Pelanggaran', description: 'Catat pelanggaran siswa', icon: Shield, href: '/violation-management' },
+        { title: 'Prestasi', description: 'Catat prestasi siswa', icon: Trophy, href: '/achievement-management' },
+        { title: 'Jurnal Perwalian', description: 'Kelola jurnal kelas', icon: FileText, href: '/homeroom-journal' }
       );
     }
 
@@ -99,57 +101,7 @@ export const DashboardHome = () => {
     return actions;
   };
 
-  const getDashboardStats = () => {
-    if (!user?.roles || user.roles.length === 0) return [];
-
-    const roles = user.roles;
-    const stats = [];
-
-    // Admin sistem stats
-    if (roles.includes('admin_sistem')) {
-      stats.push(
-        { title: 'Total Pengguna', value: '-', icon: Users, description: 'Akan tersedia setelah implementasi lengkap' },
-        { title: 'Sistem Aktif', value: '✓', icon: CheckCircle, description: 'Semua modul berjalan normal' }
-      );
-    }
-
-    // Kesiswaan stats  
-    if (roles.includes('admin_kesiswaan') || roles.includes('waka_kesiswaan')) {
-      stats.push(
-        { title: 'Siswa Aktif', value: '-', icon: School, description: 'Data siswa dalam pengembangan' },
-        { title: 'Kasus Pending', value: '-', icon: AlertTriangle, description: 'Kasus menunggu penanganan' }
-      );
-    }
-
-    // Wali kelas stats
-    if (roles.includes('wali_kelas')) {
-      stats.push(
-        { title: 'Siswa Perwalian', value: '-', icon: Users, description: 'Total siswa dalam kelas' },
-        { title: 'Hadir Hari Ini', value: '-', icon: Calendar, description: 'Presensi hari ini' }
-      );
-    }
-
-    // TPPK/BK stats
-    if (roles.includes('tppk') || roles.includes('guru_bk') || roles.includes('arps') || roles.includes('p4gn')) {
-      stats.push(
-        { title: 'Kasus Aktif', value: '-', icon: Shield, description: 'Kasus dalam penanganan' },
-        { title: 'Sesi Konseling', value: '-', icon: Shield, description: 'Jadwal konseling minggu ini' }
-      );
-    }
-
-    // Koordinator eskul stats
-    if (roles.includes('koordinator_ekstrakurikuler')) {
-      stats.push(
-        { title: 'Ekstrakurikuler', value: '-', icon: BookOpen, description: 'Total kegiatan ekstrakurikuler' },
-        { title: 'Peserta Aktif', value: '-', icon: Users, description: 'Siswa yang mengikuti eskul' }
-      );
-    }
-
-    return stats;
-  };
-
   const quickActions = getQuickActions();
-  const dashboardStats = getDashboardStats();
 
   return (
     <div className="space-y-6">
@@ -164,30 +116,10 @@ export const DashboardHome = () => {
           </p>
           <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-500 bg-opacity-20">
             <CheckCircle className="h-4 w-4 mr-2" />
-            Phase 1: Foundation & Infrastructure - Aktif
+            Sistem Aktif dan Siap Digunakan
           </div>
         </div>
       </div>
-
-      {/* Role-specific Stats Cards */}
-      {dashboardStats.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {dashboardStats.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
       {/* User Profile Info */}
       {user?.profile && (
@@ -262,69 +194,40 @@ export const DashboardHome = () => {
         </Card>
       )}
 
-      {/* System Status */}
+      {/* System Overview */}
       <Card>
         <CardHeader>
-          <CardTitle>Status Sistem Phase 1</CardTitle>
-          <CardDescription>Foundation & Infrastructure - Progress Implementation</CardDescription>
+          <CardTitle>Ringkasan Sistem</CardTitle>
+          <CardDescription>Informasi umum sistem kesiswaan</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">Authentication System</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Sistem Autentikasi</p>
+                <p className="text-sm text-gray-500">Keamanan login terjamin</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">Role-Based Access Control</span>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Manajemen Data</p>
+                <p className="text-sm text-gray-500">Data siswa terintegrasi</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">Database Integration</span>
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">User Management</span>
+              <div>
+                <p className="text-sm font-medium text-gray-900">Laporan & Analytics</p>
+                <p className="text-sm text-gray-500">Dashboard lengkap tersedia</p>
               </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">Navigation & Layout</span>
-              </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-sm font-medium">Permission Matrix & RLS</span>
-              </div>
-              <span className="text-green-600 text-sm font-medium">✓ Selesai</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Clock className="h-5 w-5 text-yellow-600 mr-2" />
-                <span className="text-sm font-medium">Data Modules (Siswa, Ekstrakurikuler, BK)</span>
-              </div>
-              <span className="text-yellow-600 text-sm font-medium">⚠ Phase 2</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Clock className="h-5 w-5 text-yellow-600 mr-2" />
-                <span className="text-sm font-medium">Reporting & Analytics</span>
-              </div>
-              <span className="text-yellow-600 text-sm font-medium">⚠ Phase 3</span>
             </div>
           </div>
         </CardContent>

@@ -195,7 +195,7 @@ export const AdvancedAnalytics = () => {
   };
 
   const handleExportData = () => {
-    console.log('Exporting analytics data...');
+    console.log('Mengekspor data analytics...');
     // Implementation for exporting data
   };
 
@@ -205,9 +205,9 @@ export const AdvancedAnalytics = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics & Laporan Lanjutan</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Analytics & Laporan</h1>
           <p className="text-muted-foreground">
-            Analisis mendalam data kesiswaan dan tren perkembangan
+            Analisis data kesiswaan dan laporan komprehensif
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -352,7 +352,7 @@ export const AdvancedAnalytics = () => {
           <TabsTrigger value="attendance">Kehadiran</TabsTrigger>
           <TabsTrigger value="behavior">Perilaku</TabsTrigger>
           <TabsTrigger value="performance">Performa Kelas</TabsTrigger>
-          <TabsTrigger value="predictions">Prediksi</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="attendance" className="space-y-6">
@@ -480,28 +480,28 @@ export const AdvancedAnalytics = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="predictions" className="space-y-6">
+        <TabsContent value="insights" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Brain className="w-5 h-5" />
-                Prediksi & Insights
+                Insights & Rekomendasi
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Prediksi Kehadiran Bulan Depan</h3>
+                  <h3 className="font-semibold text-lg">Analisis Kehadiran</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span>Estimasi Tingkat Kehadiran</span>
+                      <span>Tingkat Kehadiran Rata-rata</span>
                       <div className="flex items-center gap-2">
                         <Progress value={92} className="w-20" />
                         <span className="font-bold">92%</span>
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span>Potensi Siswa Bermasalah</span>
+                      <span>Siswa Perlu Perhatian</span>
                       <Badge variant="outline">15 siswa</Badge>
                     </div>
                   </div>
@@ -510,16 +510,22 @@ export const AdvancedAnalytics = () => {
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg">Rekomendasi Tindakan</h3>
                   <div className="space-y-2">
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm">
-                        <strong>Perhatian:</strong> Kelas X RPL 2 menunjukkan tren penurunan kehadiran. 
-                        Pertimbangkan konseling kelompok.
+                        <strong>Informasi:</strong> Tingkat kehadiran siswa menunjukkan tren positif 
+                        pada bulan ini.
                       </p>
                     </div>
                     <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-sm">
                         <strong>Positif:</strong> Program ekstrakurikuler menunjukkan dampak positif 
                         terhadap kedisiplinan siswa.
+                      </p>
+                    </div>
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm">
+                        <strong>Perhatian:</strong> Beberapa kelas menunjukkan penurunan kehadiran. 
+                        Disarankan untuk melakukan pendekatan individual.
                       </p>
                     </div>
                   </div>
