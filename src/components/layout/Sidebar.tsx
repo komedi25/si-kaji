@@ -34,7 +34,7 @@ import {
   Award,
   FileX,
   ListChecks,
-  FileUpload,
+  Upload,
   Archive,
   Clock,
   MessageSquare,
@@ -339,7 +339,7 @@ export const Sidebar = () => {
             {
               title: 'Upload Dokumen',
               href: '/document-repository?tab=upload',
-              icon: FileUpload,
+              icon: Upload,
               requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
             },
             {
