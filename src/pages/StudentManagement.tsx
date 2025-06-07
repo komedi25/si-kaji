@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, Search, Edit, Upload, Download, Filter } from 'lucide-react';
+import { Loader2, Plus, Search, Edit, Filter } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,10 +48,21 @@ export default function StudentManagement() {
               id,
               name,
               grade,
+              major_id,
+              academic_year_id,
+              homeroom_teacher_id,
+              max_students,
+              is_active,
+              created_at,
+              updated_at,
               major:majors(
                 id,
                 name,
-                code
+                code,
+                description,
+                is_active,
+                created_at,
+                updated_at
               )
             )
           )
@@ -85,7 +96,15 @@ export default function StudentManagement() {
         supabase.from('majors').select('*').eq('is_active', true),
         supabase.from('classes').select(`
           *,
-          major:majors(id, name, code)
+          major:majors(
+            id, 
+            name, 
+            code,
+            description,
+            is_active,
+            created_at,
+            updated_at
+          )
         `).eq('is_active', true)
       ]);
 
