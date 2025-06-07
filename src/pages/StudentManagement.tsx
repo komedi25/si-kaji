@@ -17,15 +17,21 @@ import { Loader2, Plus, Search, Edit, Upload, Download, Filter } from 'lucide-re
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Student } from '@/types/student';
+import { StudentWithClass, Major, Class } from '@/types/student';
 
 export default function StudentManagement() {
   const { hasRole } = useAuth();
   const { toast } = useToast();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentWithClass[]>([]);
+  const [majors, setMajors] = useState<Major[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedMajor, setSelectedMajor] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<StudentWithClass | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -34,22 +40,33 @@ export default function StudentManagement() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('profiles')
+        .from('students')
         .select(`
           *,
-          current_class:classes(
-            id,
-            name,
-            major:majors(
+          current_enrollment:student_enrollments!inner(
+            classes!inner(
               id,
-              name
+              name,
+              grade,
+              major:majors(
+                id,
+                name,
+                code
+              )
             )
           )
         `)
-        .eq('role', 'siswa');
+        .eq('student_enrollments.status', 'active');
 
       if (error) throw error;
-      setStudents(data || []);
+
+      // Transform the data to match StudentWithClass interface
+      const transformedData: StudentWithClass[] = (data || []).map(student => ({
+        ...student,
+        current_class: student.current_enrollment?.[0]?.classes || null
+      }));
+
+      setStudents(transformedData);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -62,19 +79,48 @@ export default function StudentManagement() {
     }
   };
 
+  const fetchMajorsAndClasses = async () => {
+    try {
+      const [majorsResult, classesResult] = await Promise.all([
+        supabase.from('majors').select('*').eq('is_active', true),
+        supabase.from('classes').select(`
+          *,
+          major:majors(id, name, code)
+        `).eq('is_active', true)
+      ]);
+
+      if (majorsResult.error) throw majorsResult.error;
+      if (classesResult.error) throw classesResult.error;
+
+      setMajors(majorsResult.data || []);
+      setClasses(classesResult.data || []);
+    } catch (error) {
+      console.error('Error fetching majors and classes:', error);
+    }
+  };
+
   useEffect(() => {
     if (hasRole('admin_kesiswaan') || hasRole('wali_kelas') || hasRole('guru_bk')) {
       fetchStudents();
+      fetchMajorsAndClasses();
     }
   }, [hasRole]);
 
-  const filteredStudents = students.filter(student =>
-    student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.nis?.includes(searchTerm) ||
-    student.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = searchTerm === '' || 
+      student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.nis?.includes(searchTerm) ||
+      student.nisn?.includes(searchTerm);
+    
+    const matchesMajor = selectedMajor === '' || student.current_class?.major?.id === selectedMajor;
+    const matchesClass = selectedClass === '' || student.current_class?.id === selectedClass;
+    const matchesStatus = selectedStatus === '' || student.status === selectedStatus;
+    const matchesGrade = selectedGrade === '' || student.current_class?.grade?.toString() === selectedGrade;
 
-  const handleEditStudent = (student: Student) => {
+    return matchesSearch && matchesMajor && matchesClass && matchesStatus && matchesGrade;
+  });
+
+  const handleEditStudent = (student: StudentWithClass) => {
     setSelectedStudent(student);
     setShowEditDialog(true);
   };
@@ -167,7 +213,7 @@ export default function StudentManagement() {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Cari nama, NIS, atau email..."
+                    placeholder="Cari nama, NIS, atau NISN..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -185,7 +231,20 @@ export default function StudentManagement() {
             
             {showFilters && (
               <div className="mt-4">
-                <StudentFilters onFiltersChange={() => {}} />
+                <StudentFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  selectedMajor={selectedMajor}
+                  setSelectedMajor={setSelectedMajor}
+                  selectedClass={selectedClass}
+                  setSelectedClass={setSelectedClass}
+                  selectedStatus={selectedStatus}
+                  setSelectedStatus={setSelectedStatus}
+                  selectedGrade={selectedGrade}
+                  setSelectedGrade={setSelectedGrade}
+                  majors={majors}
+                  classes={classes}
+                />
               </div>
             )}
           </CardContent>
@@ -229,7 +288,7 @@ export default function StudentManagement() {
                             </Avatar>
                             <div>
                               <div className="font-medium">{student.full_name}</div>
-                              <div className="text-sm text-gray-500">{student.email}</div>
+                              <div className="text-sm text-gray-500">{student.nisn}</div>
                             </div>
                           </div>
                         </TableCell>
@@ -252,13 +311,14 @@ export default function StudentManagement() {
                               student.status === 'active' ? 'default' :
                               student.status === 'graduated' ? 'secondary' :
                               student.status === 'transferred' ? 'outline' :
+                              student.status === 'dropped' ? 'destructive' :
                               'destructive'
                             }
                           >
                             {student.status === 'active' ? 'Aktif' :
                              student.status === 'graduated' ? 'Lulus' :
                              student.status === 'transferred' ? 'Pindah' :
-                             student.status === 'dropped_out' ? 'DO' :
+                             student.status === 'dropped' ? 'DO' :
                              'Tidak Aktif'}
                           </Badge>
                         </TableCell>
@@ -284,7 +344,9 @@ export default function StudentManagement() {
         <AddStudentDialog
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
-          onStudentAdded={fetchStudents}
+          onSuccess={fetchStudents}
+          majors={majors}
+          classes={classes}
         />
 
         {selectedStudent && (
@@ -292,7 +354,9 @@ export default function StudentManagement() {
             open={showEditDialog}
             onOpenChange={setShowEditDialog}
             student={selectedStudent}
-            onStudentUpdated={fetchStudents}
+            onSuccess={fetchStudents}
+            majors={majors}
+            classes={classes}
           />
         )}
       </div>
