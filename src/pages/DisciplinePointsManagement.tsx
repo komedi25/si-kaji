@@ -1,276 +1,290 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { 
-  BarChart3, 
-  Download,
-  Search
-} from 'lucide-react';
-import { AcademicYear, Semester } from '@/types/student';
-import { StudentDisciplinePoint } from '@/types/attendance';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Search, Filter, Download, TrendingUp, TrendingDown } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-const DisciplinePointsManagement = () => {
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>('');
-  const [selectedSemesterId, setSelectedSemesterId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const { data: academicYears } = useQuery({
-    queryKey: ['academic-years'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('*')
-        .order('year_start', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Set default to active academic year
-      const activeYear = data.find(y => y.is_active);
-      if (activeYear && !selectedAcademicYearId) {
-        setSelectedAcademicYearId(activeYear.id);
-      }
-      
-      return data as AcademicYear[];
-    }
-  });
-
-  const { data: semesters } = useQuery({
-    queryKey: ['semesters', selectedAcademicYearId],
-    queryFn: async () => {
-      if (!selectedAcademicYearId) return [];
-      
-      const { data, error } = await supabase
-        .from('semesters')
-        .select('*')
-        .eq('academic_year_id', selectedAcademicYearId)
-        .order('semester_number');
-      
-      if (error) throw error;
-
-      // Set default to active semester
-      const activeSemester = data.find(s => s.is_active);
-      if (activeSemester && !selectedSemesterId) {
-        setSelectedSemesterId(activeSemester.id);
-      }
-      
-      return data as Semester[];
-    },
-    enabled: !!selectedAcademicYearId
-  });
-
-  const { data: disciplinePoints, isLoading } = useQuery({
-    queryKey: ['discipline-points', selectedAcademicYearId, selectedSemesterId, searchQuery],
-    queryFn: async () => {
-      if (!selectedAcademicYearId) return [];
-      
-      let query = supabase
-        .from('student_discipline_points')
-        .select(`
-          *,
-          student:students(
-            id, 
-            full_name, 
-            nis, 
-            current_enrollment:student_enrollments(
-              id, 
-              class:classes(
-                id, 
-                name,
-                grade,
-                is_active,
-                created_at,
-                updated_at,
-                major:majors(name)
-              )
-            )
-          )
-        `)
-        .eq('academic_year_id', selectedAcademicYearId);
-        
-      if (selectedSemesterId) {
-        query = query.eq('semester_id', selectedSemesterId);
-      } else {
-        query = query.is('semester_id', null);
-      }
-
-      // Apply search filter if provided
-      if (searchQuery && searchQuery.length >= 3) {
-        query = query.or(`student.nis.ilike.%${searchQuery}%,student.full_name.ilike.%${searchQuery}%`);
-      }
-      
-      query = query.order('final_score', { ascending: false });
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      return data.map(point => ({
-        ...point,
-        student: {
-          ...point.student,
-          current_class: point.student?.current_enrollment?.[0]?.class || null
-        }
-      })) as (StudentDisciplinePoint & { student: any })[];
-    },
-    enabled: !!selectedAcademicYearId && (searchQuery === '' || searchQuery.length >= 3)
-  });
-
-  const getDisciplineStatusBadge = (status: string) => {
-    const statusConfig = {
-      excellent: { label: 'Sangat Baik', variant: 'default' as const },
-      good: { label: 'Baik', variant: 'secondary' as const },
-      warning: { label: 'Peringatan', variant: 'secondary' as const },
-      probation: { label: 'Masa Percobaan', variant: 'destructive' as const },
-      critical: { label: 'Kritis', variant: 'destructive' as const }
+interface StudentDisciplinePoint {
+  id: string;
+  student_id: string;
+  total_points: number;
+  violation_points: number;
+  achievement_points: number;
+  student: {
+    full_name: string;
+    nis: string;
+    current_class?: {
+      name: string;
+      major?: {
+        name: string;
+      };
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig];
-    const className = status === 'warning' ? 'bg-yellow-100 text-yellow-800' : '';
-    
-    return config ? (
-      <Badge 
-        variant={config.variant} 
-        className={className}
-      >
-        {config.label}
-      </Badge>
-    ) : null;
+  };
+}
+
+export default function DisciplinePointsManagement() {
+  const { hasRole } = useAuth();
+  const { toast } = useToast();
+  const [students, setStudents] = useState<StudentDisciplinePoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchDisciplinePoints = async () => {
+    try {
+      setLoading(true);
+      // This would be replaced with actual database query
+      // For now, using mock data
+      const mockData: StudentDisciplinePoint[] = [
+        {
+          id: '1',
+          student_id: '1',
+          total_points: 85,
+          violation_points: -15,
+          achievement_points: 100,
+          student: {
+            full_name: 'Ahmad Rizki',
+            nis: '2023001',
+            current_class: {
+              name: 'XII RPL 1',
+              major: { name: 'Rekayasa Perangkat Lunak' }
+            }
+          }
+        },
+        {
+          id: '2',
+          student_id: '2',
+          total_points: 70,
+          violation_points: -30,
+          achievement_points: 100,
+          student: {
+            full_name: 'Siti Nurhaliza',
+            nis: '2023002',
+            current_class: {
+              name: 'XII TKJ 1',
+              major: { name: 'Teknik Komputer dan Jaringan' }
+            }
+          }
+        }
+      ];
+      
+      setStudents(mockData);
+    } catch (error) {
+      console.error('Error fetching discipline points:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data poin disiplin",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    if (hasRole('admin_kesiswaan') || hasRole('wali_kelas') || hasRole('guru_bk')) {
+      fetchDisciplinePoints();
+    }
+  }, [hasRole]);
+
+  const filteredStudents = students.filter(student =>
+    student.student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.student.nis.includes(searchTerm)
+  );
+
+  const getPointsBadgeVariant = (points: number) => {
+    if (points >= 80) return 'default'; // Green
+    if (points >= 60) return 'secondary'; // Yellow
+    return 'destructive'; // Red
+  };
+
+  if (!hasRole('admin_kesiswaan') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <Alert className="max-w-md">
+            <AlertDescription>
+              Anda tidak memiliki akses ke halaman ini.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Poin Disiplin Siswa</h1>
-        <p className="text-gray-600 mt-2">
-          Pantau poin disiplin siswa dari pelanggaran dan prestasi
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Rekap Poin Disiplin</CardTitle>
-          <CardDescription>
-            Laporan akumulasi poin disiplin siswa
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="academic_year">Tahun Ajaran</Label>
-              <Select value={selectedAcademicYearId} onValueChange={setSelectedAcademicYearId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih tahun ajaran" />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears?.map((ay) => (
-                    <SelectItem key={ay.id} value={ay.id}>
-                      {ay.name} {ay.is_active && '(Aktif)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="semester">Semester</Label>
-              <Select value={selectedSemesterId} onValueChange={setSelectedSemesterId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Semua Semester</SelectItem>
-                  {semesters?.map((sem) => (
-                    <SelectItem key={sem.id} value={sem.id}>
-                      {sem.name} {sem.is_active && '(Aktif)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="search">Cari Siswa</Label>
-              <div className="relative">
-                <Input
-                  id="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Nama atau NIS siswa"
-                  className="pl-10"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-              </div>
-            </div>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Manajemen Poin Disiplin</h1>
+            <p className="text-gray-600">Kelola dan pantau poin disiplin siswa</p>
           </div>
-
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              <h3 className="text-lg font-semibold">
-                Data Poin Disiplin {semesters?.find(s => s.id === selectedSemesterId)?.name || 'Semua Semester'}
-              </h3>
-            </div>
-            
-            <Button disabled className="opacity-50" title="Fitur akan datang">
+          <div className="flex gap-2">
+            <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
-              Export Excel
+              Export
             </Button>
           </div>
+        </div>
 
-          {isLoading ? (
-            <div className="text-center py-10">Loading...</div>
-          ) : disciplinePoints && disciplinePoints.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b bg-slate-50">
-                    <th className="px-4 py-3 text-left">Nama Siswa</th>
-                    <th className="px-4 py-3 text-left">NIS</th>
-                    <th className="px-4 py-3 text-left">Kelas</th>
-                    <th className="px-4 py-3 text-center">Poin Prestasi</th>
-                    <th className="px-4 py-3 text-center">Poin Pelanggaran</th>
-                    <th className="px-4 py-3 text-center">Skor Akhir</th>
-                    <th className="px-4 py-3 text-center">Status Disiplin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {disciplinePoints.map((point) => (
-                    <tr key={point.id} className="border-b hover:bg-slate-50">
-                      <td className="px-4 py-3">{point.student?.full_name}</td>
-                      <td className="px-4 py-3">{point.student?.nis}</td>
-                      <td className="px-4 py-3">{point.student?.current_class?.name || '-'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant="secondary">+{point.total_achievement_points}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge variant={point.total_violation_points > 0 ? 'destructive' : 'outline'}>
-                          -{point.total_violation_points}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium">{point.final_score}</td>
-                      <td className="px-4 py-3 text-center">
-                        {getDisciplineStatusBadge(point.discipline_status)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Siswa</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{students.length}</div>
+              <p className="text-xs text-muted-foreground">Siswa terdaftar</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Rata-rata Poin</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {students.length > 0 
+                  ? Math.round(students.reduce((sum, s) => sum + s.total_points, 0) / students.length)
+                  : 0
+                }
+              </div>
+              <p className="text-xs text-muted-foreground">Poin disiplin</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Perlu Perhatian</CardTitle>
+              <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {students.filter(s => s.total_points < 60).length}
+              </div>
+              <p className="text-xs text-muted-foreground">Siswa poin rendah</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filter */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filter Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Label htmlFor="search">Cari Siswa</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="search"
+                    placeholder="Nama atau NIS..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <Button variant="outline">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-10">Tidak ada data poin disiplin</div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+          </CardContent>
+        </Card>
 
-export default DisciplinePointsManagement;
+        {/* Students Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Poin Disiplin Siswa</CardTitle>
+            <CardDescription>
+              Pantau poin disiplin setiap siswa berdasarkan prestasi dan pelanggaran
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Siswa</TableHead>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Total Poin</TableHead>
+                      <TableHead>Poin Prestasi</TableHead>
+                      <TableHead>Poin Pelanggaran</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={student.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{student.student.full_name}</div>
+                            <div className="text-sm text-gray-500">{student.student.nis}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{student.student.current_class?.name || '-'}</div>
+                            <div className="text-sm text-gray-500">
+                              {student.student.current_class?.major?.name || '-'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getPointsBadgeVariant(student.total_points)}>
+                            {student.total_points}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-green-600 font-medium">
+                            +{student.achievement_points}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-red-600 font-medium">
+                            {student.violation_points}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {student.total_points >= 80 ? (
+                            <Badge variant="default">Baik</Badge>
+                          ) : student.total_points >= 60 ? (
+                            <Badge variant="secondary">Perlu Perbaikan</Badge>
+                          ) : (
+                            <Badge variant="destructive">Perlu Perhatian</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}

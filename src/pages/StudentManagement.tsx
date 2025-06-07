@@ -1,121 +1,55 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, Edit, Trash2, Search, Filter, Download, Upload } from 'lucide-react';
-import { Student, StudentWithClass, Major, Class, AcademicYear } from '@/types/student';
-import { useToast } from '@/hooks/use-toast';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { AddStudentDialog } from '@/components/student/AddStudentDialog';
 import { EditStudentDialog } from '@/components/student/EditStudentDialog';
 import { StudentFilters } from '@/components/student/StudentFilters';
-import { ExcelExport } from '@/components/student/ExcelExport';
 import { ExcelImport } from '@/components/student/ExcelImport';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { ExcelExport } from '@/components/student/ExcelExport';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Plus, Search, Edit, Upload, Download, Filter } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Student } from '@/types/student';
 
 export default function StudentManagement() {
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const { toast } = useToast();
-  const [students, setStudents] = useState<StudentWithClass[]>([]);
-  const [majors, setMajors] = useState<Major[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
-  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMajor, setSelectedMajor] = useState<string>('');
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedGrade, setSelectedGrade] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<StudentWithClass | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-
-  const canManageStudents = hasRole('admin_sistem') || hasRole('admin_kesiswaan');
-  const canViewStudents = canManageStudents || hasRole('wali_kelas') || hasRole('guru_bk') || 
-                          hasRole('waka_kesiswaan') || hasRole('kepala_sekolah');
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      
-      // Fetch students with their current enrollment and class
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('students')
+      const { data, error } = await supabase
+        .from('profiles')
         .select(`
           *,
-          student_enrollments!inner (
+          current_class:classes(
             id,
-            student_id,
-            class_id,
-            academic_year_id,
-            enrollment_date,
-            status,
-            created_at,
-            updated_at,
-            classes (
+            name,
+            major:majors(
               id,
-              name,
-              grade,
-              major_id,
-              academic_year_id,
-              homeroom_teacher_id,
-              max_students,
-              is_active,
-              created_at,
-              updated_at,
-              majors (
-                id,
-                code,
-                name,
-                description,
-                is_active,
-                created_at,
-                updated_at
-              )
-            ),
-            academic_years (
-              id,
-              name,
-              year_start,
-              year_end,
-              is_active,
-              created_at,
-              updated_at
+              name
             )
           )
         `)
-        .eq('student_enrollments.academic_years.is_active', true)
-        .order('full_name');
+        .eq('role', 'siswa');
 
-      if (studentsError) throw studentsError;
-
-      // Transform the data with proper type casting
-      const transformedStudents: StudentWithClass[] = studentsData.map(student => ({
-        ...student,
-        gender: student.gender as 'L' | 'P',
-        status: student.status as 'active' | 'graduated' | 'transferred' | 'dropped',
-        current_enrollment: student.student_enrollments[0] ? {
-          ...student.student_enrollments[0],
-          status: student.student_enrollments[0].status as 'active' | 'transferred' | 'completed'
-        } : undefined,
-        current_class: student.student_enrollments[0]?.classes
-      }));
-
-      setStudents(transformedStudents);
+      if (error) throw error;
+      setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -128,271 +62,240 @@ export default function StudentManagement() {
     }
   };
 
-  const fetchMajors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('majors')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setMajors(data || []);
-    } catch (error) {
-      console.error('Error fetching majors:', error);
-    }
-  };
-
-  const fetchClasses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          majors (
-            id,
-            code,
-            name
-          ),
-          academic_years (
-            id,
-            name,
-            is_active
-          )
-        `)
-        .eq('is_active', true)
-        .eq('academic_years.is_active', true)
-        .order('grade')
-        .order('name');
-
-      if (error) throw error;
-      setClasses(data || []);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-    }
-  };
-
-  const fetchAcademicYears = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('academic_years')
-        .select('*')
-        .order('year_start', { ascending: false });
-
-      if (error) throw error;
-      setAcademicYears(data || []);
-    } catch (error) {
-      console.error('Error fetching academic years:', error);
-    }
-  };
-
   useEffect(() => {
-    if (canViewStudents) {
+    if (hasRole('admin_kesiswaan') || hasRole('wali_kelas') || hasRole('guru_bk')) {
       fetchStudents();
-      fetchMajors();
-      fetchClasses();
-      fetchAcademicYears();
     }
-  }, [canViewStudents]);
+  }, [hasRole]);
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.nis.includes(searchTerm) ||
-                         (student.nisn && student.nisn.includes(searchTerm));
-    
-    const matchesMajor = !selectedMajor || student.current_class?.major?.id === selectedMajor;
-    const matchesClass = !selectedClass || student.current_class?.id === selectedClass;
-    const matchesStatus = !selectedStatus || student.status === selectedStatus;
-    const matchesGrade = !selectedGrade || student.current_class?.grade?.toString() === selectedGrade;
+  const filteredStudents = students.filter(student =>
+    student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.nis?.includes(searchTerm) ||
+    student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    return matchesSearch && matchesMajor && matchesClass && matchesStatus && matchesGrade;
-  });
-
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      active: 'default',
-      graduated: 'secondary',
-      transferred: 'outline',
-      dropped: 'destructive'
-    } as const;
-
-    const labels = {
-      active: 'Aktif',
-      graduated: 'Lulus',
-      transferred: 'Pindah',
-      dropped: 'Keluar'
-    };
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants]}>
-        {labels[status as keyof typeof labels]}
-      </Badge>
-    );
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setShowEditDialog(true);
   };
 
-  if (!canViewStudents) {
+  if (!hasRole('admin_kesiswaan') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Alert className="max-w-md">
-          <AlertDescription>
-            Anda tidak memiliki akses ke halaman ini. Hanya admin kesiswaan, wali kelas, guru BK, dan kepala sekolah yang dapat mengakses data siswa.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <Alert className="max-w-md">
+            <AlertDescription>
+              Anda tidak memiliki akses ke halaman ini.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Data Siswa</h1>
-          <p className="text-gray-600">Kelola data siswa dan informasi akademik</p>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Data Siswa</h1>
+            <p className="text-gray-600">Kelola data dan informasi siswa</p>
+          </div>
+          <div className="flex gap-2">
+            <ExcelImport onImportComplete={fetchStudents} />
+            <ExcelExport students={students} />
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Siswa
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          {canManageStudents && (
-            <>
-              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Data
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Import Data Siswa</DialogTitle>
-                    <DialogDescription>
-                      Import data siswa dari file CSV
-                    </DialogDescription>
-                  </DialogHeader>
-                  <ExcelImport onImportComplete={() => {
-                    fetchStudents();
-                    setShowImportDialog(false);
-                  }} />
-                </DialogContent>
-              </Dialog>
-              
-              <ExcelExport students={filteredStudents} />
-              
-              <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Siswa
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Siswa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{students.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Siswa Aktif</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {students.filter(s => s.status === 'active').length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Siswa Lulus</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {students.filter(s => s.status === 'graduated').length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Siswa Pindah</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">
+                {students.filter(s => s.status === 'transferred').length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filter Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Cari nama, NIS, atau email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
               </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <StudentFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        selectedMajor={selectedMajor}
-        setSelectedMajor={setSelectedMajor}
-        selectedClass={selectedClass}
-        setSelectedClass={setSelectedClass}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        selectedGrade={selectedGrade}
-        setSelectedGrade={setSelectedGrade}
-        majors={majors}
-        classes={classes}
-      />
-
-      {/* Students Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Siswa</CardTitle>
-          <CardDescription>
-            Total: {filteredStudents.length} siswa
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>NIS</TableHead>
-                    <TableHead>Nama Lengkap</TableHead>
-                    <TableHead>Kelas</TableHead>
-                    <TableHead>Jurusan</TableHead>
-                    <TableHead>JK</TableHead>
-                    <TableHead>Status</TableHead>
-                    {canManageStudents && <TableHead>Aksi</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.nis}</TableCell>
-                      <TableCell>{student.full_name}</TableCell>
-                      <TableCell>{student.current_class?.name || '-'}</TableCell>
-                      <TableCell>{student.current_class?.major?.code || '-'}</TableCell>
-                      <TableCell>{student.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</TableCell>
-                      <TableCell>{getStatusBadge(student.status)}</TableCell>
-                      {canManageStudents && (
+            
+            {showFilters && (
+              <div className="mt-4">
+                <StudentFilters onFiltersChange={() => {}} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Students Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Siswa</CardTitle>
+            <CardDescription>
+              Data lengkap siswa yang terdaftar di sekolah
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Siswa</TableHead>
+                      <TableHead>NIS</TableHead>
+                      <TableHead>Kelas</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow key={student.id}>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingStudent(student)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={student.photo_url || ''} />
+                              <AvatarFallback>
+                                {student.full_name?.charAt(0).toUpperCase() || 'S'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{student.full_name}</div>
+                              <div className="text-sm text-gray-500">{student.email}</div>
+                            </div>
                           </div>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {filteredStudents.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={canManageStudents ? 7 : 6} className="text-center py-8 text-gray-500">
-                        Tidak ada data siswa yang ditemukan
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        <TableCell>{student.nis}</TableCell>
+                        <TableCell>
+                          {student.current_class ? (
+                            <div>
+                              <div className="font-medium">{student.current_class.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {student.current_class.major?.name}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Belum ada kelas</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              student.status === 'active' ? 'default' :
+                              student.status === 'graduated' ? 'secondary' :
+                              student.status === 'transferred' ? 'outline' :
+                              'destructive'
+                            }
+                          >
+                            {student.status === 'active' ? 'Aktif' :
+                             student.status === 'graduated' ? 'Lulus' :
+                             student.status === 'transferred' ? 'Pindah' :
+                             student.status === 'dropped_out' ? 'DO' :
+                             'Tidak Aktif'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditStudent(student)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Add Student Dialog */}
-      {showAddDialog && (
+        {/* Dialogs */}
         <AddStudentDialog
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
-          onSuccess={() => {
-            fetchStudents();
-            setShowAddDialog(false);
-          }}
-          majors={majors}
-          classes={classes}
+          onStudentAdded={fetchStudents}
         />
-      )}
 
-      {/* Edit Student Dialog */}
-      {editingStudent && (
-        <EditStudentDialog
-          open={!!editingStudent}
-          onOpenChange={(open) => !open && setEditingStudent(null)}
-          student={editingStudent}
-          onSuccess={() => {
-            fetchStudents();
-            setEditingStudent(null);
-          }}
-          majors={majors}
-          classes={classes}
-        />
-      )}
-    </div>
+        {selectedStudent && (
+          <EditStudentDialog
+            open={showEditDialog}
+            onOpenChange={setShowEditDialog}
+            student={selectedStudent}
+            onStudentUpdated={fetchStudents}
+          />
+        )}
+      </div>
+    </AppLayout>
   );
 }

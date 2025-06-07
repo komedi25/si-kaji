@@ -1,176 +1,162 @@
 
-import { useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { NotificationTemplateManager } from '@/components/notifications/NotificationTemplateManager';
 import { NotificationChannelManager } from '@/components/notifications/NotificationChannelManager';
+import { NotificationTemplateManager } from '@/components/notifications/NotificationTemplateManager';
 import { UserNotificationPreferences } from '@/components/notifications/UserNotificationPreferences';
 import { AdvancedAnalytics } from '@/components/analytics/AdvancedAnalytics';
 import { GlobalSearch } from '@/components/search/GlobalSearch';
 import { ExportSystem } from '@/components/export/ExportSystem';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'react-router-dom';
 
-const Settings = () => {
+export default function Settings() {
+  const { hasRole } = useAuth();
   const location = useLocation();
+
+  // Determine which tab to show based on URL path
+  const currentPath = location.pathname;
   
-  const getCurrentSection = () => {
-    const path = location.pathname;
-    if (path === '/settings/notifications') return 'notifications';
-    if (path === '/settings/analytics') return 'analytics';
-    if (path === '/settings/search') return 'search';
-    if (path === '/settings/export') return 'export';
-    if (path === '/settings/preferences') return 'preferences';
-    return 'overview';
-  };
-
-  const currentSection = getCurrentSection();
-
   const renderContent = () => {
-    switch (currentSection) {
-      case 'notifications':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Pengaturan Notifikasi</h1>
-              <p className="text-muted-foreground">
-                Kelola template notifikasi dan channel komunikasi
-              </p>
-            </div>
-            <div className="grid gap-6">
-              <NotificationTemplateManager />
-              <NotificationChannelManager />
-            </div>
+    if (currentPath === '/settings/notifications') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pengaturan Notifikasi</h1>
+            <p className="text-gray-600">Kelola sistem notifikasi dan preferensi pengguna</p>
           </div>
-        );
 
-      case 'analytics':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Analytics & Laporan</h1>
-              <p className="text-muted-foreground">
-                Analisis data dan laporan sistem yang mendalam
-              </p>
-            </div>
-            <AdvancedAnalytics />
-          </div>
-        );
-
-      case 'search':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Global Search</h1>
-              <p className="text-muted-foreground">
-                Pengaturan dan konfigurasi pencarian global
-              </p>
-            </div>
-            <GlobalSearch />
-          </div>
-        );
-
-      case 'export':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Export System</h1>
-              <p className="text-muted-foreground">
-                Kelola export data dan laporan sistem
-              </p>
-            </div>
-            <ExportSystem />
-          </div>
-        );
-
-      case 'preferences':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Preferensi Pengguna</h1>
-              <p className="text-muted-foreground">
-                Pengaturan preferensi notifikasi dan tampilan
-              </p>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {hasRole('admin_sistem') && (
+              <>
+                <NotificationChannelManager />
+                <NotificationTemplateManager />
+              </>
+            )}
             <UserNotificationPreferences />
           </div>
-        );
-
-      default:
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Pengaturan Sistem</h1>
-              <p className="text-muted-foreground">
-                Kelola konfigurasi dan pengaturan sistem SIAKAD
-              </p>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notifikasi</CardTitle>
-                  <CardDescription>
-                    Kelola template dan channel notifikasi sistem
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Konfigurasi email, SMS, dan notifikasi push untuk berbagai kegiatan sistem.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Analytics</CardTitle>
-                  <CardDescription>
-                    Analisis data dan laporan sistem
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Dashboard analytics untuk monitoring dan evaluasi performa sistem.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Global Search</CardTitle>
-                  <CardDescription>
-                    Konfigurasi pencarian global sistem
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Pengaturan indexing dan konfigurasi pencarian di seluruh modul.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Export System</CardTitle>
-                  <CardDescription>
-                    Kelola export data dan laporan
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Konfigurasi format export, jadwal otomatis, dan template laporan.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
+        </div>
+      );
     }
+
+    if (currentPath === '/settings/analytics') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+            <p className="text-gray-600">Analisis dan laporan sistem</p>
+          </div>
+          <AdvancedAnalytics />
+        </div>
+      );
+    }
+
+    if (currentPath === '/settings/search') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Global Search</h1>
+            <p className="text-gray-600">Pencarian data di seluruh sistem</p>
+          </div>
+          <GlobalSearch />
+        </div>
+      );
+    }
+
+    if (currentPath === '/settings/export') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Export System</h1>
+            <p className="text-gray-600">Ekspor data dan laporan</p>
+          </div>
+          <ExportSystem />
+        </div>
+      );
+    }
+
+    if (currentPath === '/settings/preferences') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Preferensi</h1>
+            <p className="text-gray-600">Pengaturan preferensi pengguna</p>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferensi Umum</CardTitle>
+              <CardDescription>Atur preferensi aplikasi Anda</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Fitur preferensi akan segera tersedia.</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Default settings page
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Pengaturan Sistem</h1>
+          <p className="text-gray-600">Konfigurasi dan pengaturan aplikasi</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifikasi</CardTitle>
+              <CardDescription>Kelola sistem notifikasi</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Atur kanal notifikasi dan template pesan</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytics</CardTitle>
+              <CardDescription>Analisis dan pelaporan</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Lihat analisis penggunaan sistem</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Global Search</CardTitle>
+              <CardDescription>Pencarian menyeluruh</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Cari data di seluruh sistem</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Export System</CardTitle>
+              <CardDescription>Ekspor data</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Ekspor laporan dan data sistem</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferensi</CardTitle>
+              <CardDescription>Pengaturan personal</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Atur preferensi aplikasi</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   };
 
-  return (
-    <AppLayout>
-      {renderContent()}
-    </AppLayout>
-  );
-};
-
-export default Settings;
+  return <AppLayout>{renderContent()}</AppLayout>;
+}
