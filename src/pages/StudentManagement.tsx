@@ -44,6 +44,14 @@ export default function StudentManagement() {
         .select(`
           *,
           current_enrollment:student_enrollments!inner(
+            id,
+            student_id,
+            class_id,
+            academic_year_id,
+            enrollment_date,
+            status,
+            created_at,
+            updated_at,
             classes!inner(
               id,
               name,
