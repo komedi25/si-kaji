@@ -1,44 +1,50 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { LetterRequestForm } from '@/components/letters/LetterRequestForm';
 import { StudentMutation } from '@/components/documents/StudentMutation';
 import { LetterTemplates } from '@/components/documents/LetterTemplates';
 
 const DocumentManagement = () => {
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('letters');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'letters':
+        return <LetterRequestForm />;
+      case 'mutations':
+        return <StudentMutation />;
+      case 'templates':
+        return <LetterTemplates />;
+      default:
+        return <LetterRequestForm />;
+    }
+  };
+
   return (
     <AppLayout>
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Sistem Permohonan Surat & Mutasi</h1>
-            <p className="text-muted-foreground">
-              Kelola permohonan surat keterangan dan proses mutasi siswa
-            </p>
-          </div>
-
-          <Tabs defaultValue="letters" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="letters">Permohonan Surat</TabsTrigger>
-              <TabsTrigger value="mutations">Mutasi Siswa</TabsTrigger>
-              <TabsTrigger value="templates">Template Surat</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="letters" className="space-y-4">
-              <LetterRequestForm />
-            </TabsContent>
-
-            <TabsContent value="mutations" className="space-y-4">
-              <StudentMutation />
-            </TabsContent>
-
-            <TabsContent value="templates" className="space-y-4">
-              <LetterTemplates />
-            </TabsContent>
-          </Tabs>
+      <div className="space-y-4 md:space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Sistem Permohonan Surat & Mutasi</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Kelola permohonan surat keterangan dan proses mutasi siswa
+          </p>
         </div>
-      </DashboardLayout>
+
+        <div className="space-y-4">
+          {renderContent()}
+        </div>
+      </div>
     </AppLayout>
   );
 };

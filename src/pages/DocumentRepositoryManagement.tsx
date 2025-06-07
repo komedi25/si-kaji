@@ -1,5 +1,6 @@
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DocumentRepository } from '@/components/documents/DocumentRepository';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
@@ -8,45 +9,47 @@ import { PolicyManager } from '@/components/documents/PolicyManager';
 import { DocumentCategories } from '@/components/documents/DocumentCategories';
 
 const DocumentRepositoryManagement = () => {
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('repository');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'repository':
+        return <DocumentRepository />;
+      case 'upload':
+        return <DocumentUpload />;
+      case 'policies':
+        return <PolicyManager />;
+      case 'categories':
+        return <DocumentCategories />;
+      case 'versions':
+        return <DocumentVersionHistory />;
+      default:
+        return <DocumentRepository />;
+    }
+  };
+
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Repositori Dokumen & Kebijakan</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold">Repositori Dokumen & Kebijakan</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
             Kelola dokumen sekolah, kebijakan, dan panduan dengan sistem version control
           </p>
         </div>
 
-        <Tabs defaultValue="repository" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="repository">Repositori</TabsTrigger>
-            <TabsTrigger value="upload">Upload Dokumen</TabsTrigger>
-            <TabsTrigger value="policies">Kebijakan</TabsTrigger>
-            <TabsTrigger value="categories">Kategori</TabsTrigger>
-            <TabsTrigger value="versions">Version Control</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="repository" className="space-y-4">
-            <DocumentRepository />
-          </TabsContent>
-
-          <TabsContent value="upload" className="space-y-4">
-            <DocumentUpload />
-          </TabsContent>
-
-          <TabsContent value="policies" className="space-y-4">
-            <PolicyManager />
-          </TabsContent>
-
-          <TabsContent value="categories" className="space-y-4">
-            <DocumentCategories />
-          </TabsContent>
-
-          <TabsContent value="versions" className="space-y-4">
-            <DocumentVersionHistory />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+          {renderContent()}
+        </div>
       </div>
     </AppLayout>
   );

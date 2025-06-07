@@ -28,7 +28,18 @@ import {
   LineChart,
   Search,
   Download,
-  Sliders
+  Sliders,
+  Building,
+  Activity,
+  Award,
+  FileX,
+  ListChecks,
+  FileUpload,
+  Archive,
+  Clock,
+  MessageSquare,
+  TrendingUp,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -68,21 +79,63 @@ export const Sidebar = () => {
       children: [
         {
           title: 'Presensi',
-          href: '/attendance-management',
+          href: '#',
           icon: Calendar,
           requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+          children: [
+            {
+              title: 'Input Presensi',
+              href: '/attendance-management?tab=record',
+              icon: Calendar,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+            },
+            {
+              title: 'Laporan Presensi',
+              href: '/attendance-management?tab=report',
+              icon: FileText,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+            },
+          ],
         },
         {
           title: 'Pelanggaran',
-          href: '/violation-management',
+          href: '#',
           icon: AlertTriangle,
           requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+          children: [
+            {
+              title: 'Input Pelanggaran',
+              href: '/violation-management?tab=record',
+              icon: AlertTriangle,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+            },
+            {
+              title: 'Laporan Pelanggaran',
+              href: '/violation-management?tab=report',
+              icon: FileText,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'tppk'],
+            },
+          ],
         },
         {
           title: 'Prestasi',
-          href: '/achievement-management',
+          href: '#',
           icon: Trophy,
           requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+          children: [
+            {
+              title: 'Input Prestasi',
+              href: '/achievement-management?tab=record',
+              icon: Award,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+            },
+            {
+              title: 'Laporan Prestasi',
+              href: '/achievement-management?tab=report',
+              icon: FileText,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+            },
+          ],
         },
         {
           title: 'Poin Disiplin',
@@ -99,15 +152,61 @@ export const Sidebar = () => {
       children: [
         {
           title: 'Proposal Kegiatan',
-          href: '/activity-proposal',
+          href: '#',
           icon: ClipboardList,
           requiredRoles: ['koordinator_ekstrakurikuler', 'admin_kesiswaan'],
+          children: [
+            {
+              title: 'Buat Proposal',
+              href: '/activity-proposal?tab=proposal',
+              icon: ClipboardList,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'admin_kesiswaan'],
+            },
+            {
+              title: 'Peminjaman Fasilitas',
+              href: '/activity-proposal?tab=facilities',
+              icon: Building,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'admin_kesiswaan'],
+            },
+            {
+              title: 'LPJ & Dokumentasi',
+              href: '/activity-proposal?tab=report',
+              icon: FileText,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'admin_kesiswaan'],
+            },
+          ],
         },
         {
           title: 'Ekstrakurikuler',
-          href: '/extracurricular-management',
+          href: '#',
           icon: BookOpen,
           requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+          children: [
+            {
+              title: 'Pendaftaran Siswa',
+              href: '/extracurricular-management?tab=enrollment',
+              icon: Users,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+            },
+            {
+              title: 'Jurnal Pelatih',
+              href: '/extracurricular-management?tab=activity-log',
+              icon: BookOpen,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+            },
+            {
+              title: 'Presensi Pelatih',
+              href: '/extracurricular-management?tab=attendance',
+              icon: Calendar,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+            },
+            {
+              title: 'Data Ekstrakurikuler',
+              href: '/extracurricular-management?tab=master-data',
+              icon: Database,
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+            },
+          ],
         },
       ],
     },
@@ -118,9 +217,41 @@ export const Sidebar = () => {
       children: [
         {
           title: 'Jurnal Perwalian',
-          href: '/homeroom-journal',
+          href: '#',
           icon: BookOpen,
           requiredRoles: ['wali_kelas'],
+          children: [
+            {
+              title: 'Buat Jurnal',
+              href: '/homeroom-journal?tab=create',
+              icon: FileText,
+              requiredRoles: ['wali_kelas'],
+            },
+            {
+              title: 'Daftar Jurnal',
+              href: '/homeroom-journal?tab=list',
+              icon: FolderOpen,
+              requiredRoles: ['wali_kelas'],
+            },
+            {
+              title: 'Progres Siswa',
+              href: '/homeroom-journal?tab=progress',
+              icon: TrendingUp,
+              requiredRoles: ['wali_kelas'],
+            },
+            {
+              title: 'Komunikasi Ortu',
+              href: '/homeroom-journal?tab=communication',
+              icon: MessageSquare,
+              requiredRoles: ['wali_kelas'],
+            },
+            {
+              title: 'Analisis Kelas',
+              href: '/homeroom-journal?tab=analytics',
+              icon: BarChart3,
+              requiredRoles: ['wali_kelas'],
+            },
+          ],
         },
         {
           title: 'Sesi Konseling',
@@ -143,21 +274,93 @@ export const Sidebar = () => {
       children: [
         {
           title: 'Perizinan',
-          href: '/permit-management',
+          href: '#',
           icon: MapPin,
           requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+          children: [
+            {
+              title: 'Buat Izin',
+              href: '/permit-management?tab=form',
+              icon: FileX,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+            },
+            {
+              title: 'Persetujuan',
+              href: '/permit-management?tab=approval',
+              icon: ListChecks,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+            },
+            {
+              title: 'Laporan Izin',
+              href: '/permit-management?tab=report',
+              icon: FileText,
+              requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
+            },
+          ],
         },
         {
           title: 'Dokumen & Surat',
-          href: '/document-management',
+          href: '#',
           icon: FileText,
           requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+          children: [
+            {
+              title: 'Permohonan Surat',
+              href: '/document-management?tab=letters',
+              icon: FileText,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Mutasi Siswa',
+              href: '/document-management?tab=mutations',
+              icon: Users,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Template Surat',
+              href: '/document-management?tab=templates',
+              icon: Archive,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+          ],
         },
         {
           title: 'Repositori Dokumen',
-          href: '/document-repository',
+          href: '#',
           icon: FolderOpen,
           requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+          children: [
+            {
+              title: 'Repositori',
+              href: '/document-repository?tab=repository',
+              icon: Archive,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Upload Dokumen',
+              href: '/document-repository?tab=upload',
+              icon: FileUpload,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Kebijakan',
+              href: '/document-repository?tab=policies',
+              icon: Shield,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Kategori',
+              href: '/document-repository?tab=categories',
+              icon: FolderOpen,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+            {
+              title: 'Version Control',
+              href: '/document-repository?tab=versions',
+              icon: Clock,
+              requiredRoles: ['admin_kesiswaan', 'admin_sistem'],
+            },
+          ],
         },
         {
           title: 'Portal Orang Tua',
@@ -180,9 +383,47 @@ export const Sidebar = () => {
         },
         {
           title: 'Master Data',
-          href: '/master-data',
+          href: '#',
           icon: Database,
           requiredRoles: ['admin_sistem'],
+          children: [
+            {
+              title: 'Akademik',
+              href: '/master-data?tab=academic',
+              icon: Calendar,
+              requiredRoles: ['admin_sistem'],
+            },
+            {
+              title: 'Struktur',
+              href: '/master-data?tab=structure',
+              icon: School,
+              requiredRoles: ['admin_sistem'],
+            },
+            {
+              title: 'Pelanggaran',
+              href: '/master-data?tab=violations',
+              icon: AlertTriangle,
+              requiredRoles: ['admin_sistem'],
+            },
+            {
+              title: 'Prestasi',
+              href: '/master-data?tab=achievements',
+              icon: Trophy,
+              requiredRoles: ['admin_sistem'],
+            },
+            {
+              title: 'Ekstrakurikuler',
+              href: '/master-data?tab=extracurricular',
+              icon: Activity,
+              requiredRoles: ['admin_sistem'],
+            },
+            {
+              title: 'Fasilitas',
+              href: '/master-data?tab=facilities',
+              icon: Building,
+              requiredRoles: ['admin_sistem'],
+            },
+          ],
         },
         {
           title: 'Notifikasi',
@@ -220,12 +461,24 @@ export const Sidebar = () => {
 
   const isItemActive = (href: string) => {
     if (href === '#') return false;
-    return location.pathname === href;
+    const currentPath = location.pathname;
+    const currentSearch = location.search;
+    
+    // Handle tab-based navigation
+    if (href.includes('?tab=')) {
+      const [path, tab] = href.split('?tab=');
+      return currentPath === path && currentSearch.includes(`tab=${tab}`);
+    }
+    
+    return currentPath === href;
   };
 
-  const hasActiveChild = (children?: SidebarItem[]) => {
+  const hasActiveChild = (children?: SidebarItem[]): boolean => {
     if (!children) return false;
-    return children.some(child => isItemActive(child.href));
+    return children.some(child => {
+      if (isItemActive(child.href)) return true;
+      return hasActiveChild(child.children);
+    });
   };
 
   const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan']);
@@ -258,6 +511,7 @@ export const Sidebar = () => {
             onClick={() => toggleExpand(item.title)}
             className={cn(
               "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors w-full text-left",
+              level > 0 && "ml-4",
               (hasActiveChildren || isExpanded)
                 ? "bg-blue-50 text-blue-700"
                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -267,36 +521,17 @@ export const Sidebar = () => {
             {!isCollapsed && (
               <>
                 <span className="truncate flex-1">{item.title}</span>
-                <ChevronLeft className={cn(
+                <ChevronDown className={cn(
                   "h-4 w-4 transition-transform",
-                  isExpanded && "rotate-90"
+                  isExpanded && "rotate-180"
                 )} />
               </>
             )}
           </button>
           
           {!isCollapsed && isExpanded && (
-            <div className="ml-6 mt-1 space-y-1">
-              {filteredChildren.map(child => (
-                <Link
-                  key={child.href}
-                  to={child.href}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                    isItemActive(child.href)
-                      ? "bg-blue-100 text-blue-700 border-r-2 border-blue-700"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                >
-                  <child.icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{child.title}</span>
-                  {child.badge && (
-                    <span className="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                      {child.badge}
-                    </span>
-                  )}
-                </Link>
-              ))}
+            <div className="mt-1 space-y-1">
+              {filteredChildren.map(child => renderMenuItem(child, level + 1))}
             </div>
           )}
         </div>
@@ -309,8 +544,10 @@ export const Sidebar = () => {
         to={item.href}
         className={cn(
           "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+          level > 0 && "ml-4",
+          level > 1 && "ml-8",
           isActive
-            ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+            ? "bg-blue-100 text-blue-700 border-r-2 border-blue-700"
             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
         )}
       >

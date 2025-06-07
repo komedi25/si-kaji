@@ -1,46 +1,32 @@
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  FileX, 
-  ListChecks,
-  FileText
-} from 'lucide-react';
 import { PermitForm } from '@/components/permits/PermitForm';
 import { PermitApproval } from '@/components/permits/PermitApproval';
 import PermitReport from '@/components/permits/PermitReport';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 const PermitManagement = () => {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Manajemen Perizinan</h1>
-        <p className="text-gray-600 mt-2">
-          Ajukan dan kelola perizinan dan dispensasi siswa
-        </p>
-      </div>
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState('form');
 
-      <Tabs defaultValue="form" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="form" className="flex items-center gap-2">
-            <FileX className="h-4 w-4" />
-            Buat Izin
-          </TabsTrigger>
-          <TabsTrigger value="approval" className="flex items-center gap-2">
-            <ListChecks className="h-4 w-4" />
-            Persetujuan
-          </TabsTrigger>
-          <TabsTrigger value="report" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Laporan Izin
-          </TabsTrigger>
-        </TabsList>
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
-        <TabsContent value="form" className="space-y-6">
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'form':
+        return (
           <Card>
             <CardHeader>
-              <CardTitle>Formulir Perizinan</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl md:text-2xl">Formulir Perizinan</CardTitle>
+              <CardDescription className="text-sm md:text-base">
                 Buat perizinan baru untuk siswa
               </CardDescription>
             </CardHeader>
@@ -48,13 +34,13 @@ const PermitManagement = () => {
               <PermitForm />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="approval" className="space-y-6">
+        );
+      case 'approval':
+        return (
           <Card>
             <CardHeader>
-              <CardTitle>Persetujuan Perizinan</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl md:text-2xl">Persetujuan Perizinan</CardTitle>
+              <CardDescription className="text-sm md:text-base">
                 Tinjau dan setujui pengajuan perizinan siswa
               </CardDescription>
             </CardHeader>
@@ -62,13 +48,13 @@ const PermitManagement = () => {
               <PermitApproval />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="report" className="space-y-6">
+        );
+      case 'report':
+        return (
           <Card>
             <CardHeader>
-              <CardTitle>Laporan Perizinan</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl md:text-2xl">Laporan Perizinan</CardTitle>
+              <CardDescription className="text-sm md:text-base">
                 Lihat laporan perizinan siswa
               </CardDescription>
             </CardHeader>
@@ -76,9 +62,39 @@ const PermitManagement = () => {
               <PermitReport />
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+        );
+      default:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl md:text-2xl">Formulir Perizinan</CardTitle>
+              <CardDescription className="text-sm md:text-base">
+                Buat perizinan baru untuk siswa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PermitForm />
+            </CardContent>
+          </Card>
+        );
+    }
+  };
+
+  return (
+    <AppLayout>
+      <div className="space-y-4 md:space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Manajemen Perizinan</h1>
+          <p className="text-gray-600 mt-2 text-sm md:text-base">
+            Ajukan dan kelola perizinan dan dispensasi siswa
+          </p>
+        </div>
+
+        <div className="space-y-4 md:space-y-6">
+          {renderContent()}
+        </div>
+      </div>
+    </AppLayout>
   );
 };
 
