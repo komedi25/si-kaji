@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +53,7 @@ export const Sidebar = () => {
       title: 'Dashboard',
       href: '/dashboard',
       icon: Home,
+      // No requiredRoles - available for all authenticated users
     },
     {
       title: 'Data Siswa',
@@ -336,7 +338,7 @@ export const Sidebar = () => {
       <div className="flex items-center justify-between p-4 border-b">
         {!isCollapsed && (
           <h2 className="text-lg font-semibold text-gray-900">
-            Navigation
+            Navigasi
           </h2>
         )}
         <Button

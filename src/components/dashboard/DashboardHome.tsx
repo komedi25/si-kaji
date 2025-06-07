@@ -104,14 +104,14 @@ export const DashboardHome = () => {
   const quickActions = getQuickActions();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 overflow-hidden shadow rounded-lg">
-        <div className="px-6 py-8 text-white">
-          <h1 className="text-3xl font-bold mb-2">
+        <div className="px-4 py-6 md:px-6 md:py-8 text-white">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">
             {getWelcomeMessage()}
           </h1>
-          <p className="text-blue-100 text-lg">
+          <p className="text-blue-100 text-base md:text-lg">
             Sistem Informasi Kesiswaan SMK Negeri 1 Kendal
           </p>
           <div className="mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-500 bg-opacity-20">
@@ -136,7 +136,7 @@ export const DashboardHome = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Email</label>
-                <p className="text-sm">{user.email}</p>
+                <p className="text-sm break-all">{user.email}</p>
               </div>
               {user.profile.nip && (
                 <div>
@@ -175,17 +175,17 @@ export const DashboardHome = () => {
             <CardDescription>Akses cepat ke fitur-fitur utama berdasarkan role Anda</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {quickActions.map((action, index) => (
                 <a 
                   key={index} 
                   href={action.href}
                   className="flex items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors group"
                 >
-                  <action.icon className="h-8 w-8 text-blue-600 mr-3" />
-                  <div>
-                    <h3 className="font-medium text-gray-900 group-hover:text-blue-600">{action.title}</h3>
-                    <p className="text-sm text-gray-500">{action.description}</p>
+                  <action.icon className="h-6 w-6 md:h-8 md:w-8 text-blue-600 mr-3 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-gray-900 group-hover:text-blue-600 text-sm md:text-base">{action.title}</h3>
+                    <p className="text-xs md:text-sm text-gray-500 break-words">{action.description}</p>
                   </div>
                 </a>
               ))}
@@ -201,30 +201,30 @@ export const DashboardHome = () => {
           <CardDescription>Informasi umum sistem kesiswaan</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900">Sistem Autentikasi</p>
                 <p className="text-sm text-gray-500">Keamanan login terjamin</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900">Manajemen Data</p>
                 <p className="text-sm text-gray-500">Data siswa terintegrasi</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900">Laporan & Analytics</p>
                 <p className="text-sm text-gray-500">Dashboard lengkap tersedia</p>
               </div>
