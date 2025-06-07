@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AddStudentDialog } from '@/components/student/AddStudentDialog';
@@ -82,7 +81,8 @@ export default function StudentManagement() {
       // Transform the data to match StudentWithClass interface
       const transformedData: StudentWithClass[] = (data || []).map(student => ({
         ...student,
-        current_class: student.current_enrollment?.[0]?.classes || null
+        current_class: student.current_enrollment?.[0]?.classes || null,
+        current_enrollment: student.current_enrollment?.[0] || undefined
       }));
 
       setStudents(transformedData);
