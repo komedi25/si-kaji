@@ -81,6 +81,7 @@ export default function StudentManagement() {
       // Transform the data to match StudentWithClass interface
       const transformedData: StudentWithClass[] = (data || []).map(student => ({
         ...student,
+        gender: student.gender as 'L' | 'P',
         current_class: student.current_enrollment?.[0]?.classes || null,
         current_enrollment: student.current_enrollment?.[0] ? {
           ...student.current_enrollment[0],
