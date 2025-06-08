@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,7 +38,8 @@ import {
   Clock,
   MessageSquare,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -369,6 +369,12 @@ export const Sidebar = () => {
           requiredRoles: ['admin_kesiswaan', 'wali_kelas'],
         },
       ],
+    },
+    {
+      title: 'AI & Sistem Cerdas',
+      href: '/ai-management',
+      icon: Bot,
+      requiredRoles: ['admin_kesiswaan', 'wali_kelas', 'guru_bk', 'admin_sistem'],
     },
     {
       title: 'Sistem & Pengaturan',
