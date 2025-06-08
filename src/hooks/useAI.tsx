@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -55,15 +54,27 @@ export function useAI() {
 
   const logAIUsage = async (request: AIRequest, response: AIResponse) => {
     try {
-      await supabase.from('ai_usage_logs').insert({
-        provider: request.provider,
-        task_type: request.task,
-        prompt_length: request.prompt.length,
-        response_length: response.result.length,
-        tokens_used: response.usage.tokens,
-        cost: response.usage.cost || 0,
-        user_id: (await supabase.auth.getUser()).data.user?.id
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.warn('No authenticated user, skipping AI usage log');
+        return;
+      }
+
+      // Use raw SQL query to insert into ai_usage_logs since TypeScript types haven't been regenerated yet
+      const { error } = await supabase.rpc('log_ai_usage', {
+        p_user_id: user.id,
+        p_provider: request.provider,
+        p_task_type: request.task,
+        p_prompt_length: request.prompt.length,
+        p_response_length: response.result.length,
+        p_tokens_used: response.usage.tokens,
+        p_cost: response.usage.cost || 0
       });
+
+      if (error) {
+        console.error('Failed to log AI usage:', error);
+      }
     } catch (error) {
       console.error('Failed to log AI usage:', error);
     }

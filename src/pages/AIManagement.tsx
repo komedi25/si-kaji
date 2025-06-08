@@ -26,60 +26,63 @@ export default function AIManagement() {
 
   const loadUsageStats = async () => {
     try {
-      // Get total requests (if ai_usage_logs table exists)
-      const { count: totalCount } = await supabase
-        .from('ai_usage_logs')
-        .select('*', { count: 'exact', head: true });
-
+      // Get total requests using RPC call since TypeScript types haven't been regenerated yet
+      const { data: totalData, error: totalError } = await supabase.rpc('get_ai_usage_count');
+      
       // Get this month's requests
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { count: monthCount } = await supabase
-        .from('ai_usage_logs')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', startOfMonth.toISOString());
+      const { data: monthData, error: monthError } = await supabase.rpc('get_ai_usage_count_since', {
+        since_date: startOfMonth.toISOString()
+      });
 
       // Get most used task type
-      const { data: taskStats } = await supabase
-        .from('ai_usage_logs')
-        .select('task_type')
-        .gte('created_at', startOfMonth.toISOString());
+      const { data: taskStats, error: taskError } = await supabase.rpc('get_ai_task_stats', {
+        since_date: startOfMonth.toISOString()
+      });
 
-      const taskCounts = taskStats?.reduce((acc: any, curr: any) => {
-        acc[curr.task_type] = (acc[curr.task_type] || 0) + 1;
-        return acc;
-      }, {});
-
-      const topTask = taskCounts ? Object.keys(taskCounts).reduce((a, b) => 
-        taskCounts[a] > taskCounts[b] ? a : b
-      ) : 'Analisis Perilaku';
+      const totalCount = totalData || 0;
+      const monthCount = monthData || 0;
+      
+      let topTask = 'Analisis Perilaku';
+      if (taskStats && taskStats.length > 0) {
+        const topTaskData = taskStats[0];
+        topTask = topTaskData.task_type === 'analyze_behavior' ? 'Analisis Perilaku' : 
+                 topTaskData.task_type === 'generate_letter' ? 'Generate Surat' :
+                 topTaskData.task_type === 'summarize_case' ? 'Ringkas Kasus' : 'Analisis Perilaku';
+      }
 
       setUsageStats({
-        totalRequests: totalCount || 0,
-        thisMonth: monthCount || 0,
-        remainingQuota: Math.max(0, 100 - (monthCount || 0)),
-        topFeature: topTask === 'analyze_behavior' ? 'Analisis Perilaku' : 
-                   topTask === 'generate_letter' ? 'Generate Surat' :
-                   topTask === 'summarize_case' ? 'Ringkas Kasus' : 'Analisis Perilaku'
+        totalRequests: totalCount,
+        thisMonth: monthCount,
+        remainingQuota: Math.max(0, 100 - monthCount),
+        topFeature: topTask
       });
     } catch (error) {
       console.error('Error loading usage stats:', error);
-      // Use default values if table doesn't exist yet
+      // Use default values if there's an error
+      setUsageStats({
+        totalRequests: 0,
+        thisMonth: 0,
+        remainingQuota: 100,
+        topFeature: 'Analisis Perilaku'
+      });
     }
   };
 
   const loadRecentActivities = async () => {
     try {
-      const { data } = await supabase
-        .from('ai_usage_logs')
-        .select(`
-          *,
-          profiles (full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const { data, error } = await supabase.rpc('get_recent_ai_activities', {
+        limit_count: 5
+      });
+
+      if (error) {
+        console.error('Error loading recent activities:', error);
+        setDefaultActivities();
+        return;
+      }
 
       const activities = data?.map((log: any) => ({
         id: log.id,
@@ -87,25 +90,30 @@ export default function AIManagement() {
         title: getActivityTitle(log.task_type),
         timestamp: formatTimestamp(log.created_at),
         status: 'completed',
-        user: log.profiles?.full_name || 'Unknown'
+        user: log.user_name || 'Unknown'
       })) || [];
 
-      setRecentActivities(activities);
+      setRecentActivities(activities.length > 0 ? activities : getDefaultActivities());
     } catch (error) {
       console.error('Error loading recent activities:', error);
-      // Set default activities if table doesn't exist
-      setRecentActivities([
-        {
-          id: 1,
-          type: 'analyze_behavior',
-          title: 'Sistem AI siap digunakan',
-          timestamp: 'Baru saja',
-          status: 'completed',
-          user: 'Sistem'
-        }
-      ]);
+      setDefaultActivities();
     }
   };
+
+  const setDefaultActivities = () => {
+    setRecentActivities(getDefaultActivities());
+  };
+
+  const getDefaultActivities = () => [
+    {
+      id: 1,
+      type: 'system',
+      title: 'Sistem AI siap digunakan',
+      timestamp: 'Baru saja',
+      status: 'completed',
+      user: 'Sistem'
+    }
+  ];
 
   const getActivityTitle = (taskType: string) => {
     switch (taskType) {

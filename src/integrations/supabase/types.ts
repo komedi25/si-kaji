@@ -165,6 +165,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          cost: number | null
+          created_at: string
+          id: string
+          prompt_length: number
+          provider: string
+          response_length: number
+          task_type: string
+          tokens_used: number
+          user_id: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          id?: string
+          prompt_length?: number
+          provider: string
+          response_length?: number
+          task_type: string
+          tokens_used?: number
+          user_id?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          id?: string
+          prompt_length?: number
+          provider?: string
+          response_length?: number
+          task_type?: string
+          tokens_used?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       case_activities: {
         Row: {
           activity_type: string
