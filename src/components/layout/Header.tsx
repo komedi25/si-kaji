@@ -37,7 +37,7 @@ const Header = () => {
           <Link className="flex items-center space-x-2" to="/dashboard">
             <GraduationCap className="h-6 w-6" />
             <span className="hidden font-bold sm:inline-block">
-              SIAKAD SMK N 1 Kendal
+              Si-Kaji SMK N 1 Kendal
             </span>
           </Link>
         </div>
@@ -47,7 +47,7 @@ const Header = () => {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Cari..."
+                placeholder="Cari siswa, kelas, atau kegiatan..."
                 className="pl-8 md:w-64 lg:w-80"
               />
             </div>

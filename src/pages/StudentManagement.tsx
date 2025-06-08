@@ -177,7 +177,7 @@ export default function StudentManagement() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Data Siswa</h1>
-            <p className="text-gray-600">Kelola data dan informasi siswa</p>
+            <p className="text-gray-600">Kelola data dan informasi siswa SMK N 1 Kendal</p>
           </div>
           <div className="flex gap-2">
             <ExcelImport onImportComplete={fetchStudents} />
@@ -237,7 +237,7 @@ export default function StudentManagement() {
         {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle>Filter Data</CardTitle>
+            <CardTitle>Filter Data Siswa</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
@@ -245,7 +245,7 @@ export default function StudentManagement() {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Cari nama, NIS, atau NISN..."
+                    placeholder="Cari nama, NIS, atau NISN siswa..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -285,9 +285,9 @@ export default function StudentManagement() {
         {/* Students Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Daftar Siswa</CardTitle>
+            <CardTitle>Daftar Siswa SMK N 1 Kendal</CardTitle>
             <CardDescription>
-              Data lengkap siswa yang terdaftar di sekolah
+              Database lengkap siswa yang terdaftar di SMK Negeri 1 Kendal
             </CardDescription>
           </CardHeader>
           <CardContent>

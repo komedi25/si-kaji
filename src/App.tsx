@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { QueryClient } from './hooks/useQueryClient';
@@ -22,6 +23,7 @@ import MasterData from './pages/MasterData';
 import Settings from './pages/Settings';
 import ComingSoon from './pages/ComingSoon';
 import NotFound from './pages/NotFound';
+import AIManagement from './pages/AIManagement';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { NotificationProvider } from '@/hooks/useNotifications';
 import HomeroomJournalManagement from './pages/HomeroomJournalManagement';
@@ -54,6 +56,7 @@ function App() {
                   <Route path="/document-management" element={<DocumentManagement />} />
                   <Route path="/homeroom-journal" element={<HomeroomJournalManagement />} />
                   <Route path="/document-repository" element={<DocumentRepositoryManagement />} />
+                  <Route path="/ai-management" element={<AIManagement />} />
                   <Route path="/parent-portal" element={<ParentPortal />} />
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/master-data" element={<MasterData />} />
