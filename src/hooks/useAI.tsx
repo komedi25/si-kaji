@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +10,7 @@ interface AIRequest {
   task: string;
   prompt: string;
   context?: any;
+  model?: string;
 }
 
 interface AIResponse {
@@ -119,7 +121,7 @@ export function useAI() {
       attendances
     };
 
-    const prompt = `Analisis perilaku siswa berikut:
+    const prompt = `Analisis komprehensif perilaku siswa berikut:
 
 Nama: ${student?.full_name}
 NIS: ${student?.nis}
@@ -134,14 +136,15 @@ Data Kehadiran (30 hari terakhir):
 Hadir: ${attendances?.filter(a => a.status === 'present').length || 0} hari
 Tidak Hadir: ${attendances?.filter(a => a.status !== 'present').length || 0} hari
 
-Berikan analisis komprehensif tentang:
-1. Pola perilaku siswa
-2. Trend kedisiplinan
-3. Potensi dan area yang perlu diperbaiki
-4. Rekomendasi tindakan konkret
-5. Saran untuk orang tua dan guru
+Berikan analisis yang mencakup:
+1. Pola perilaku dan trend kedisiplinan
+2. Identifikasi risiko dan potensi siswa
+3. Rekomendasi stakeholder yang tepat (Wali Kelas, Guru BK, TPPK, ARPS, P4GN)
+4. Tindakan intervensi yang disarankan
+5. Timeline dan indikator keberhasilan
+6. Saran untuk orang tua dan sekolah
 
-Format response dalam bahasa Indonesia yang mudah dipahami.`;
+Format response dalam bahasa Indonesia yang profesional dan mudah dipahami.`;
 
     return await processAIRequest({
       provider,
@@ -292,21 +295,56 @@ Format dalam bahasa Indonesia yang praktis dan implementatif.`;
       
       // Determine appropriate stakeholder based on analysis
       let assignedRole = 'wali_kelas';
-      let priority = 'medium';
+      let priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium';
       
-      // Logic to determine stakeholder and priority
+      // Logic to determine stakeholder and priority based on student condition
       const { data: disciplinePoints } = await supabase
         .from('student_discipline_points')
         .select('*')
         .eq('student_id', studentId)
         .single();
 
-      if (disciplinePoints?.final_score < 40) {
+      const { data: violations } = await supabase
+        .from('student_violations')
+        .select('*')
+        .eq('student_id', studentId)
+        .gte('violation_date', new Date(Date.now() - 30*24*60*60*1000).toISOString())
+        .eq('status', 'active');
+
+      const { data: attendances } = await supabase
+        .from('student_attendances')
+        .select('*')
+        .eq('student_id', studentId)
+        .gte('attendance_date', new Date(Date.now() - 30*24*60*60*1000).toISOString());
+
+      const attendanceRate = attendances ? 
+        (attendances.filter(a => a.status === 'present').length / attendances.length) * 100 : 100;
+
+      // Determine priority and stakeholder based on conditions
+      if (disciplinePoints?.final_score < 40 || (violations && violations.length >= 5)) {
         assignedRole = 'tppk';
         priority = 'urgent';
-      } else if (disciplinePoints?.final_score < 60) {
+      } else if (disciplinePoints?.final_score < 60 || (violations && violations.length >= 3)) {
         assignedRole = 'guru_bk';
         priority = 'high';
+      } else if (attendanceRate < 70) {
+        assignedRole = 'arps';
+        priority = 'high';
+      } else if (attendanceRate < 80) {
+        assignedRole = 'wali_kelas';
+        priority = 'medium';
+      }
+
+      // Check for specific indicators that might require P4GN involvement
+      const hasSubstanceIssues = violations?.some(v => 
+        v.description?.toLowerCase().includes('narkoba') || 
+        v.description?.toLowerCase().includes('rokok') ||
+        v.description?.toLowerCase().includes('merokok')
+      );
+
+      if (hasSubstanceIssues) {
+        assignedRole = 'p4gn';
+        priority = 'urgent';
       }
 
       await supabase.from('ai_recommendations').insert({
@@ -319,7 +357,9 @@ Format dalam bahasa Indonesia yang praktis dan implementatif.`;
         metadata: {
           generated_at: new Date().toISOString(),
           student_score: disciplinePoints?.final_score,
-          analysis_type: 'automatic'
+          analysis_type: 'automatic',
+          attendance_rate: attendanceRate,
+          violation_count: violations?.length || 0
         }
       });
 

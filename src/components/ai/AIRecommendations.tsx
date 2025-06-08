@@ -43,6 +43,16 @@ const STATUS_COLORS = {
   implemented: 'bg-blue-100 text-blue-800'
 };
 
+const STAKEHOLDER_LABELS = {
+  wali_kelas: 'Wali Kelas',
+  guru_bk: 'Guru BK',
+  tppk: 'TPPK (Tim Pencegahan & Penanganan Kekerasan + Kedisiplinan)',
+  arps: 'ARPS (Tim Pencegahan Anak Rentan Putus Sekolah)',
+  p4gn: 'P4GN (Satgas Anti Narkotika)',
+  admin_kesiswaan: 'Admin Kesiswaan',
+  kepala_sekolah: 'Kepala Sekolah'
+};
+
 export function AIRecommendations() {
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,10 +71,26 @@ export function AIRecommendations() {
 
       if (error) throw error;
 
-      setRecommendations(data.map(item => ({
-        ...item,
-        student: item.students
-      })));
+      // Transform the data to match our interface
+      const transformedData = data?.map((item: any) => ({
+        id: item.id,
+        student_id: item.student_id,
+        recommendation_type: item.recommendation_type,
+        title: item.title,
+        content: item.content,
+        priority: item.priority as 'low' | 'medium' | 'high' | 'urgent',
+        status: item.status as 'pending' | 'accepted' | 'rejected' | 'implemented',
+        assigned_to: item.assigned_to,
+        assigned_role: item.assigned_role,
+        created_at: item.created_at,
+        metadata: item.metadata,
+        student: {
+          full_name: item.students.full_name,
+          nis: item.students.nis
+        }
+      })) || [];
+
+      setRecommendations(transformedData);
     } catch (error) {
       console.error('Error loading recommendations:', error);
       toast({
@@ -162,7 +188,7 @@ export function AIRecommendations() {
             {recommendation.assigned_role && (
               <span className="flex items-center gap-1">
                 <AlertTriangle className="h-4 w-4" />
-                Untuk: {recommendation.assigned_role}
+                Untuk: {STAKEHOLDER_LABELS[recommendation.assigned_role as keyof typeof STAKEHOLDER_LABELS] || recommendation.assigned_role}
               </span>
             )}
           </div>
@@ -245,7 +271,7 @@ export function AIRecommendations() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Rekomendasi AI</h2>
-          <p className="text-gray-600">Tinjau dan kelola rekomendasi dari AI</p>
+          <p className="text-gray-600">Tinjau dan kelola rekomendasi dari AI untuk berbagai stakeholder</p>
         </div>
         <Button onClick={loadRecommendations} variant="outline" size="sm">
           Refresh

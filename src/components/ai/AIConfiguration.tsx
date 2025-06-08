@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAIPreferences } from '@/hooks/useAIPreferences';
-import { Bot, Key, Settings, Zap } from 'lucide-react';
+import { Bot, Key, Settings, Zap, AlertTriangle, Users, FileText, Brain } from 'lucide-react';
 
 const AI_PROVIDERS = [
   { value: 'openai', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
@@ -223,7 +223,7 @@ export function AIConfiguration() {
             Preferensi Umum
           </CardTitle>
           <CardDescription>
-            Pengaturan umum untuk fitur AI
+            Pengaturan umum untuk fitur AI dan stakeholder rekomendasi
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -239,13 +239,65 @@ export function AIConfiguration() {
 
           <div className="p-4 bg-green-50 rounded-lg">
             <h4 className="font-medium text-green-800 mb-2">Stakeholder Rekomendasi</h4>
-            <ul className="text-sm text-green-700 space-y-1">
-              <li>• <strong>Wali Kelas:</strong> Rekomendasi pembinaan harian</li>
-              <li>• <strong>Guru BK:</strong> Rekomendasi konseling dan intervensi</li>
-              <li>• <strong>TPPK:</strong> Rekomendasi tindakan disiplin</li>
-              <li>• <strong>ARPS:</strong> Rekomendasi pencegahan narkoba</li>
-              <li>• <strong>P4GN:</strong> Rekomendasi anti-radikalisme</li>
-            </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">Wali Kelas</span>
+                </div>
+                <p className="text-xs text-green-700 ml-6">Rekomendasi pembinaan harian dan monitoring siswa</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">Guru BK</span>
+                </div>
+                <p className="text-xs text-green-700 ml-6">Rekomendasi konseling dan intervensi psikologis</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">TPPK</span>
+                </div>
+                <p className="text-xs text-green-700 ml-6">Pencegahan kekerasan & penanganan kedisiplinan</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">ARPS</span>
+                </div>
+                <p className="text-xs text-green-700 ml-6">Pencegahan anak rentan putus sekolah</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">P4GN</span>
+                </div>
+                <p className="text-xs text-green-700 ml-6">Satgas anti narkotika dan pencegahan penyalahgunaan</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-medium text-blue-800 mb-2">Fitur AI Tersedia</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Analisis pola perilaku siswa</li>
+                <li>• Prediksi risiko putus sekolah</li>
+                <li>• Deteksi indikasi kekerasan</li>
+                <li>• Monitoring kedisiplinan</li>
+              </ul>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Generator surat otomatis</li>
+                <li>• Ringkasan kasus siswa</li>
+                <li>• Rekomendasi tindakan intervensi</li>
+                <li>• Laporan analisis komprehensif</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
