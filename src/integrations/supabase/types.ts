@@ -165,6 +165,104 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_preferences: {
+        Row: {
+          auto_analysis_enabled: boolean
+          auto_analysis_schedule: string | null
+          created_at: string
+          id: string
+          notification_enabled: boolean
+          preferred_model: string | null
+          preferred_provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_analysis_enabled?: boolean
+          auto_analysis_schedule?: string | null
+          created_at?: string
+          id?: string
+          notification_enabled?: boolean
+          preferred_model?: string | null
+          preferred_provider?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_analysis_enabled?: boolean
+          auto_analysis_schedule?: string | null
+          created_at?: string
+          id?: string
+          notification_enabled?: boolean
+          preferred_model?: string | null
+          preferred_provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_recommendations: {
+        Row: {
+          assigned_role: string | null
+          assigned_to: string | null
+          content: string
+          created_at: string
+          created_by_ai: boolean
+          id: string
+          metadata: Json | null
+          priority: string
+          recommendation_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          content: string
+          created_at?: string
+          created_by_ai?: boolean
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          recommendation_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          content?: string
+          created_at?: string
+          created_by_ai?: boolean
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          recommendation_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage_logs: {
         Row: {
           cost: number | null
@@ -2178,6 +2276,30 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_ai_task_stats: {
+        Args: { since_date: string }
+        Returns: {
+          task_type: string
+          count: number
+        }[]
+      }
+      get_ai_usage_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_ai_usage_count_since: {
+        Args: { since_date: string }
+        Returns: number
+      }
+      get_recent_ai_activities: {
+        Args: { limit_count: number }
+        Returns: {
+          id: string
+          task_type: string
+          created_at: string
+          user_name: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -2192,6 +2314,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      log_ai_usage: {
+        Args: {
+          p_user_id: string
+          p_provider: string
+          p_task_type: string
+          p_prompt_length: number
+          p_response_length: number
+          p_tokens_used: number
+          p_cost?: number
+        }
+        Returns: undefined
       }
       process_letter_approval: {
         Args: {

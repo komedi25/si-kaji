@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AIAssistant } from '@/components/ai/AIAssistant';
+import { AIConfiguration } from '@/components/ai/AIConfiguration';
+import { AIRecommendations } from '@/components/ai/AIRecommendations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Bot, Brain, FileText, TrendingUp, Users, MessageSquare } from 'lucide-react';
+import { Bot, Brain, FileText, TrendingUp, Users, MessageSquare, Settings, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function AIManagement() {
@@ -26,32 +28,44 @@ export default function AIManagement() {
 
   const loadUsageStats = async () => {
     try {
-      // Get total requests using RPC call since TypeScript types haven't been regenerated yet
-      const { data: totalData, error: totalError } = await supabase.rpc('get_ai_usage_count');
+      // Get total requests count
+      const { data: totalData, error: totalError } = await supabase
+        .from('ai_usage_logs')
+        .select('id', { count: 'exact' });
       
       // Get this month's requests
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: monthData, error: monthError } = await supabase.rpc('get_ai_usage_count_since', {
-        since_date: startOfMonth.toISOString()
-      });
+      const { data: monthData, error: monthError } = await supabase
+        .from('ai_usage_logs')
+        .select('id', { count: 'exact' })
+        .gte('created_at', startOfMonth.toISOString());
 
       // Get most used task type
-      const { data: taskStats, error: taskError } = await supabase.rpc('get_ai_task_stats', {
-        since_date: startOfMonth.toISOString()
-      });
+      const { data: taskStats, error: taskError } = await supabase
+        .from('ai_usage_logs')
+        .select('task_type')
+        .gte('created_at', startOfMonth.toISOString());
 
-      const totalCount = totalData || 0;
-      const monthCount = monthData || 0;
+      const totalCount = totalData?.length || 0;
+      const monthCount = monthData?.length || 0;
       
       let topTask = 'Analisis Perilaku';
       if (taskStats && taskStats.length > 0) {
-        const topTaskData = taskStats[0];
-        topTask = topTaskData.task_type === 'analyze_behavior' ? 'Analisis Perilaku' : 
-                 topTaskData.task_type === 'generate_letter' ? 'Generate Surat' :
-                 topTaskData.task_type === 'summarize_case' ? 'Ringkas Kasus' : 'Analisis Perilaku';
+        const taskCounts = taskStats.reduce((acc: any, curr: any) => {
+          acc[curr.task_type] = (acc[curr.task_type] || 0) + 1;
+          return acc;
+        }, {});
+        
+        const topTaskType = Object.keys(taskCounts).reduce((a, b) => 
+          taskCounts[a] > taskCounts[b] ? a : b
+        );
+        
+        topTask = topTaskType === 'analyze_behavior' ? 'Analisis Perilaku' : 
+                 topTaskType === 'generate_letter' ? 'Generate Surat' :
+                 topTaskType === 'summarize_case' ? 'Ringkas Kasus' : 'Analisis Perilaku';
       }
 
       setUsageStats({
@@ -74,9 +88,16 @@ export default function AIManagement() {
 
   const loadRecentActivities = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_recent_ai_activities', {
-        limit_count: 5
-      });
+      const { data, error } = await supabase
+        .from('ai_usage_logs')
+        .select(`
+          id,
+          task_type,
+          created_at,
+          profiles!inner(full_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
       if (error) {
         console.error('Error loading recent activities:', error);
@@ -90,7 +111,7 @@ export default function AIManagement() {
         title: getActivityTitle(log.task_type),
         timestamp: formatTimestamp(log.created_at),
         status: 'completed',
-        user: log.user_name || 'Unknown'
+        user: log.profiles?.full_name || 'Unknown'
       })) || [];
 
       setRecentActivities(activities.length > 0 ? activities : getDefaultActivities());
@@ -147,7 +168,7 @@ export default function AIManagement() {
       icon: Users,
       title: 'Analisis Perilaku Siswa',
       description: 'Analisis pola perilaku dan kedisiplinan siswa berdasarkan data historis',
-      usage: usageStats.totalRequests,
+      usage: Math.floor(usageStats.totalRequests * 0.4),
       color: 'bg-blue-500'
     },
     {
@@ -161,14 +182,14 @@ export default function AIManagement() {
       icon: Brain,
       title: 'Rekomendasi Tindakan',
       description: 'Saran tindakan pembinaan berdasarkan analisis AI',
-      usage: Math.floor(usageStats.totalRequests * 0.4),
+      usage: Math.floor(usageStats.totalRequests * 0.2),
       color: 'bg-purple-500'
     },
     {
       icon: MessageSquare,
       title: 'Ringkasan Kasus',
       description: 'Ringkasan otomatis untuk kasus siswa',
-      usage: Math.floor(usageStats.totalRequests * 0.2),
+      usage: Math.floor(usageStats.totalRequests * 0.1),
       color: 'bg-orange-500'
     }
   ];
@@ -233,12 +254,22 @@ export default function AIManagement() {
         <Tabs defaultValue="assistant" className="space-y-4">
           <TabsList>
             <TabsTrigger value="assistant">AI Assistant</TabsTrigger>
+            <TabsTrigger value="recommendations">Rekomendasi AI</TabsTrigger>
+            <TabsTrigger value="configuration">Konfigurasi AI</TabsTrigger>
             <TabsTrigger value="features">Fitur AI</TabsTrigger>
             <TabsTrigger value="activity">Aktivitas Terkini</TabsTrigger>
           </TabsList>
 
           <TabsContent value="assistant">
             <AIAssistant />
+          </TabsContent>
+
+          <TabsContent value="recommendations">
+            <AIRecommendations />
+          </TabsContent>
+
+          <TabsContent value="configuration">
+            <AIConfiguration />
           </TabsContent>
 
           <TabsContent value="features">

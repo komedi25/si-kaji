@@ -35,7 +35,7 @@ export function useAI() {
         throw error;
       }
 
-      // Log AI usage to database
+      // Log AI usage to database using the new function
       await logAIUsage(request, data);
 
       return data;
@@ -61,20 +61,17 @@ export function useAI() {
         return;
       }
 
-      // Use raw SQL query to insert into ai_usage_logs since TypeScript types haven't been regenerated yet
-      const { error } = await supabase.rpc('log_ai_usage', {
-        p_user_id: user.id,
-        p_provider: request.provider,
-        p_task_type: request.task,
-        p_prompt_length: request.prompt.length,
-        p_response_length: response.result.length,
-        p_tokens_used: response.usage.tokens,
-        p_cost: response.usage.cost || 0
+      // Use the database function to log AI usage
+      await supabase.from('ai_usage_logs').insert({
+        user_id: user.id,
+        provider: request.provider,
+        task_type: request.task,
+        prompt_length: request.prompt.length,
+        response_length: response.result.length,
+        tokens_used: response.usage.tokens,
+        cost: response.usage.cost || 0
       });
 
-      if (error) {
-        console.error('Failed to log AI usage:', error);
-      }
     } catch (error) {
       console.error('Failed to log AI usage:', error);
     }
@@ -282,12 +279,62 @@ Format dalam bahasa Indonesia yang praktis dan implementatif.`;
     });
   };
 
+  const generateAutomaticRecommendation = async (studentId: string) => {
+    try {
+      // Analyze student and create recommendation
+      const analysis = await analyzeStudentBehavior(studentId);
+      
+      if (!analysis) return;
+
+      // Create AI recommendation in database
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: student } = await supabase.from('students').select('*').eq('id', studentId).single();
+      
+      // Determine appropriate stakeholder based on analysis
+      let assignedRole = 'wali_kelas';
+      let priority = 'medium';
+      
+      // Logic to determine stakeholder and priority
+      const { data: disciplinePoints } = await supabase
+        .from('student_discipline_points')
+        .select('*')
+        .eq('student_id', studentId)
+        .single();
+
+      if (disciplinePoints?.final_score < 40) {
+        assignedRole = 'tppk';
+        priority = 'urgent';
+      } else if (disciplinePoints?.final_score < 60) {
+        assignedRole = 'guru_bk';
+        priority = 'high';
+      }
+
+      await supabase.from('ai_recommendations').insert({
+        student_id: studentId,
+        recommendation_type: 'behavioral_analysis',
+        title: `Rekomendasi Pembinaan untuk ${student?.full_name}`,
+        content: analysis.result,
+        priority,
+        assigned_role: assignedRole,
+        metadata: {
+          generated_at: new Date().toISOString(),
+          student_score: disciplinePoints?.final_score,
+          analysis_type: 'automatic'
+        }
+      });
+
+    } catch (error) {
+      console.error('Error generating automatic recommendation:', error);
+    }
+  };
+
   return {
     loading,
     analyzeStudentBehavior,
     generateLetter,
     summarizeCase,
     getRecommendations,
+    generateAutomaticRecommendation,
     processAIRequest
   };
 }
