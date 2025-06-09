@@ -44,21 +44,13 @@ export function ActivityLogs() {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
       const { data, error } = await supabase
-        .from('activity_logs')
-        .select(`
-          *,
-          profiles:user_id (full_name)
-        `)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .rpc('get_activity_logs', {
+          since_date: since,
+          limit_count: 100
+        });
 
       if (error) throw error;
-
-      return data?.map(log => ({
-        ...log,
-        user_name: log.profiles?.full_name || 'Unknown User'
-      })) as ActivityLog[];
+      return data as ActivityLog[];
     },
     enabled: logType === 'activity'
   });
@@ -70,21 +62,13 @@ export function ActivityLogs() {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
       const { data, error } = await supabase
-        .from('error_logs')
-        .select(`
-          *,
-          profiles:user_id (full_name)
-        `)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .rpc('get_error_logs', {
+          since_date: since,
+          limit_count: 100
+        });
 
       if (error) throw error;
-
-      return data?.map(log => ({
-        ...log,
-        user_name: log.profiles?.full_name || 'Unknown User'
-      })) as ErrorLog[];
+      return data as ErrorLog[];
     },
     enabled: logType === 'error'
   });
@@ -195,7 +179,7 @@ export function ActivityLogs() {
                       <TableCell>
                         {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: id })}
                       </TableCell>
-                      <TableCell>{log.user_name}</TableCell>
+                      <TableCell>{log.user_name || 'Unknown User'}</TableCell>
                       <TableCell>
                         <Badge variant={getActivityBadgeVariant(log.activity_type)} className="flex items-center gap-1 w-fit">
                           {getActivityIcon(log.activity_type)}
@@ -235,7 +219,7 @@ export function ActivityLogs() {
                       <TableCell>
                         {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: id })}
                       </TableCell>
-                      <TableCell>{log.user_name}</TableCell>
+                      <TableCell>{log.user_name || 'Unknown User'}</TableCell>
                       <TableCell>
                         <Badge variant="destructive" className="flex items-center gap-1 w-fit">
                           <AlertTriangle className="h-3 w-3" />

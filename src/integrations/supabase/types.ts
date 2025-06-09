@@ -75,6 +75,36 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string
+          id: string
+          metadata: Json | null
+          page_url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       activity_proposals: {
         Row: {
           activity_report: string | null
@@ -776,6 +806,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      error_logs: {
+        Row: {
+          created_at: string | null
+          error_message: string
+          error_stack: string | null
+          error_type: string
+          id: string
+          metadata: Json | null
+          page_url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message: string
+          error_stack?: string | null
+          error_type: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string
+          error_stack?: string | null
+          error_type?: string
+          id?: string
+          metadata?: Json | null
+          page_url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       extracurricular_enrollments: {
         Row: {

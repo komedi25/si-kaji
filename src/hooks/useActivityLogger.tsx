@@ -25,15 +25,13 @@ export function useActivityLogger() {
 
   const logActivity = async (activity: Omit<ActivityLog, 'user_id'>) => {
     try {
-      const { error } = await supabase
-        .from('activity_logs')
-        .insert({
-          user_id: user?.id,
-          activity_type: activity.activity_type,
-          description: activity.description,
-          page_url: activity.page_url || window.location.pathname,
-          metadata: activity.metadata || {}
-        });
+      const { error } = await supabase.rpc('log_activity', {
+        p_user_id: user?.id,
+        p_activity_type: activity.activity_type,
+        p_description: activity.description,
+        p_page_url: activity.page_url || window.location.pathname,
+        p_metadata: activity.metadata || {}
+      });
 
       if (error) {
         console.error('Failed to log activity:', error);
@@ -45,16 +43,14 @@ export function useActivityLogger() {
 
   const logError = async (errorLog: Omit<ErrorLog, 'user_id'>) => {
     try {
-      const { error } = await supabase
-        .from('error_logs')
-        .insert({
-          user_id: user?.id,
-          error_type: errorLog.error_type,
-          error_message: errorLog.error_message,
-          error_stack: errorLog.error_stack,
-          page_url: errorLog.page_url || window.location.pathname,
-          metadata: errorLog.metadata || {}
-        });
+      const { error } = await supabase.rpc('log_error', {
+        p_user_id: user?.id,
+        p_error_type: errorLog.error_type,
+        p_error_message: errorLog.error_message,
+        p_error_stack: errorLog.error_stack,
+        p_page_url: errorLog.page_url || window.location.pathname,
+        p_metadata: errorLog.metadata || {}
+      });
 
       if (error) {
         console.error('Failed to log error:', error);
