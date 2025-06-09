@@ -17,8 +17,8 @@ export const HomeroomJournalList = () => {
   const [journals, setJournals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
-  const [filterClass, setFilterClass] = useState('');
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterClass, setFilterClass] = useState('all');
 
   useEffect(() => {
     fetchJournals();
@@ -53,8 +53,8 @@ export const HomeroomJournalList = () => {
   const filteredJournals = journals.filter(journal => {
     const matchesSearch = journal.activity_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          journal.classes?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMonth = !filterMonth || journal.journal_date.startsWith(filterMonth);
-    const matchesClass = !filterClass || journal.class_id === filterClass;
+    const matchesMonth = filterMonth === 'all' || journal.journal_date.startsWith(filterMonth);
+    const matchesClass = filterClass === 'all' || journal.class_id === filterClass;
     
     return matchesSearch && matchesMonth && matchesClass;
   });
@@ -114,7 +114,7 @@ export const HomeroomJournalList = () => {
                 <SelectValue placeholder="Pilih bulan..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua bulan</SelectItem>
+                <SelectItem value="all">Semua bulan</SelectItem>
                 <SelectItem value="2024-01">Januari 2024</SelectItem>
                 <SelectItem value="2024-02">Februari 2024</SelectItem>
                 <SelectItem value="2024-03">Maret 2024</SelectItem>
@@ -129,7 +129,7 @@ export const HomeroomJournalList = () => {
                 <SelectValue placeholder="Pilih kelas..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Semua kelas</SelectItem>
+                <SelectItem value="all">Semua kelas</SelectItem>
                 <SelectItem value="class1">X RPL 1</SelectItem>
                 <SelectItem value="class2">X RPL 2</SelectItem>
                 <SelectItem value="class3">XI RPL 1</SelectItem>
@@ -194,7 +194,7 @@ export const HomeroomJournalList = () => {
                 {filteredJournals.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      {searchTerm || filterMonth || filterClass ? 
+                      {searchTerm || filterMonth !== 'all' || filterClass !== 'all' ? 
                         'Tidak ada jurnal yang sesuai dengan filter' : 
                         'Belum ada jurnal yang dibuat'
                       }
@@ -258,7 +258,7 @@ export const HomeroomJournalList = () => {
           </div>
 
           {/* Quick Actions */}
-          {filteredJournals.length === 0 && !searchTerm && !filterMonth && !filterClass && (
+          {filteredJournals.length === 0 && !searchTerm && filterMonth === 'all' && filterClass === 'all' && (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium mb-2">Mulai Membuat Jurnal</h3>
