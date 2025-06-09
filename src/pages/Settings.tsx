@@ -5,17 +5,30 @@ import { NotificationChannelManager } from '@/components/notifications/Notificat
 import { NotificationTemplateManager } from '@/components/notifications/NotificationTemplateManager';
 import { UserNotificationPreferences } from '@/components/notifications/UserNotificationPreferences';
 import { AdvancedAnalytics } from '@/components/analytics/AdvancedAnalytics';
+import { ActivityLogs } from '@/components/analytics/ActivityLogs';
 import { GlobalSearch } from '@/components/search/GlobalSearch';
 import { ExportSystem } from '@/components/export/ExportSystem';
 import { GeneralPreferences } from '@/components/settings/GeneralPreferences';
 import { APIKeyManager } from '@/components/ai/APIKeyManager';
 import { AIConfiguration } from '@/components/ai/AIConfiguration';
 import { useAuth } from '@/hooks/useAuth';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export default function Settings() {
   const { hasRole } = useAuth();
   const location = useLocation();
+  const { logActivity } = useActivityLogger();
+
+  // Log settings page access
+  useEffect(() => {
+    logActivity({
+      activity_type: 'settings_access',
+      description: `User accessed settings page: ${location.pathname}`,
+      metadata: { section: location.pathname.split('/').pop() || 'main' }
+    });
+  }, [location.pathname]);
 
   // Determine which tab to show based on URL path
   const currentPath = location.pathname;
@@ -46,10 +59,21 @@ export default function Settings() {
       return (
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-            <p className="text-gray-600">Analisis dan laporan sistem</p>
+            <h1 className="text-2xl font-bold text-gray-900">Analytics & Logs</h1>
+            <p className="text-gray-600">Analisis sistem dan monitoring aktivitas</p>
           </div>
-          <AdvancedAnalytics />
+          {hasRole('admin') ? (
+            <>
+              <AdvancedAnalytics />
+              <ActivityLogs />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Akses terbatas untuk administrator</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       );
     }
@@ -91,6 +115,21 @@ export default function Settings() {
     }
 
     if (currentPath === '/settings/ai-keys') {
+      if (!hasRole('admin')) {
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">API Keys AI</h1>
+              <p className="text-gray-600">Akses terbatas untuk administrator</p>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Hanya administrator yang dapat mengakses pengaturan API keys</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
       return (
         <div className="space-y-6">
           <div>
@@ -103,6 +142,21 @@ export default function Settings() {
     }
 
     if (currentPath === '/settings/ai-config') {
+      if (!hasRole('admin')) {
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Konfigurasi AI</h1>
+              <p className="text-gray-600">Akses terbatas untuk administrator</p>
+            </div>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-muted-foreground">Hanya administrator yang dapat mengakses konfigurasi AI</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      }
       return (
         <div className="space-y-6">
           <div>
@@ -137,11 +191,11 @@ export default function Settings() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Analytics</CardTitle>
-                  <CardDescription>Analisis dan pelaporan</CardDescription>
+                  <CardTitle>Analytics & Logs</CardTitle>
+                  <CardDescription>Analisis dan monitoring</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600">Lihat analisis penggunaan sistem</p>
+                  <p className="text-sm text-gray-600">Lihat analisis sistem dan log aktivitas</p>
                 </CardContent>
               </Card>
 

@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { User, Bell, Shield, Globe, Palette, AlertCircle } from 'lucide-react';
 
 interface UserPreferences {
@@ -32,6 +33,7 @@ interface UserPreferences {
 export function GeneralPreferences() {
   const { toast } = useToast();
   const { hasRole } = useAuth();
+  const { logActivity, logError } = useActivityLogger();
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>({
     user_id: '',
@@ -50,29 +52,59 @@ export function GeneralPreferences() {
   const { data: userProfile } = useQuery({
     queryKey: ['user-profile'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+        // Get user profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
 
-      // Try to load existing preferences
-      const { data: existingPrefs } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+        if (profileError) {
+          logError({
+            error_type: 'database_error',
+            error_message: `Failed to load user profile: ${profileError.message}`,
+            metadata: { error: profileError }
+          });
+        }
 
-      if (existingPrefs) {
-        setPreferences(existingPrefs);
-      } else {
-        setPreferences(prev => ({ ...prev, user_id: user.id }));
+        // Try to load existing preferences
+        const { data: existingPrefs, error: prefsError } = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (prefsError) {
+          logError({
+            error_type: 'database_error',
+            error_message: `Failed to load user preferences: ${prefsError.message}`,
+            metadata: { error: prefsError }
+          });
+        }
+
+        if (existingPrefs) {
+          setPreferences(existingPrefs);
+          logActivity({
+            activity_type: 'preferences_loaded',
+            description: 'User preferences loaded successfully'
+          });
+        } else {
+          setPreferences(prev => ({ ...prev, user_id: user.id }));
+        }
+
+        return { user, profile };
+      } catch (error) {
+        logError({
+          error_type: 'query_error',
+          error_message: `Failed to load user data: ${error}`,
+          metadata: { error }
+        });
+        throw error;
       }
-
-      return { user, profile };
     }
   });
 
@@ -91,12 +123,26 @@ export function GeneralPreferences() {
 
       if (error) throw error;
 
+      logActivity({
+        activity_type: 'preferences_updated',
+        description: 'User updated their preferences',
+        metadata: { 
+          changes: preferences,
+          timestamp: new Date().toISOString()
+        }
+      });
+
       toast({
         title: "Berhasil",
         description: "Preferensi telah disimpan"
       });
     } catch (error) {
       console.error('Error saving preferences:', error);
+      logError({
+        error_type: 'save_error',
+        error_message: `Failed to save preferences: ${error}`,
+        metadata: { error, preferences }
+      });
       toast({
         title: "Error",
         description: "Gagal menyimpan preferensi",
