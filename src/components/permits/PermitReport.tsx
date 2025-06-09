@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,8 +18,8 @@ import { PermitLetter } from './PermitLetter';
 const PermitReport = () => {
   const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: permits, isLoading } = useQuery({
@@ -51,11 +52,11 @@ const PermitReport = () => {
         .lte('end_date', endDate)
         .order('submitted_at', { ascending: false });
 
-      if (selectedStatus) {
+      if (selectedStatus && selectedStatus !== 'all') {
         query = query.eq('status', selectedStatus);
       }
 
-      if (selectedType) {
+      if (selectedType && selectedType !== 'all') {
         query = query.eq('permit_type', selectedType);
       }
 
@@ -186,7 +187,7 @@ const PermitReport = () => {
                   <SelectValue placeholder="Semua Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Status</SelectItem>
+                  <SelectItem value="all">Semua Status</SelectItem>
                   <SelectItem value="pending">Menunggu</SelectItem>
                   <SelectItem value="approved">Disetujui</SelectItem>
                   <SelectItem value="rejected">Ditolak</SelectItem>
@@ -201,7 +202,7 @@ const PermitReport = () => {
                   <SelectValue placeholder="Semua Jenis" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Semua Jenis</SelectItem>
+                  <SelectItem value="all">Semua Jenis</SelectItem>
                   <SelectItem value="sick_leave">Sakit</SelectItem>
                   <SelectItem value="family_leave">Keperluan Keluarga</SelectItem>
                   <SelectItem value="school_activity">Kegiatan Sekolah</SelectItem>
