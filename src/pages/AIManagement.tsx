@@ -3,12 +3,13 @@ import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { AIConfiguration } from '@/components/ai/AIConfiguration';
+import { APIKeyManager } from '@/components/ai/APIKeyManager';
 import { AIRecommendations } from '@/components/ai/AIRecommendations';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Bot, Brain, FileText, TrendingUp, Users, MessageSquare, Settings, Zap } from 'lucide-react';
+import { Bot, Brain, FileText, TrendingUp, Users, MessageSquare, Settings, Zap, Key } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function AIManagement() {
@@ -256,6 +257,7 @@ export default function AIManagement() {
             <TabsTrigger value="assistant">AI Assistant</TabsTrigger>
             <TabsTrigger value="recommendations">Rekomendasi AI</TabsTrigger>
             <TabsTrigger value="configuration">Konfigurasi AI</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="features">Fitur AI</TabsTrigger>
             <TabsTrigger value="activity">Aktivitas Terkini</TabsTrigger>
           </TabsList>
@@ -270,6 +272,23 @@ export default function AIManagement() {
 
           <TabsContent value="configuration">
             <AIConfiguration />
+          </TabsContent>
+
+          <TabsContent value="api-keys">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  Manajemen API Keys
+                </CardTitle>
+                <CardDescription>
+                  Kelola API keys untuk berbagai provider AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <APIKeyManager />
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="features">
