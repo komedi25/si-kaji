@@ -39,7 +39,8 @@ import {
   MessageSquare,
   TrendingUp,
   ChevronDown,
-  Bot
+  Bot,
+  Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -180,31 +181,31 @@ export const Sidebar = () => {
           title: 'Ekstrakurikuler',
           href: '#',
           icon: BookOpen,
-          requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+          requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
           children: [
             {
               title: 'Pendaftaran Siswa',
               href: '/extracurricular-management?tab=enrollment',
               icon: Users,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Jurnal Pelatih',
               href: '/extracurricular-management?tab=activity-log',
               icon: BookOpen,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Presensi Pelatih',
               href: '/extracurricular-management?tab=attendance',
               icon: Calendar,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Data Ekstrakurikuler',
               href: '/extracurricular-management?tab=master-data',
               icon: Database,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler'],
+              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
           ],
         },
@@ -219,37 +220,37 @@ export const Sidebar = () => {
           title: 'Jurnal Perwalian',
           href: '#',
           icon: BookOpen,
-          requiredRoles: ['wali_kelas'],
+          requiredRoles: ['wali_kelas', 'admin'],
           children: [
             {
               title: 'Buat Jurnal',
               href: '/homeroom-journal?tab=create',
               icon: FileText,
-              requiredRoles: ['wali_kelas'],
+              requiredRoles: ['wali_kelas', 'admin'],
             },
             {
               title: 'Daftar Jurnal',
               href: '/homeroom-journal?tab=list',
               icon: FolderOpen,
-              requiredRoles: ['wali_kelas'],
+              requiredRoles: ['wali_kelas', 'admin'],
             },
             {
               title: 'Progres Siswa',
               href: '/homeroom-journal?tab=progress',
               icon: TrendingUp,
-              requiredRoles: ['wali_kelas'],
+              requiredRoles: ['wali_kelas', 'admin'],
             },
             {
               title: 'Komunikasi Ortu',
               href: '/homeroom-journal?tab=communication',
               icon: MessageSquare,
-              requiredRoles: ['wali_kelas'],
+              requiredRoles: ['wali_kelas', 'admin'],
             },
             {
               title: 'Analisis Kelas',
               href: '/homeroom-journal?tab=analytics',
               icon: BarChart3,
-              requiredRoles: ['wali_kelas'],
+              requiredRoles: ['wali_kelas', 'admin'],
             },
           ],
         },
@@ -257,13 +258,13 @@ export const Sidebar = () => {
           title: 'Sesi Konseling',
           href: '/counseling-management',
           icon: Heart,
-          requiredRoles: ['guru_bk'],
+          requiredRoles: ['guru_bk', 'admin'],
         },
         {
           title: 'Manajemen Kasus',
           href: '/case-management',
           icon: Shield,
-          requiredRoles: ['guru_bk', 'tppk', 'arps', 'p4gn'],
+          requiredRoles: ['guru_bk', 'tppk', 'arps', 'p4gn', 'admin'],
         },
       ],
     },
@@ -432,24 +433,40 @@ export const Sidebar = () => {
           ],
         },
         {
+          title: 'API Keys AI',
+          href: '/settings/ai-keys',
+          icon: Key,
+          requiredRoles: ['admin'],
+        },
+        {
+          title: 'Konfigurasi AI',
+          href: '/settings/ai-config',
+          icon: Bot,
+          requiredRoles: ['admin'],
+        },
+        {
           title: 'Notifikasi',
           href: '/settings/notifications',
           icon: Bell,
+          requiredRoles: ['admin'],
         },
         {
           title: 'Analytics',
           href: '/settings/analytics',
           icon: LineChart,
+          requiredRoles: ['admin'],
         },
         {
           title: 'Global Search',
           href: '/settings/search',
           icon: Search,
+          requiredRoles: ['admin'],
         },
         {
           title: 'Export System',
           href: '/settings/export',
           icon: Download,
+          requiredRoles: ['admin'],
         },
         {
           title: 'Preferensi',

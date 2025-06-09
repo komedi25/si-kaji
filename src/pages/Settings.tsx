@@ -95,7 +95,7 @@ export default function Settings() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">API Keys AI</h1>
-            <p className="text-gray-600">Kelola API keys untuk layanan AI</p>
+            <p className="text-gray-600">Kelola API keys untuk layanan AI (Khusus Admin)</p>
           </div>
           <APIKeyManager />
         </div>
@@ -107,7 +107,7 @@ export default function Settings() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Konfigurasi AI</h1>
-            <p className="text-gray-600">Pengaturan provider dan model AI</p>
+            <p className="text-gray-600">Pengaturan provider dan model AI (Khusus Admin)</p>
           </div>
           <AIConfiguration />
         </div>
@@ -123,45 +123,69 @@ export default function Settings() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifikasi</CardTitle>
-              <CardDescription>Kelola sistem notifikasi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Atur kanal notifikasi dan template pesan</p>
-            </CardContent>
-          </Card>
+          {hasRole('admin') && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notifikasi</CardTitle>
+                  <CardDescription>Kelola sistem notifikasi</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Atur kanal notifikasi dan template pesan</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Analytics</CardTitle>
-              <CardDescription>Analisis dan pelaporan</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Lihat analisis penggunaan sistem</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Analytics</CardTitle>
+                  <CardDescription>Analisis dan pelaporan</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Lihat analisis penggunaan sistem</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Global Search</CardTitle>
-              <CardDescription>Pencarian menyeluruh</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Cari data di seluruh sistem</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Global Search</CardTitle>
+                  <CardDescription>Pencarian menyeluruh</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Cari data di seluruh sistem</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Export System</CardTitle>
-              <CardDescription>Ekspor data</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Ekspor laporan dan data sistem</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Export System</CardTitle>
+                  <CardDescription>Ekspor data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Ekspor laporan dan data sistem</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>API Keys AI</CardTitle>
+                  <CardDescription>Manajemen API keys</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Kelola API keys untuk layanan AI</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Konfigurasi AI</CardTitle>
+                  <CardDescription>Pengaturan AI</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Konfigurasi provider dan model AI</p>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           <Card>
             <CardHeader>
@@ -170,26 +194,6 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600">Atur preferensi aplikasi dan profil</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>API Keys AI</CardTitle>
-              <CardDescription>Manajemen API keys</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Kelola API keys untuk layanan AI</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Konfigurasi AI</CardTitle>
-              <CardDescription>Pengaturan AI</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Konfigurasi provider dan model AI</p>
             </CardContent>
           </Card>
         </div>

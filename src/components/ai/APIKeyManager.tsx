@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Key, Eye, EyeOff, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
@@ -48,11 +48,24 @@ const AI_PROVIDERS = [
 
 export function APIKeyManager() {
   const { toast } = useToast();
+  const { hasRole } = useAuth();
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const [keyStatus, setKeyStatus] = useState<Record<string, 'valid' | 'invalid' | 'unknown'>>({});
   const [loading, setLoading] = useState(false);
+
+  // Check if user has admin role
+  if (!hasRole('admin')) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Hanya Admin yang dapat mengakses pengaturan API Keys.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   // Load existing API keys from user preferences
   useEffect(() => {

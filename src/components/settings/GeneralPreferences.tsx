@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { User, Bell, Shield, Globe, Palette } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { User, Bell, Shield, Globe, Palette, AlertCircle } from 'lucide-react';
 
 interface UserPreferences {
   id?: string;
@@ -29,6 +31,7 @@ interface UserPreferences {
 
 export function GeneralPreferences() {
   const { toast } = useToast();
+  const { hasRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>({
     user_id: '',
@@ -348,26 +351,68 @@ export function GeneralPreferences() {
         </CardContent>
       </Card>
 
-      {/* Security Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Keamanan
-          </CardTitle>
-          <CardDescription>
-            Pengaturan keamanan akun
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Catatan:</strong> Untuk mengubah password atau pengaturan keamanan lainnya, 
-              silakan hubungi administrator sistem.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Security Preferences - Only for Admin */}
+      {hasRole('admin') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Keamanan Akun (Admin)
+            </CardTitle>
+            <CardDescription>
+              Pengaturan keamanan sistem untuk administrator
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Pengaturan Admin:</strong> Sebagai administrator, Anda memiliki akses ke pengaturan keamanan tingkat sistem. 
+                Untuk mengubah password atau pengaturan keamanan akun, silakan gunakan menu manajemen pengguna atau 
+                hubungi administrator sistem lainnya.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 border rounded-lg">
+                <h4 className="font-medium mb-2">Akses Sistem</h4>
+                <p className="text-sm text-muted-foreground">
+                  Akses penuh ke semua fitur sistem dan pengaturan
+                </p>
+              </div>
+              <div className="p-4 border rounded-lg">
+                <h4 className="font-medium mb-2">Manajemen Pengguna</h4>
+                <p className="text-sm text-muted-foreground">
+                  Dapat mengelola pengguna, role, dan permission
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Non-admin security note */}
+      {!hasRole('admin') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Keamanan
+            </CardTitle>
+            <CardDescription>
+              Pengaturan keamanan akun
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Catatan:</strong> Untuk mengubah password atau pengaturan keamanan lainnya, 
+                silakan hubungi administrator sistem.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={savePreferences} disabled={loading}>
