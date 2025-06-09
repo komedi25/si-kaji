@@ -15,6 +15,7 @@ export const HomeroomJournalList = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [journals, setJournals] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMonth, setFilterMonth] = useState('all');
@@ -22,7 +23,24 @@ export const HomeroomJournalList = () => {
 
   useEffect(() => {
     fetchJournals();
+    fetchClasses();
   }, []);
+
+  const fetchClasses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, grade')
+        .eq('homeroom_teacher_id', user?.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setClasses(data || []);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    }
+  };
 
   const fetchJournals = async () => {
     try {
@@ -30,8 +48,11 @@ export const HomeroomJournalList = () => {
         .from('homeroom_journals')
         .select(`
           *,
-          classes(name),
-          profiles(full_name)
+          class:classes(
+            id,
+            name,
+            grade
+          )
         `)
         .eq('homeroom_teacher_id', user?.id)
         .order('journal_date', { ascending: false });
@@ -52,7 +73,7 @@ export const HomeroomJournalList = () => {
 
   const filteredJournals = journals.filter(journal => {
     const matchesSearch = journal.activity_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         journal.classes?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+                         journal.class?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesMonth = filterMonth === 'all' || journal.journal_date.startsWith(filterMonth);
     const matchesClass = filterClass === 'all' || journal.class_id === filterClass;
     
@@ -61,10 +82,10 @@ export const HomeroomJournalList = () => {
 
   const handleExport = async () => {
     try {
-      // Implementation for exporting journals
+      // Implementation for exporting journals to PDF/Excel
       toast({
         title: "Export Berhasil",
-        description: "Jurnal berhasil diekspor ke PDF"
+        description: "Jurnal berhasil diekspor"
       });
     } catch (error) {
       toast({
@@ -73,6 +94,26 @@ export const HomeroomJournalList = () => {
         variant: "destructive"
       });
     }
+  };
+
+  // Generate month options based on current year
+  const generateMonthOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const months = [
+      { value: `${currentYear}-01`, label: 'Januari' },
+      { value: `${currentYear}-02`, label: 'Februari' },
+      { value: `${currentYear}-03`, label: 'Maret' },
+      { value: `${currentYear}-04`, label: 'April' },
+      { value: `${currentYear}-05`, label: 'Mei' },
+      { value: `${currentYear}-06`, label: 'Juni' },
+      { value: `${currentYear}-07`, label: 'Juli' },
+      { value: `${currentYear}-08`, label: 'Agustus' },
+      { value: `${currentYear}-09`, label: 'September' },
+      { value: `${currentYear}-10`, label: 'Oktober' },
+      { value: `${currentYear}-11`, label: 'November' },
+      { value: `${currentYear}-12`, label: 'Desember' },
+    ];
+    return months;
   };
 
   if (loading) {
@@ -91,6 +132,10 @@ export const HomeroomJournalList = () => {
             <Button variant="outline" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Ekspor Laporan
+            </Button>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Buat Jurnal Baru
             </Button>
           </div>
         </CardTitle>
@@ -115,12 +160,11 @@ export const HomeroomJournalList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua bulan</SelectItem>
-                <SelectItem value="2024-01">Januari 2024</SelectItem>
-                <SelectItem value="2024-02">Februari 2024</SelectItem>
-                <SelectItem value="2024-03">Maret 2024</SelectItem>
-                <SelectItem value="2024-04">April 2024</SelectItem>
-                <SelectItem value="2024-05">Mei 2024</SelectItem>
-                <SelectItem value="2024-06">Juni 2024</SelectItem>
+                {generateMonthOptions().map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label} {new Date().getFullYear()}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -130,9 +174,11 @@ export const HomeroomJournalList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua kelas</SelectItem>
-                <SelectItem value="class1">X RPL 1</SelectItem>
-                <SelectItem value="class2">X RPL 2</SelectItem>
-                <SelectItem value="class3">XI RPL 1</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -169,8 +215,8 @@ export const HomeroomJournalList = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{Math.round((journals.length / 30) * 100)}%</div>
-                  <div className="text-sm text-muted-foreground">Kelengkapan</div>
+                  <div className="text-2xl font-bold">{classes.length}</div>
+                  <div className="text-sm text-muted-foreground">Kelas Diampu</div>
                 </div>
               </CardContent>
             </Card>
@@ -211,7 +257,7 @@ export const HomeroomJournalList = () => {
                         })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{journal.classes?.name || 'Kelas tidak ditemukan'}</Badge>
+                        <Badge variant="outline">{journal.class?.name || 'Kelas tidak ditemukan'}</Badge>
                       </TableCell>
                       <TableCell className="max-w-xs">
                         <div className="truncate" title={journal.activity_description}>

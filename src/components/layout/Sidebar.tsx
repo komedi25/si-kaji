@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -65,7 +66,6 @@ export const Sidebar = () => {
       title: 'Dashboard',
       href: '/dashboard',
       icon: Home,
-      // No requiredRoles - available for all authenticated users
     },
     {
       title: 'Data Siswa',
@@ -74,69 +74,27 @@ export const Sidebar = () => {
       requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
     },
     {
-      title: 'Akademik',
+      title: 'Akademik & Kedisiplinan',
       href: '#',
       icon: BookOpen,
       children: [
         {
-          title: 'Presensi',
-          href: '#',
+          title: 'Kehadiran',
+          href: '/attendance-management',
           icon: Calendar,
           requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-          children: [
-            {
-              title: 'Input Presensi',
-              href: '/attendance-management?tab=record',
-              icon: Calendar,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-            },
-            {
-              title: 'Laporan Presensi',
-              href: '/attendance-management?tab=report',
-              icon: FileText,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-            },
-          ],
         },
         {
           title: 'Pelanggaran',
-          href: '#',
+          href: '/violation-management',
           icon: AlertTriangle,
           requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-          children: [
-            {
-              title: 'Input Pelanggaran',
-              href: '/violation-management?tab=record',
-              icon: AlertTriangle,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-            },
-            {
-              title: 'Laporan Pelanggaran',
-              href: '/violation-management?tab=report',
-              icon: FileText,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-            },
-          ],
         },
         {
           title: 'Prestasi',
-          href: '#',
+          href: '/achievement-management',
           icon: Trophy,
           requiredRoles: ['admin', 'wali_kelas'],
-          children: [
-            {
-              title: 'Input Prestasi',
-              href: '/achievement-management?tab=record',
-              icon: Award,
-              requiredRoles: ['admin', 'wali_kelas'],
-            },
-            {
-              title: 'Laporan Prestasi',
-              href: '/achievement-management?tab=report',
-              icon: FileText,
-              requiredRoles: ['admin', 'wali_kelas'],
-            },
-          ],
         },
         {
           title: 'Poin Disiplin',
@@ -147,115 +105,18 @@ export const Sidebar = () => {
       ],
     },
     {
-      title: 'Kegiatan',
-      href: '#',
-      icon: Calendar,
-      children: [
-        {
-          title: 'Proposal Kegiatan',
-          href: '#',
-          icon: ClipboardList,
-          requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
-          children: [
-            {
-              title: 'Buat Proposal',
-              href: '/activity-proposal?tab=proposal',
-              icon: ClipboardList,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
-            },
-            {
-              title: 'Peminjaman Fasilitas',
-              href: '/activity-proposal?tab=facilities',
-              icon: Building,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
-            },
-            {
-              title: 'LPJ & Dokumentasi',
-              href: '/activity-proposal?tab=report',
-              icon: FileText,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
-            },
-          ],
-        },
-        {
-          title: 'Ekstrakurikuler',
-          href: '#',
-          icon: BookOpen,
-          requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-          children: [
-            {
-              title: 'Pendaftaran Siswa',
-              href: '/extracurricular-management?tab=enrollment',
-              icon: Users,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-            },
-            {
-              title: 'Jurnal Pelatih',
-              href: '/extracurricular-management?tab=activity-log',
-              icon: BookOpen,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-            },
-            {
-              title: 'Presensi Pelatih',
-              href: '/extracurricular-management?tab=attendance',
-              icon: Calendar,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-            },
-            {
-              title: 'Data Ekstrakurikuler',
-              href: '/extracurricular-management?tab=master-data',
-              icon: Database,
-              requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Perwalian & BK',
+      title: 'Perwalian & Konseling',
       href: '#',
       icon: Heart,
       children: [
         {
           title: 'Jurnal Perwalian',
-          href: '#',
+          href: '/homeroom-journal-management',
           icon: BookOpen,
           requiredRoles: ['wali_kelas', 'admin'],
-          children: [
-            {
-              title: 'Buat Jurnal',
-              href: '/homeroom-journal?tab=create',
-              icon: FileText,
-              requiredRoles: ['wali_kelas', 'admin'],
-            },
-            {
-              title: 'Daftar Jurnal',
-              href: '/homeroom-journal?tab=list',
-              icon: FolderOpen,
-              requiredRoles: ['wali_kelas', 'admin'],
-            },
-            {
-              title: 'Progres Siswa',
-              href: '/homeroom-journal?tab=progress',
-              icon: TrendingUp,
-              requiredRoles: ['wali_kelas', 'admin'],
-            },
-            {
-              title: 'Komunikasi Ortu',
-              href: '/homeroom-journal?tab=communication',
-              icon: MessageSquare,
-              requiredRoles: ['wali_kelas', 'admin'],
-            },
-            {
-              title: 'Analisis Kelas',
-              href: '/homeroom-journal?tab=analytics',
-              icon: BarChart3,
-              requiredRoles: ['wali_kelas', 'admin'],
-            },
-          ],
         },
         {
-          title: 'Sesi Konseling',
+          title: 'Konseling',
           href: '/counseling-management',
           icon: Heart,
           requiredRoles: ['guru_bk', 'admin'],
@@ -269,116 +130,56 @@ export const Sidebar = () => {
       ],
     },
     {
+      title: 'Ekstrakurikuler',
+      href: '/extracurricular-management',
+      icon: Activity,
+      requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
+    },
+    {
+      title: 'Proposal & Kegiatan',
+      href: '/activity-proposal-management',
+      icon: ClipboardList,
+      requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
+    },
+    {
       title: 'Administrasi',
       href: '#',
       icon: FolderOpen,
       children: [
         {
           title: 'Perizinan',
-          href: '#',
+          href: '/permit-management',
           icon: MapPin,
           requiredRoles: ['admin', 'wali_kelas'],
-          children: [
-            {
-              title: 'Buat Izin',
-              href: '/permit-management?tab=form',
-              icon: FileX,
-              requiredRoles: ['admin', 'wali_kelas'],
-            },
-            {
-              title: 'Persetujuan',
-              href: '/permit-management?tab=approval',
-              icon: ListChecks,
-              requiredRoles: ['admin', 'wali_kelas'],
-            },
-            {
-              title: 'Laporan Izin',
-              href: '/permit-management?tab=report',
-              icon: FileText,
-              requiredRoles: ['admin', 'wali_kelas'],
-            },
-          ],
         },
         {
-          title: 'Dokumen & Surat',
-          href: '#',
+          title: 'Surat & Dokumen',
+          href: '/document-management',
           icon: FileText,
           requiredRoles: ['admin'],
-          children: [
-            {
-              title: 'Permohonan Surat',
-              href: '/document-management?tab=letters',
-              icon: FileText,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Mutasi Siswa',
-              href: '/document-management?tab=mutations',
-              icon: Users,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Template Surat',
-              href: '/document-management?tab=templates',
-              icon: Archive,
-              requiredRoles: ['admin'],
-            },
-          ],
         },
         {
           title: 'Repositori Dokumen',
-          href: '#',
-          icon: FolderOpen,
+          href: '/document-repository-management',
+          icon: Archive,
           requiredRoles: ['admin'],
-          children: [
-            {
-              title: 'Repositori',
-              href: '/document-repository?tab=repository',
-              icon: Archive,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Upload Dokumen',
-              href: '/document-repository?tab=upload',
-              icon: Upload,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Kebijakan',
-              href: '/document-repository?tab=policies',
-              icon: Shield,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Kategori',
-              href: '/document-repository?tab=categories',
-              icon: FolderOpen,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Version Control',
-              href: '/document-repository?tab=versions',
-              icon: Clock,
-              requiredRoles: ['admin'],
-            },
-          ],
-        },
-        {
-          title: 'Portal Orang Tua',
-          href: '/parent-portal',
-          icon: UsersIcon,
-          requiredRoles: ['admin', 'wali_kelas'],
         },
       ],
     },
     {
-      title: 'AI & Sistem Cerdas',
+      title: 'Portal Orang Tua',
+      href: '/parent-portal-management',
+      icon: UsersIcon,
+      requiredRoles: ['admin', 'wali_kelas'],
+    },
+    {
+      title: 'AI Assistant',
       href: '/ai-management',
       icon: Bot,
       requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
     },
     {
-      title: 'Sistem & Pengaturan',
+      title: 'Pengaturan Sistem',
       href: '#',
       icon: Settings,
       children: [
@@ -390,82 +191,14 @@ export const Sidebar = () => {
         },
         {
           title: 'Master Data',
-          href: '#',
+          href: '/master-data-management',
           icon: Database,
-          requiredRoles: ['admin'],
-          children: [
-            {
-              title: 'Akademik',
-              href: '/master-data?tab=academic',
-              icon: Calendar,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Struktur',
-              href: '/master-data?tab=structure',
-              icon: School,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Pelanggaran',
-              href: '/master-data?tab=violations',
-              icon: AlertTriangle,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Prestasi',
-              href: '/master-data?tab=achievements',
-              icon: Trophy,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Ekstrakurikuler',
-              href: '/master-data?tab=extracurricular',
-              icon: Activity,
-              requiredRoles: ['admin'],
-            },
-            {
-              title: 'Fasilitas',
-              href: '/master-data?tab=facilities',
-              icon: Building,
-              requiredRoles: ['admin'],
-            },
-          ],
-        },
-        {
-          title: 'API Keys AI',
-          href: '/settings/ai-keys',
-          icon: Key,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Konfigurasi AI',
-          href: '/settings/ai-config',
-          icon: Bot,
           requiredRoles: ['admin'],
         },
         {
           title: 'Notifikasi',
-          href: '/settings/notifications',
+          href: '/notification-management',
           icon: Bell,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Analytics',
-          href: '/settings/analytics',
-          icon: LineChart,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Global Search',
-          href: '/settings/search',
-          icon: Search,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Export System',
-          href: '/settings/export',
-          icon: Download,
           requiredRoles: ['admin'],
         },
         {
@@ -493,7 +226,7 @@ export const Sidebar = () => {
       return currentPath === path && currentSearch.includes(`tab=${tab}`);
     }
     
-    return currentPath === href;
+    return currentPath === href || currentPath.startsWith(href + '/');
   };
 
   const hasActiveChild = (children?: SidebarItem[]): boolean => {
@@ -504,7 +237,7 @@ export const Sidebar = () => {
     });
   };
 
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Pengaturan Sistem']);
 
   const toggleExpand = (title: string) => {
     setExpandedItems(prev => 
@@ -598,7 +331,7 @@ export const Sidebar = () => {
       <div className="flex items-center justify-between p-4 border-b">
         {!isCollapsed && (
           <h2 className="text-lg font-semibold text-gray-900">
-            Navigasi
+            SIAKAD SMK
           </h2>
         )}
         <Button
