@@ -48,108 +48,198 @@ function App() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/student-management" element={
+                <ProtectedRoute>
+                  <StudentManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/students" element={
                 <ProtectedRoute>
                   <StudentManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/violation-management" element={
+                <ProtectedRoute>
+                  <ViolationManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/violations" element={
                 <ProtectedRoute>
                   <ViolationManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/achievement-management" element={
+                <ProtectedRoute>
+                  <AchievementManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/achievements" element={
                 <ProtectedRoute>
                   <AchievementManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/attendance-management" element={
+                <ProtectedRoute>
+                  <AttendanceManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/attendance" element={
                 <ProtectedRoute>
                   <AttendanceManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/case-management" element={
+                <ProtectedRoute>
+                  <CaseManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/cases" element={
                 <ProtectedRoute>
                   <CaseManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/counseling-management" element={
+                <ProtectedRoute>
+                  <CounselingManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/counseling" element={
                 <ProtectedRoute>
                   <CounselingManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/permit-management" element={
+                <ProtectedRoute>
+                  <PermitManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/permits" element={
                 <ProtectedRoute>
                   <PermitManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/document-management" element={
+                <ProtectedRoute>
+                  <DocumentManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/documents" element={
                 <ProtectedRoute>
                   <DocumentManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/document-repository-management" element={
+                <ProtectedRoute>
+                  <DocumentRepositoryManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/document-repository" element={
                 <ProtectedRoute>
                   <DocumentRepositoryManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/extracurricular-management" element={
+                <ProtectedRoute>
+                  <ExtracurricularManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/extracurricular" element={
                 <ProtectedRoute>
                   <ExtracurricularManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/homeroom-journal-management" element={
+                <ProtectedRoute>
+                  <HomeroomJournalManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/homeroom-journal" element={
                 <ProtectedRoute>
                   <HomeroomJournalManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/activity-proposal-management" element={
+                <ProtectedRoute>
+                  <ActivityProposal />
+                </ProtectedRoute>
+              } />
               <Route path="/activity-proposal" element={
                 <ProtectedRoute>
                   <ActivityProposal />
                 </ProtectedRoute>
               } />
               
+              <Route path="/master-data-management" element={
+                <ProtectedRoute>
+                  <MasterData />
+                </ProtectedRoute>
+              } />
               <Route path="/master-data" element={
                 <ProtectedRoute>
                   <MasterData />
                 </ProtectedRoute>
               } />
               
+              <Route path="/user-management" element={
+                <ProtectedRoute>
+                  <UserManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/users" element={
                 <ProtectedRoute>
                   <UserManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/notification-management" element={
+                <ProtectedRoute>
+                  <NotificationManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/notifications" element={
                 <ProtectedRoute>
                   <NotificationManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/ai-management" element={
+                <ProtectedRoute>
+                  <AIManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/ai" element={
                 <ProtectedRoute>
                   <AIManagement />
                 </ProtectedRoute>
               } />
               
+              <Route path="/parent-portal-management" element={
+                <ProtectedRoute>
+                  <ParentPortal />
+                </ProtectedRoute>
+              } />
               <Route path="/parent-portal" element={
                 <ProtectedRoute>
                   <ParentPortal />
                 </ProtectedRoute>
               } />
               
+              <Route path="/discipline-points-management" element={
+                <ProtectedRoute>
+                  <DisciplinePointsManagement />
+                </ProtectedRoute>
+              } />
               <Route path="/discipline-points" element={
                 <ProtectedRoute>
                   <DisciplinePointsManagement />
