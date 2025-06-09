@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -130,16 +129,23 @@ export const Sidebar = () => {
       ],
     },
     {
-      title: 'Ekstrakurikuler',
-      href: '/extracurricular-management',
+      title: 'Ekstrakurikuler & Kegiatan',
+      href: '#',
       icon: Activity,
-      requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
-    },
-    {
-      title: 'Proposal & Kegiatan',
-      href: '/activity-proposal-management',
-      icon: ClipboardList,
-      requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
+      children: [
+        {
+          title: 'Ekstrakurikuler',
+          href: '/extracurricular-management',
+          icon: Activity,
+          requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
+        },
+        {
+          title: 'Proposal Kegiatan',
+          href: '/activity-proposal-management',
+          icon: ClipboardList,
+          requiredRoles: ['koordinator_ekstrakurikuler', 'admin'],
+        },
+      ],
     },
     {
       title: 'Administrasi',
@@ -203,7 +209,7 @@ export const Sidebar = () => {
         },
         {
           title: 'Preferensi',
-          href: '/settings/preferences',
+          href: '/settings',
           icon: Sliders,
         },
       ],
