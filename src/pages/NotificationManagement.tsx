@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const NotificationManagement = () => {
   const { hasRole } = useAuth();
-  const isAdmin = hasRole('admin_sistem');
+  const isAdmin = hasRole('admin');
 
   return (
     <AppLayout>

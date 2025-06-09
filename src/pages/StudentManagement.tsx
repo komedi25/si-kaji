@@ -132,7 +132,7 @@ export default function StudentManagement() {
   };
 
   useEffect(() => {
-    if (hasRole('admin_kesiswaan') || hasRole('wali_kelas') || hasRole('guru_bk')) {
+    if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk')) {
       fetchStudents();
       fetchMajorsAndClasses();
     }
@@ -157,7 +157,7 @@ export default function StudentManagement() {
     setShowEditDialog(true);
   };
 
-  if (!hasRole('admin_kesiswaan') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
+  if (!hasRole('admin') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">

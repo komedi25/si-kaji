@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 export default function ParentPortal() {
   const { hasRole } = useAuth();
 
-  if (!hasRole('admin_kesiswaan') && !hasRole('wali_kelas') && !hasRole('orang_tua')) {
+  if (!hasRole('admin') && !hasRole('wali_kelas') && !hasRole('orang_tua')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,7 +89,7 @@ export default function DisciplinePointsManagement() {
   };
 
   useEffect(() => {
-    if (hasRole('admin_kesiswaan') || hasRole('wali_kelas') || hasRole('guru_bk')) {
+    if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk')) {
       fetchDisciplinePoints();
     }
   }, [hasRole]);
@@ -106,7 +105,7 @@ export default function DisciplinePointsManagement() {
     return 'destructive'; // Red
   };
 
-  if (!hasRole('admin_kesiswaan') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
+  if (!hasRole('admin') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">

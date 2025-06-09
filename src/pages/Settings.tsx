@@ -27,7 +27,7 @@ export default function Settings() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {hasRole('admin_sistem') && (
+            {hasRole('admin') && (
               <>
                 <NotificationChannelManager />
                 <NotificationTemplateManager />

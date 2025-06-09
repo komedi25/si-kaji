@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Calendar, Trophy, FileText } from 'lucide-react';
@@ -8,8 +7,7 @@ export const DashboardHome = () => {
 
   const getRoleDisplayName = (role: string) => {
     const roleNames: Record<string, string> = {
-      'admin_sistem': 'Admin Sistem',
-      'admin_kesiswaan': 'Admin Kesiswaan',
+      'admin': 'Admin',
       'kepala_sekolah': 'Kepala Sekolah',
       'tppk': 'TPPK',
       'arps': 'ARPS',
@@ -44,7 +42,7 @@ export const DashboardHome = () => {
     const roles = user.roles;
 
     // Admin actions
-    if (roles.includes('admin_sistem')) {
+    if (roles.includes('admin')) {
       actions.push(
         { title: 'Manajemen Pengguna', description: 'Kelola user dan role', icon: Users, href: '/user-management' },
         { title: 'Master Data', description: 'Kelola data master sistem', icon: School, href: '/master-data' }
@@ -52,7 +50,7 @@ export const DashboardHome = () => {
     }
 
     // Kesiswaan actions
-    if (roles.includes('admin_kesiswaan') || roles.includes('waka_kesiswaan')) {
+    if (roles.includes('admin') || roles.includes('waka_kesiswaan')) {
       actions.push(
         { title: 'Data Siswa', description: 'Kelola data siswa', icon: Users, href: '/student-management' },
         { title: 'Laporan', description: 'Lihat laporan kesiswaan', icon: BarChart3, href: '/reports' }
