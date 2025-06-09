@@ -7,6 +7,9 @@ import { UserNotificationPreferences } from '@/components/notifications/UserNoti
 import { AdvancedAnalytics } from '@/components/analytics/AdvancedAnalytics';
 import { GlobalSearch } from '@/components/search/GlobalSearch';
 import { ExportSystem } from '@/components/export/ExportSystem';
+import { GeneralPreferences } from '@/components/settings/GeneralPreferences';
+import { APIKeyManager } from '@/components/ai/APIKeyManager';
+import { AIConfiguration } from '@/components/ai/AIConfiguration';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'react-router-dom';
 
@@ -80,17 +83,33 @@ export default function Settings() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Preferensi</h1>
-            <p className="text-gray-600">Pengaturan preferensi pengguna</p>
+            <p className="text-gray-600">Pengaturan preferensi pengguna dan sistem</p>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferensi Umum</CardTitle>
-              <CardDescription>Atur preferensi aplikasi Anda</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600">Fitur preferensi akan segera tersedia.</p>
-            </CardContent>
-          </Card>
+          <GeneralPreferences />
+        </div>
+      );
+    }
+
+    if (currentPath === '/settings/ai-keys') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">API Keys AI</h1>
+            <p className="text-gray-600">Kelola API keys untuk layanan AI</p>
+          </div>
+          <APIKeyManager />
+        </div>
+      );
+    }
+
+    if (currentPath === '/settings/ai-config') {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Konfigurasi AI</h1>
+            <p className="text-gray-600">Pengaturan provider dan model AI</p>
+          </div>
+          <AIConfiguration />
         </div>
       );
     }
@@ -150,7 +169,27 @@ export default function Settings() {
               <CardDescription>Pengaturan personal</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">Atur preferensi aplikasi</p>
+              <p className="text-sm text-gray-600">Atur preferensi aplikasi dan profil</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys AI</CardTitle>
+              <CardDescription>Manajemen API keys</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Kelola API keys untuk layanan AI</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Konfigurasi AI</CardTitle>
+              <CardDescription>Pengaturan AI</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">Konfigurasi provider dan model AI</p>
             </CardContent>
           </Card>
         </div>

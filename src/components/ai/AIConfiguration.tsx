@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,13 +8,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAIPreferences } from '@/hooks/useAIPreferences';
-import { Bot, Key, Settings, Zap, AlertTriangle, Users, FileText, Brain } from 'lucide-react';
+import { Bot, Settings, Zap, AlertTriangle, Users, FileText, Brain } from 'lucide-react';
 
 const AI_PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'] },
-  { value: 'gemini', label: 'Google Gemini', models: ['gemini-pro', 'gemini-pro-vision'] },
-  { value: 'openrouter', label: 'OpenRouter', models: ['custom'] },
-  { value: 'deepseek', label: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder'] }
+  { 
+    value: 'openai', 
+    label: 'OpenAI', 
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+    supportCustom: true
+  },
+  { 
+    value: 'gemini', 
+    label: 'Google Gemini', 
+    models: ['gemini-pro', 'gemini-pro-vision'],
+    supportCustom: false
+  },
+  { 
+    value: 'openrouter', 
+    label: 'OpenRouter', 
+    models: [
+      'meta-llama/llama-3.2-3b-instruct:free',
+      'microsoft/phi-3-mini-128k-instruct:free',
+      'huggingfaceh4/zephyr-7b-beta:free',
+      'google/gemma-7b-it:free',
+      'meta-llama/llama-3.1-8b-instruct:free',
+      'gryphe/mythomist-7b:free'
+    ],
+    supportCustom: true
+  },
+  { 
+    value: 'deepseek', 
+    label: 'DeepSeek', 
+    models: ['deepseek-chat', 'deepseek-coder'],
+    supportCustom: true
+  }
 ];
 
 const ANALYSIS_SCHEDULES = [
@@ -38,7 +66,8 @@ export function AIConfiguration() {
 
   const handleModelChange = (model: string) => {
     if (model === 'custom') {
-      savePreferences({ preferred_model: customModel });
+      // Don't save yet, wait for custom model input
+      return;
     } else {
       savePreferences({ preferred_model: model });
     }
@@ -47,8 +76,12 @@ export function AIConfiguration() {
   const handleCustomModelSubmit = () => {
     if (customModel.trim()) {
       savePreferences({ preferred_model: customModel.trim() });
+      setCustomModel('');
     }
   };
+
+  const isCustomModelSelected = preferences.preferred_model && 
+    !availableModels.includes(preferences.preferred_model);
 
   return (
     <div className="space-y-6">
@@ -83,7 +116,7 @@ export function AIConfiguration() {
           <div className="space-y-2">
             <Label htmlFor="model">Model AI</Label>
             <Select 
-              value={preferences.preferred_model || ''} 
+              value={isCustomModelSelected ? 'custom' : (preferences.preferred_model || '')} 
               onValueChange={handleModelChange}
             >
               <SelectTrigger>
@@ -95,60 +128,62 @@ export function AIConfiguration() {
                     {model}
                   </SelectItem>
                 ))}
-                <SelectItem value="custom">Custom Model</SelectItem>
+                {selectedProvider?.supportCustom && (
+                  <SelectItem value="custom">Custom Model</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {(preferences.preferred_model === 'custom' || selectedProvider?.value === 'openrouter') && (
+          {(isCustomModelSelected || selectedProvider?.supportCustom) && (
             <div className="space-y-2">
-              <Label htmlFor="custom-model">Custom Model Name</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="custom-model"
-                  value={customModel}
-                  onChange={(e) => setCustomModel(e.target.value)}
-                  placeholder="Masukkan nama model custom"
-                />
-                <Button onClick={handleCustomModelSubmit} size="sm">
-                  Set
-                </Button>
-              </div>
+              <Label htmlFor="custom-model">
+                {isCustomModelSelected ? 'Model Saat Ini' : 'Custom Model Name'}
+              </Label>
+              {isCustomModelSelected ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={preferences.preferred_model}
+                    disabled
+                    className="bg-gray-50"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => savePreferences({ preferred_model: '' })}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    id="custom-model"
+                    value={customModel}
+                    onChange={(e) => setCustomModel(e.target.value)}
+                    placeholder="Masukkan nama model custom"
+                    onKeyPress={(e) => e.key === 'Enter' && handleCustomModelSubmit()}
+                  />
+                  <Button onClick={handleCustomModelSubmit} size="sm" disabled={!customModel.trim()}>
+                    Set
+                  </Button>
+                </div>
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* API Keys Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            Konfigurasi API Keys
-          </CardTitle>
-          <CardDescription>
-            API keys disimpan dengan aman di Supabase Secrets
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Catatan:</strong> API keys dikonfigurasi di tingkat sistem oleh administrator. 
-              Hubungi admin untuk mengatur atau memperbarui API keys.
-            </p>
-          </div>
-          
-          <div className="space-y-2">
-            <Label>Status API Keys</Label>
-            <div className="space-y-2">
-              {AI_PROVIDERS.map(provider => (
-                <div key={provider.value} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-sm font-medium">{provider.label}</span>
-                  <span className="text-xs px-2 py-1 bg-gray-200 rounded">Dikonfigurasi Sistem</span>
-                </div>
-              ))}
+          {selectedProvider && (
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>{selectedProvider.label}:</strong> {
+                  selectedProvider.value === 'openai' ? 'Memerlukan API key berbayar, namun memberikan hasil terbaik' :
+                  selectedProvider.value === 'gemini' ? 'Tersedia gratis dengan batas penggunaan yang cukup besar' :
+                  selectedProvider.value === 'openrouter' ? 'Akses ke berbagai model, beberapa gratis' :
+                  selectedProvider.value === 'deepseek' ? 'Model yang sangat cost-effective dengan performa tinggi' :
+                  'Provider AI terpilih'
+                }
+              </p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

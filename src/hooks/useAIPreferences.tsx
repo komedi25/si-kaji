@@ -10,6 +10,7 @@ interface AIPreferences {
   auto_analysis_enabled: boolean;
   auto_analysis_schedule: string;
   notification_enabled: boolean;
+  api_keys?: Record<string, string>;
 }
 
 export function useAIPreferences() {
@@ -18,7 +19,8 @@ export function useAIPreferences() {
     preferred_model: '',
     auto_analysis_enabled: false,
     auto_analysis_schedule: 'weekly',
-    notification_enabled: true
+    notification_enabled: true,
+    api_keys: {}
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -39,7 +41,10 @@ export function useAIPreferences() {
       }
 
       if (data) {
-        setPreferences(data);
+        setPreferences({
+          ...data,
+          api_keys: data.api_keys || {}
+        });
       }
     } catch (error) {
       console.error('Error loading AI preferences:', error);
@@ -64,10 +69,14 @@ export function useAIPreferences() {
       if (error) throw error;
 
       setPreferences(updatedPreferences);
-      toast({
-        title: "Berhasil",
-        description: "Preferensi AI telah disimpan"
-      });
+      
+      // Only show toast for significant changes, not for API keys
+      if (!newPreferences.api_keys) {
+        toast({
+          title: "Berhasil",
+          description: "Preferensi AI telah disimpan"
+        });
+      }
     } catch (error) {
       console.error('Error saving AI preferences:', error);
       toast({
