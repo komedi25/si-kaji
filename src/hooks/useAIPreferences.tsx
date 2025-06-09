@@ -43,7 +43,7 @@ export function useAIPreferences() {
       if (data) {
         setPreferences({
           ...data,
-          api_keys: data.api_keys || {}
+          api_keys: (data.api_keys as Record<string, string>) || {}
         });
       }
     } catch (error) {

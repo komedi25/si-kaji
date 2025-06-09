@@ -64,18 +64,23 @@ export function APIKeyManager() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('ai_preferences')
         .select('api_keys')
         .eq('user_id', user.id)
         .single();
 
-      if (data?.api_keys) {
-        setApiKeys(data.api_keys);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading API keys:', error);
+        return;
+      }
+
+      if (data?.api_keys && typeof data.api_keys === 'object') {
+        setApiKeys(data.api_keys as Record<string, string>);
         // Initialize status as unknown for loaded keys
         const initialStatus: Record<string, 'unknown'> = {};
-        Object.keys(data.api_keys).forEach(key => {
-          if (data.api_keys[key]) {
+        Object.keys(data.api_keys as Record<string, string>).forEach(key => {
+          if ((data.api_keys as Record<string, string>)[key]) {
             initialStatus[key] = 'unknown';
           }
         });

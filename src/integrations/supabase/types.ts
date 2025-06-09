@@ -167,6 +167,7 @@ export type Database = {
       }
       ai_preferences: {
         Row: {
+          api_keys: Json | null
           auto_analysis_enabled: boolean
           auto_analysis_schedule: string | null
           created_at: string
@@ -178,6 +179,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          api_keys?: Json | null
           auto_analysis_enabled?: boolean
           auto_analysis_schedule?: string | null
           created_at?: string
@@ -189,6 +191,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          api_keys?: Json | null
           auto_analysis_enabled?: boolean
           auto_analysis_schedule?: string | null
           created_at?: string
@@ -2184,6 +2187,57 @@ export type Database = {
           notification_type?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          auto_save: boolean
+          created_at: string
+          date_format: string
+          email_notifications: boolean
+          id: string
+          items_per_page: number
+          language: string
+          notifications_enabled: boolean
+          sms_notifications: boolean
+          theme: string
+          time_format: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_save?: boolean
+          created_at?: string
+          date_format?: string
+          email_notifications?: boolean
+          id?: string
+          items_per_page?: number
+          language?: string
+          notifications_enabled?: boolean
+          sms_notifications?: boolean
+          theme?: string
+          time_format?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_save?: boolean
+          created_at?: string
+          date_format?: string
+          email_notifications?: boolean
+          id?: string
+          items_per_page?: number
+          language?: string
+          notifications_enabled?: boolean
+          sms_notifications?: boolean
+          theme?: string
+          time_format?: string
+          timezone?: string
           updated_at?: string
           user_id?: string
         }
