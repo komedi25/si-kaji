@@ -2393,6 +2393,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_activity_logs: {
+        Args: { since_date: string; limit_count?: number }
+        Returns: {
+          id: string
+          user_id: string
+          activity_type: string
+          description: string
+          page_url: string
+          metadata: Json
+          created_at: string
+          user_name: string
+        }[]
+      }
       get_ai_task_stats: {
         Args: { since_date: string }
         Returns: {
@@ -2407,6 +2420,20 @@ export type Database = {
       get_ai_usage_count_since: {
         Args: { since_date: string }
         Returns: number
+      }
+      get_error_logs: {
+        Args: { since_date: string; limit_count?: number }
+        Returns: {
+          id: string
+          user_id: string
+          error_type: string
+          error_message: string
+          error_stack: string
+          page_url: string
+          metadata: Json
+          created_at: string
+          user_name: string
+        }[]
       }
       get_recent_ai_activities: {
         Args: { limit_count: number }
@@ -2432,6 +2459,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_activity: {
+        Args: {
+          p_user_id: string
+          p_activity_type: string
+          p_description: string
+          p_page_url: string
+          p_metadata?: Json
+        }
+        Returns: undefined
+      }
       log_ai_usage: {
         Args: {
           p_user_id: string
@@ -2441,6 +2478,17 @@ export type Database = {
           p_response_length: number
           p_tokens_used: number
           p_cost?: number
+        }
+        Returns: undefined
+      }
+      log_error: {
+        Args: {
+          p_user_id: string
+          p_error_type: string
+          p_error_message: string
+          p_error_stack?: string
+          p_page_url?: string
+          p_metadata?: Json
         }
         Returns: undefined
       }

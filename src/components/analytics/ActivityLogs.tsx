@@ -44,13 +44,27 @@ export function ActivityLogs() {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
       const { data, error } = await supabase
-        .rpc('get_activity_logs', {
-          since_date: since,
-          limit_count: 100
-        });
+        .from('activity_logs')
+        .select(`
+          id,
+          user_id,
+          activity_type,
+          description,
+          page_url,
+          metadata,
+          created_at,
+          profiles!inner(full_name)
+        `)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
-      return data as ActivityLog[];
+      
+      return data.map(log => ({
+        ...log,
+        user_name: log.profiles?.full_name || 'Unknown User'
+      })) as ActivityLog[];
     },
     enabled: logType === 'activity'
   });
@@ -62,13 +76,28 @@ export function ActivityLogs() {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
       const { data, error } = await supabase
-        .rpc('get_error_logs', {
-          since_date: since,
-          limit_count: 100
-        });
+        .from('error_logs')
+        .select(`
+          id,
+          user_id,
+          error_type,
+          error_message,
+          error_stack,
+          page_url,
+          metadata,
+          created_at,
+          profiles!inner(full_name)
+        `)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
-      return data as ErrorLog[];
+      
+      return data.map(log => ({
+        ...log,
+        user_name: log.profiles?.full_name || 'Unknown User'
+      })) as ErrorLog[];
     },
     enabled: logType === 'error'
   });
