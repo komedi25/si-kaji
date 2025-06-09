@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,7 @@ import { StudentAchievement } from '@/types/attendance';
 export const AchievementReport = () => {
   const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), 0, 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>('');
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>('all');
 
   const { data: academicYears } = useQuery({
     queryKey: ['academic-years'],
@@ -162,7 +161,7 @@ export const AchievementReport = () => {
               <SelectValue placeholder="Semua tahun ajaran" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Semua tahun ajaran</SelectItem>
+              <SelectItem value="all">Semua tahun ajaran</SelectItem>
               {academicYears?.map((ay) => (
                 <SelectItem key={ay.id} value={ay.id}>
                   {ay.name}
