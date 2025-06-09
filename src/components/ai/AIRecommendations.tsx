@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,7 +70,6 @@ export function AIRecommendations() {
 
       if (error) throw error;
 
-      // Transform the data to match our interface
       const transformedData = data?.map((item: any) => ({
         id: item.id,
         student_id: item.student_id,

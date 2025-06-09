@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -135,7 +134,7 @@ export function AIConfiguration() {
           <div className="p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800">
               <strong>Catatan:</strong> API keys dikonfigurasi di tingkat sistem oleh administrator. 
-              Hubungi admin sistem untuk mengatur atau memperbarui API keys.
+              Hubungi admin untuk mengatur atau memperbarui API keys.
             </p>
           </div>
           

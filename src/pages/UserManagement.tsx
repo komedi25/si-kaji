@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,8 +30,7 @@ export default function UserManagement() {
   const [isAddingRole, setIsAddingRole] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
-    { value: 'admin_sistem', label: 'Admin Sistem' },
-    { value: 'admin_kesiswaan', label: 'Admin Kesiswaan' },
+    { value: 'admin', label: 'Admin' },
     { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
     { value: 'tppk', label: 'TPPK' },
     { value: 'arps', label: 'ARPS' },
@@ -165,18 +163,18 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    if (hasRole('admin_sistem')) {
+    if (hasRole('admin')) {
       fetchUsers();
     }
   }, [hasRole]);
 
-  if (!hasRole('admin_sistem')) {
+  if (!hasRole('admin')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <Alert className="max-w-md">
             <AlertDescription>
-              Anda tidak memiliki akses ke halaman ini. Hanya Admin Sistem yang dapat mengakses manajemen pengguna.
+              Anda tidak memiliki akses ke halaman ini. Hanya Admin yang dapat mengakses manajemen pengguna.
             </AlertDescription>
           </Alert>
         </div>
