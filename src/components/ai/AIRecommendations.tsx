@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, TrendingUp, AlertTriangle, Award, Users, RefreshCw } from 'lucide-react';
+import { AIRecommendationFilters } from '@/components/ai/AIRecommendationFilters';
+import { Brain, TrendingUp, AlertTriangle, Award, Users, RefreshCw, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AIRecommendation {
@@ -17,23 +18,45 @@ interface AIRecommendation {
   priority: string;
   status: string;
   student_id: string;
+  assigned_role: string;
   created_at: string;
+  reviewed_at?: string;
   student?: {
     full_name: string;
     nis: string;
   };
 }
 
+interface FilterOptions {
+  status: string;
+  priority: string;
+  type: string;
+  assignedRole: string;
+  search: string;
+}
+
 export const AIRecommendations = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
+  const [filteredRecommendations, setFilteredRecommendations] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({
+    status: 'all',
+    priority: 'all',
+    type: 'all',
+    assignedRole: 'all',
+    search: ''
+  });
 
   useEffect(() => {
     fetchRecommendations();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [recommendations, filters]);
 
   const fetchRecommendations = async () => {
     try {
@@ -44,7 +67,7 @@ export const AIRecommendations = () => {
           student:students(full_name, nis)
         `)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
       setRecommendations(data || []);
@@ -55,32 +78,105 @@ export const AIRecommendations = () => {
     }
   };
 
+  const applyFilters = () => {
+    let filtered = [...recommendations];
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(rec => 
+        rec.title.toLowerCase().includes(searchLower) ||
+        rec.content.toLowerCase().includes(searchLower) ||
+        rec.student?.full_name.toLowerCase().includes(searchLower) ||
+        rec.student?.nis.includes(filters.search)
+      );
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(rec => rec.status === filters.status);
+    }
+
+    // Priority filter
+    if (filters.priority !== 'all') {
+      filtered = filtered.filter(rec => rec.priority === filters.priority);
+    }
+
+    // Type filter
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(rec => rec.recommendation_type === filters.type);
+    }
+
+    // Assigned role filter
+    if (filters.assignedRole !== 'all') {
+      filtered = filtered.filter(rec => rec.assigned_role === filters.assignedRole);
+    }
+
+    setFilteredRecommendations(filtered);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      status: 'all',
+      priority: 'all',
+      type: 'all',
+      assignedRole: 'all',
+      search: ''
+    });
+  };
+
   const generateRecommendations = async () => {
     setGenerating(true);
     try {
-      // Simulate AI analysis - in real implementation, this would call AI service
+      // Mock AI recommendation generation
       const mockRecommendations = [
         {
           student_id: 'mock-student-1',
-          title: 'Perhatian Khusus Diperlukan',
-          content: 'Siswa menunjukkan penurunan kehadiran dalam 2 minggu terakhir. Disarankan untuk melakukan konseling.',
+          title: 'Intervensi untuk Siswa dengan Absensi Rendah',
+          content: 'Berdasarkan analisis data, siswa Ahmad menunjukkan pola absensi yang menurun dalam 3 minggu terakhir. Tingkat kehadiran turun dari 95% menjadi 78%. Disarankan untuk melakukan konseling personal untuk mengidentifikasi masalah yang dihadapi.',
           recommendation_type: 'behavioral_intervention',
           priority: 'high',
-          assigned_role: 'guru_bk'
+          assigned_role: 'guru_bk',
+          metadata: {
+            attendance_rate: 78,
+            previous_rate: 95,
+            analysis_period: '3 weeks'
+          }
         },
         {
           student_id: 'mock-student-2',
-          title: 'Potensi Prestasi Akademik',
-          content: 'Berdasarkan analisis, siswa memiliki potensi untuk mengikuti olimpiade matematika.',
+          title: 'Peluang Olimpiade Matematika',
+          content: 'Siti menunjukkan prestasi konsisten dalam mata pelajaran matematika dengan nilai rata-rata 92. Berdasarkan pola pembelajaran dan kemampuan problem solving, disarankan untuk diikutsertakan dalam pelatihan olimpiade matematika.',
           recommendation_type: 'achievement_opportunity',
           priority: 'medium',
-          assigned_role: 'wali_kelas'
+          assigned_role: 'wali_kelas',
+          metadata: {
+            subject: 'matematika',
+            average_score: 92,
+            recommendation_confidence: 0.85
+          }
+        },
+        {
+          student_id: 'mock-student-3',
+          title: 'Program Remedial Bahasa Inggris',
+          content: 'Budi memerlukan dukungan tambahan dalam bahasa Inggris. Nilai semester menurun dari 75 menjadi 60. Disarankan untuk mengikuti program remedial dan bimbingan khusus.',
+          recommendation_type: 'academic_support',
+          priority: 'medium',
+          assigned_role: 'wali_kelas',
+          metadata: {
+            subject: 'bahasa_inggris',
+            current_score: 60,
+            previous_score: 75
+          }
         }
       ];
 
       // Insert mock recommendations
       for (const rec of mockRecommendations) {
-        await supabase.from('ai_recommendations').insert(rec);
+        await supabase.from('ai_recommendations').insert({
+          ...rec,
+          created_by_ai: true
+        });
       }
 
       toast({
@@ -132,6 +228,8 @@ export const AIRecommendations = () => {
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
+      case 'urgent':
+        return <Badge variant="destructive">Mendesak</Badge>;
       case 'high':
         return <Badge variant="destructive">Tinggi</Badge>;
       case 'medium':
@@ -146,13 +244,13 @@ export const AIRecommendations = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">Menunggu</Badge>;
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Menunggu</Badge>;
       case 'in_progress':
-        return <Badge variant="default">Dalam Proses</Badge>;
+        return <Badge variant="default"><RefreshCw className="w-3 h-3 mr-1" />Dalam Proses</Badge>;
       case 'completed':
-        return <Badge variant="default">Selesai</Badge>;
+        return <Badge variant="default"><CheckCircle className="w-3 h-3 mr-1" />Selesai</Badge>;
       case 'dismissed':
-        return <Badge variant="outline">Diabaikan</Badge>;
+        return <Badge variant="outline"><XCircle className="w-3 h-3 mr-1" />Diabaikan</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -166,13 +264,26 @@ export const AIRecommendations = () => {
         return <Award className="w-4 h-4 text-yellow-500" />;
       case 'academic_support':
         return <TrendingUp className="w-4 h-4 text-blue-500" />;
+      case 'discipline_recommendation':
+        return <Users className="w-4 h-4 text-purple-500" />;
       default:
         return <Brain className="w-4 h-4 text-gray-500" />;
     }
   };
 
-  const filterByType = (type: string) => {
-    return recommendations.filter(rec => rec.recommendation_type === type);
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'behavioral_intervention':
+        return 'Intervensi Perilaku';
+      case 'achievement_opportunity':
+        return 'Peluang Prestasi';
+      case 'academic_support':
+        return 'Dukungan Akademik';
+      case 'discipline_recommendation':
+        return 'Rekomendasi Disiplin';
+      default:
+        return type;
+    }
   };
 
   if (loading) {
@@ -181,147 +292,120 @@ export const AIRecommendations = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-5 h-5" />
-              Rekomendasi AI
-            </CardTitle>
-            <Button 
-              onClick={generateRecommendations}
-              disabled={generating}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-              {generating ? 'Menganalisis...' : 'Perbarui Analisis'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all">Semua</TabsTrigger>
-              <TabsTrigger value="behavioral">Perilaku</TabsTrigger>
-              <TabsTrigger value="achievement">Prestasi</TabsTrigger>
-              <TabsTrigger value="academic">Akademik</TabsTrigger>
-            </TabsList>
+      {/* Header and Generate Button */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Rekomendasi AI</h3>
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredRecommendations.length} of {recommendations.length} recommendations
+          </p>
+        </div>
+        <Button 
+          onClick={generateRecommendations}
+          disabled={generating}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
+          {generating ? 'Menganalisis...' : 'Perbarui Analisis'}
+        </Button>
+      </div>
 
-            <TabsContent value="all" className="space-y-4">
-              {recommendations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Belum ada rekomendasi AI. Klik "Perbarui Analisis" untuk memulai.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recommendations.map((rec) => (
-                    <Card key={rec.id}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-2">
-                            {getTypeIcon(rec.recommendation_type)}
-                            <h3 className="font-semibold">{rec.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getPriorityBadge(rec.priority)}
-                            {getStatusBadge(rec.status)}
-                          </div>
-                        </div>
+      {/* Filters */}
+      <AIRecommendationFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        onClearFilters={clearFilters}
+      />
 
+      {/* Recommendations List */}
+      {filteredRecommendations.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">
+              <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>
+                {recommendations.length === 0 
+                  ? 'Belum ada rekomendasi AI. Klik "Perbarui Analisis" untuk memulai.'
+                  : 'Tidak ada rekomendasi yang sesuai dengan filter.'
+                }
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredRecommendations.map((rec) => (
+            <Card key={rec.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    {getTypeIcon(rec.recommendation_type)}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-lg mb-1">{rec.title}</h4>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <span>{getTypeLabel(rec.recommendation_type)}</span>
                         {rec.student && (
-                          <div className="text-sm text-muted-foreground mb-2">
-                            Siswa: {rec.student.full_name} ({rec.student.nis})
-                          </div>
+                          <>
+                            <span>•</span>
+                            <span>{rec.student.full_name} ({rec.student.nis})</span>
+                          </>
                         )}
-
-                        <p className="text-sm mb-4">{rec.content}</p>
-
-                        <div className="flex gap-2">
-                          {rec.status === 'pending' && (
-                            <>
-                              <Button 
-                                size="sm"
-                                onClick={() => updateRecommendationStatus(rec.id, 'in_progress')}
-                              >
-                                Tindak Lanjuti
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => updateRecommendationStatus(rec.id, 'dismissed')}
-                              >
-                                Abaikan
-                              </Button>
-                            </>
-                          )}
-                          {rec.status === 'in_progress' && (
-                            <Button 
-                              size="sm"
-                              onClick={() => updateRecommendationStatus(rec.id, 'completed')}
-                            >
-                              Selesai
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="text-xs text-muted-foreground mt-2">
-                          {new Date(rec.created_at).toLocaleDateString('id-ID')}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <span>•</span>
+                        <span>{new Date(rec.created_at).toLocaleDateString('id-ID')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    {getPriorityBadge(rec.priority)}
+                    {getStatusBadge(rec.status)}
+                  </div>
                 </div>
-              )}
-            </TabsContent>
 
-            <TabsContent value="behavioral" className="space-y-4">
-              {filterByType('behavioral_intervention').map((rec) => (
-                <Card key={rec.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-red-500" />
-                      <h3 className="font-semibold">{rec.title}</h3>
-                      {getPriorityBadge(rec.priority)}
-                    </div>
-                    <p className="text-sm">{rec.content}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
+                <p className="text-sm mb-4 text-gray-700 leading-relaxed">{rec.content}</p>
 
-            <TabsContent value="achievement" className="space-y-4">
-              {filterByType('achievement_opportunity').map((rec) => (
-                <Card key={rec.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="w-4 h-4 text-yellow-500" />
-                      <h3 className="font-semibold">{rec.title}</h3>
-                      {getPriorityBadge(rec.priority)}
-                    </div>
-                    <p className="text-sm">{rec.content}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="text-xs text-muted-foreground">
+                    Ditugaskan ke: <span className="capitalize">{rec.assigned_role?.replace('_', ' ')}</span>
+                    {rec.reviewed_at && (
+                      <span className="ml-4">
+                        Direview: {new Date(rec.reviewed_at).toLocaleDateString('id-ID')}
+                      </span>
+                    )}
+                  </div>
 
-            <TabsContent value="academic" className="space-y-4">
-              {filterByType('academic_support').map((rec) => (
-                <Card key={rec.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-blue-500" />
-                      <h3 className="font-semibold">{rec.title}</h3>
-                      {getPriorityBadge(rec.priority)}
-                    </div>
-                    <p className="text-sm">{rec.content}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                  <div className="flex gap-2">
+                    {rec.status === 'pending' && (
+                      <>
+                        <Button 
+                          size="sm"
+                          onClick={() => updateRecommendationStatus(rec.id, 'in_progress')}
+                        >
+                          Tindak Lanjuti
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => updateRecommendationStatus(rec.id, 'dismissed')}
+                        >
+                          Abaikan
+                        </Button>
+                      </>
+                    )}
+                    {rec.status === 'in_progress' && (
+                      <Button 
+                        size="sm"
+                        onClick={() => updateRecommendationStatus(rec.id, 'completed')}
+                      >
+                        Selesai
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

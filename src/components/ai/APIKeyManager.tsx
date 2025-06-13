@@ -1,360 +1,331 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Key, Eye, EyeOff, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
+import { useAIPreferences } from '@/hooks/useAIPreferences';
+import { Eye, EyeOff, Key, Lock, Save, TestTube } from 'lucide-react';
 
-const AI_PROVIDERS = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    description: 'GPT-4, GPT-4o, GPT-4o-mini models',
-    secretKey: 'OPENAI_API_KEY',
-    helpUrl: 'https://platform.openai.com/api-keys',
-    testEndpoint: 'https://api.openai.com/v1/models'
-  },
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    description: 'Gemini Pro, Gemini Pro Vision',
-    secretKey: 'GEMINI_API_KEY',
-    helpUrl: 'https://makersuite.google.com/app/apikey',
-    testEndpoint: null // Gemini has different validation
-  },
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    description: 'Access to multiple AI models',
-    secretKey: 'OPENROUTER_API_KEY',
-    helpUrl: 'https://openrouter.ai/keys',
-    testEndpoint: 'https://openrouter.ai/api/v1/models'
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    description: 'DeepSeek Chat, DeepSeek Coder',
-    secretKey: 'DEEPSEEK_API_KEY',
-    helpUrl: 'https://platform.deepseek.com/api_keys',
-    testEndpoint: 'https://api.deepseek.com/v1/models'
-  }
-];
+interface APIKeyConfig {
+  openai: string;
+  gemini: string;
+  openrouter: string;
+  deepseek: string;
+}
 
 export function APIKeyManager() {
   const { toast } = useToast();
   const { hasRole } = useAuth();
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const { preferences, savePreferences, loading } = useAIPreferences();
+  const [apiKeys, setApiKeys] = useState<APIKeyConfig>({
+    openai: '',
+    gemini: '',
+    openrouter: '',
+    deepseek: ''
+  });
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({
+    openai: false,
+    gemini: false,
+    openrouter: false,
+    deepseek: false
+  });
   const [testing, setTesting] = useState<Record<string, boolean>>({});
-  const [keyStatus, setKeyStatus] = useState<Record<string, 'valid' | 'invalid' | 'unknown'>>({});
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Check if user has admin role
+  useEffect(() => {
+    if (preferences.api_keys) {
+      setApiKeys({
+        openai: preferences.api_keys.openai || '',
+        gemini: preferences.api_keys.gemini || '',
+        openrouter: preferences.api_keys.openrouter || '',
+        deepseek: preferences.api_keys.deepseek || ''
+      });
+    }
+  }, [preferences]);
+
   if (!hasRole('admin')) {
     return (
       <Alert>
-        <AlertCircle className="h-4 w-4" />
+        <Lock className="h-4 w-4" />
         <AlertDescription>
-          Hanya Admin yang dapat mengakses pengaturan API Keys.
+          Hanya Admin yang dapat mengelola API Keys.
         </AlertDescription>
       </Alert>
     );
   }
 
-  // Load existing API keys from user preferences
-  useEffect(() => {
-    loadAPIKeys();
-  }, []);
-
-  const loadAPIKeys = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('ai_preferences')
-        .select('api_keys')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading API keys:', error);
-        return;
-      }
-
-      if (data?.api_keys && typeof data.api_keys === 'object') {
-        setApiKeys(data.api_keys as Record<string, string>);
-        // Initialize status as unknown for loaded keys
-        const initialStatus: Record<string, 'unknown'> = {};
-        Object.keys(data.api_keys as Record<string, string>).forEach(key => {
-          if ((data.api_keys as Record<string, string>)[key]) {
-            initialStatus[key] = 'unknown';
-          }
-        });
-        setKeyStatus(initialStatus);
-      }
-    } catch (error) {
-      console.error('Error loading API keys:', error);
-    }
+  const handleKeyChange = (provider: keyof APIKeyConfig, value: string) => {
+    setApiKeys(prev => ({
+      ...prev,
+      [provider]: value
+    }));
   };
 
-  const saveAPIKeys = async () => {
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Filter out empty keys
-      const validKeys = Object.fromEntries(
-        Object.entries(apiKeys).filter(([_, value]) => value.trim() !== '')
-      );
-
-      const { error } = await supabase
-        .from('ai_preferences')
-        .upsert({
-          user_id: user.id,
-          api_keys: validKeys
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: "API Keys telah disimpan dengan aman"
-      });
-    } catch (error) {
-      console.error('Error saving API keys:', error);
-      toast({
-        title: "Error",
-        description: "Gagal menyimpan API keys",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+  const toggleShowKey = (provider: string) => {
+    setShowKeys(prev => ({
+      ...prev,
+      [provider]: !prev[provider]
+    }));
   };
 
-  const testAPIKey = async (provider: typeof AI_PROVIDERS[0]) => {
-    if (!apiKeys[provider.secretKey]?.trim()) {
+  const testAPIKey = async (provider: keyof APIKeyConfig) => {
+    const key = apiKeys[provider];
+    if (!key.trim()) {
       toast({
         title: "Error",
-        description: "API key tidak boleh kosong",
+        description: "API Key tidak boleh kosong",
         variant: "destructive"
       });
       return;
     }
 
-    setTesting(prev => ({ ...prev, [provider.secretKey]: true }));
+    setTesting(prev => ({ ...prev, [provider]: true }));
 
     try {
-      // Test the API key by calling the AI processor edge function
-      const { data, error } = await supabase.functions.invoke('ai-processor', {
-        body: {
-          provider: provider.id,
-          task: 'test_connection',
-          prompt: 'Test connection',
-          model: provider.id === 'openai' ? 'gpt-4o-mini' : 
-                 provider.id === 'gemini' ? 'gemini-pro' :
-                 provider.id === 'deepseek' ? 'deepseek-chat' : 'default'
-        }
+      // Simple test for different providers
+      let testUrl = '';
+      let testHeaders: Record<string, string> = {};
+      let testBody: any = {};
+
+      switch (provider) {
+        case 'openai':
+          testUrl = 'https://api.openai.com/v1/models';
+          testHeaders = {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          };
+          break;
+        case 'gemini':
+          testUrl = `https://generativelanguage.googleapis.com/v1/models?key=${key}`;
+          break;
+        case 'openrouter':
+          testUrl = 'https://openrouter.ai/api/v1/models';
+          testHeaders = {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          };
+          break;
+        case 'deepseek':
+          testUrl = 'https://api.deepseek.com/v1/models';
+          testHeaders = {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          };
+          break;
+      }
+
+      const response = await fetch(testUrl, {
+        method: 'GET',
+        headers: testHeaders
       });
 
-      if (error) {
-        setKeyStatus(prev => ({ ...prev, [provider.secretKey]: 'invalid' }));
+      if (response.ok) {
         toast({
-          title: "API Key Tidak Valid",
-          description: `Gagal terhubung dengan ${provider.name}: ${error.message}`,
-          variant: "destructive"
+          title: "Berhasil",
+          description: `API Key ${provider.toUpperCase()} berhasil diverifikasi`
         });
       } else {
-        setKeyStatus(prev => ({ ...prev, [provider.secretKey]: 'valid' }));
-        toast({
-          title: "API Key Valid",
-          description: `Berhasil terhubung dengan ${provider.name}`,
-        });
+        throw new Error(`HTTP ${response.status}`);
       }
     } catch (error) {
-      setKeyStatus(prev => ({ ...prev, [provider.secretKey]: 'invalid' }));
+      console.error(`Error testing ${provider} API key:`, error);
       toast({
         title: "Error",
-        description: `Gagal menguji koneksi: ${error}`,
+        description: `API Key ${provider.toUpperCase()} tidak valid`,
         variant: "destructive"
       });
     } finally {
-      setTesting(prev => ({ ...prev, [provider.secretKey]: false }));
+      setTesting(prev => ({ ...prev, [provider]: false }));
     }
   };
 
-  const toggleShowKey = (secretKey: string) => {
-    setShowKeys(prev => ({ ...prev, [secretKey]: !prev[secretKey] }));
-  };
+  const saveAPIKeys = async () => {
+    setSaving(true);
+    try {
+      await savePreferences({
+        api_keys: apiKeys
+      });
 
-  const updateAPIKey = (secretKey: string, value: string) => {
-    setApiKeys(prev => ({ ...prev, [secretKey]: value }));
-    // Reset status when key changes
-    if (keyStatus[secretKey]) {
-      setKeyStatus(prev => ({ ...prev, [secretKey]: 'unknown' }));
+      toast({
+        title: "Berhasil",
+        description: "API Keys berhasil disimpan"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan API Keys",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const getStatusIcon = (secretKey: string) => {
-    const status = keyStatus[secretKey];
-    if (status === 'valid') {
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    } else if (status === 'invalid') {
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
+  const providers = [
+    {
+      key: 'openai' as keyof APIKeyConfig,
+      name: 'OpenAI',
+      description: 'API key untuk GPT models',
+      placeholder: 'sk-...',
+      helpUrl: 'https://platform.openai.com/api-keys'
+    },
+    {
+      key: 'gemini' as keyof APIKeyConfig,
+      name: 'Google Gemini',
+      description: 'API key untuk Gemini models (Gratis)',
+      placeholder: 'AI...',
+      helpUrl: 'https://makersuite.google.com/app/apikey'
+    },
+    {
+      key: 'openrouter' as keyof APIKeyConfig,
+      name: 'OpenRouter',
+      description: 'API key untuk multi-model access',
+      placeholder: 'sk-or-...',
+      helpUrl: 'https://openrouter.ai/keys'
+    },
+    {
+      key: 'deepseek' as keyof APIKeyConfig,
+      name: 'DeepSeek',
+      description: 'API key untuk DeepSeek models',
+      placeholder: 'sk-...',
+      helpUrl: 'https://platform.deepseek.com/api_keys'
     }
-    return null;
-  };
+  ];
 
-  const getStatusBadge = (secretKey: string) => {
-    const status = keyStatus[secretKey];
-    if (status === 'valid') {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Valid</Badge>;
-    } else if (status === 'invalid') {
-      return <Badge variant="destructive">Invalid</Badge>;
-    } else if (apiKeys[secretKey]?.trim()) {
-      return <Badge variant="outline">Belum diuji</Badge>;
-    }
-    return <Badge variant="secondary">Tidak ada</Badge>;
-  };
+  if (loading) {
+    return <div>Memuat konfigurasi API...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <Alert>
-        <Key className="h-4 w-4" />
-        <AlertDescription>
-          API keys disimpan dengan aman dan dienkripsi. Pastikan untuk menjaga kerahasiaan API keys Anda.
-          API keys akan digunakan oleh sistem AI untuk mengakses layanan provider.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs defaultValue={AI_PROVIDERS[0].id} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          {AI_PROVIDERS.map((provider) => (
-            <TabsTrigger key={provider.id} value={provider.id} className="flex items-center gap-2">
-              {provider.name}
-              {getStatusIcon(provider.secretKey)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {AI_PROVIDERS.map((provider) => (
-          <TabsContent key={provider.id} value={provider.id}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Key className="h-5 w-5" />
-                    {provider.name} API Key
-                  </span>
-                  {getStatusBadge(provider.secretKey)}
-                </CardTitle>
-                <CardDescription>
-                  {provider.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor={provider.secretKey}>API Key</Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        id={provider.secretKey}
-                        type={showKeys[provider.secretKey] ? 'text' : 'password'}
-                        value={apiKeys[provider.secretKey] || ''}
-                        onChange={(e) => updateAPIKey(provider.secretKey, e.target.value)}
-                        placeholder={`Masukkan ${provider.name} API key...`}
-                        className="pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => toggleShowKey(provider.secretKey)}
-                      >
-                        {showKeys[provider.secretKey] ? 
-                          <EyeOff className="h-4 w-4" /> : 
-                          <Eye className="h-4 w-4" />
-                        }
-                      </Button>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => testAPIKey(provider)}
-                      disabled={!apiKeys[provider.secretKey]?.trim() || testing[provider.secretKey]}
-                    >
-                      {testing[provider.secretKey] ? 'Testing...' : 'Test'}
-                    </Button>
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="w-5 h-5" />
+            Manajemen API Keys
+          </CardTitle>
+          <CardDescription>
+            Kelola API keys untuk berbagai provider AI. Keys disimpan secara terenkripsi.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {providers.map((provider) => (
+            <div key={provider.key} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor={provider.key} className="font-medium">
+                    {provider.name}
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    {provider.description}
+                  </p>
                 </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Butuh bantuan mendapatkan API key?</span>
+                <a
+                  href={provider.helpUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Dapatkan API Key
+                </a>
+              </div>
+              
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id={provider.key}
+                    type={showKeys[provider.key] ? 'text' : 'password'}
+                    value={apiKeys[provider.key]}
+                    onChange={(e) => handleKeyChange(provider.key, e.target.value)}
+                    placeholder={provider.placeholder}
+                    className="pr-10"
+                  />
                   <Button
-                    variant="link"
+                    type="button"
+                    variant="ghost"
                     size="sm"
-                    className="h-auto p-0"
-                    onClick={() => window.open(provider.helpUrl, '_blank')}
+                    className="absolute right-1 top-1 h-8 w-8 p-0"
+                    onClick={() => toggleShowKey(provider.key)}
                   >
-                    Kunjungi {provider.name} <ExternalLink className="h-3 w-3 ml-1" />
+                    {showKeys[provider.key] ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => testAPIKey(provider.key)}
+                  disabled={!apiKeys[provider.key].trim() || testing[provider.key]}
+                  className="flex items-center gap-1"
+                >
+                  <TestTube className="h-4 w-4" />
+                  {testing[provider.key] ? 'Testing...' : 'Test'}
+                </Button>
+              </div>
+            </div>
+          ))}
 
-                {provider.id === 'openai' && (
-                  <Alert>
-                    <AlertDescription>
-                      <strong>OpenAI:</strong> Pastikan akun Anda memiliki kredit yang cukup. 
-                      API key dapat ditemukan di platform.openai.com/api-keys
-                    </AlertDescription>
-                  </Alert>
-                )}
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Keamanan:</strong> API keys disimpan terenkripsi dan hanya dapat diakses oleh admin. 
+              Jangan bagikan API keys kepada pihak yang tidak berwenang.
+            </AlertDescription>
+          </Alert>
 
-                {provider.id === 'gemini' && (
-                  <Alert>
-                    <AlertDescription>
-                      <strong>Google Gemini:</strong> Gunakan API key dari Google AI Studio. 
-                      Sebagian besar model Gemini tersedia gratis dengan batas tertentu.
-                    </AlertDescription>
-                  </Alert>
-                )}
+          <div className="flex justify-end">
+            <Button 
+              onClick={saveAPIKeys} 
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? 'Menyimpan...' : 'Simpan API Keys'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-                {provider.id === 'openrouter' && (
-                  <Alert>
-                    <AlertDescription>
-                      <strong>OpenRouter:</strong> Akses ke berbagai model AI dari satu endpoint. 
-                      Beberapa model tersedia gratis, cek openrouter.ai untuk detail.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {provider.id === 'deepseek' && (
-                  <Alert>
-                    <AlertDescription>
-                      <strong>DeepSeek:</strong> Model AI yang cost-effective dengan performa tinggi. 
-                      Dapatkan API key gratis di platform.deepseek.com
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      <div className="flex justify-end">
-        <Button onClick={saveAPIKeys} disabled={loading}>
-          {loading ? 'Menyimpan...' : 'Simpan API Keys'}
-        </Button>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Status Provider</CardTitle>
+          <CardDescription>
+            Status ketersediaan berbagai AI provider
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {providers.map((provider) => (
+              <div key={provider.key} className="flex items-center justify-between p-3 border rounded">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    apiKeys[provider.key] ? 'bg-green-500' : 'bg-gray-300'
+                  }`} />
+                  <div>
+                    <p className="font-medium">{provider.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {apiKeys[provider.key] ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm">
+                  {provider.key === 'gemini' && (
+                    <span className="text-green-600 font-medium">Gratis</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
