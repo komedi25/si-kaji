@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
@@ -56,8 +55,8 @@ export const SystemAnalysis = () => {
     },
     {
       name: 'Sesi Konseling',
-      status: 'not-started',
-      description: 'Manajemen sesi konseling BK',
+      status: 'completed',
+      description: 'Manajemen sesi konseling BK dengan kalender dan riwayat',
       priority: 'medium'
     },
     {
@@ -86,7 +85,7 @@ export const SystemAnalysis = () => {
     },
     {
       name: 'Dokumen & Surat',
-      status: 'not-started',
+      status: 'in-progress',
       description: 'Manajemen dokumen dan template surat',
       priority: 'low'
     },

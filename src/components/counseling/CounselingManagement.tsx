@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CounselingForm } from './CounselingForm';
 import { CounselingSession } from './CounselingSession';
-import { Search, Calendar, Clock, User } from 'lucide-react';
+import { CounselingStats } from './CounselingStats';
+import { CounselingCalendar } from './CounselingCalendar';
+import { StudentCounselingHistory } from './StudentCounselingHistory';
+import { Search, Calendar, Clock, User, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -43,9 +45,10 @@ export const CounselingManagement = () => {
   const [selectedSession, setSelectedSession] = useState<CounselingSessionData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const { data: sessions, isLoading, refetch } = useQuery({
-    queryKey: ['counseling-sessions', searchTerm, statusFilter],
+    queryKey: ['counseling-sessions', searchTerm, statusFilter, selectedDate],
     queryFn: async () => {
       let query = supabase
         .from('counseling_sessions')
@@ -68,6 +71,11 @@ export const CounselingManagement = () => {
 
       if (statusFilter) {
         query = query.eq('status', statusFilter);
+      }
+
+      if (selectedDate) {
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        query = query.eq('session_date', dateStr);
       }
 
       const { data, error } = await query;
@@ -130,19 +138,31 @@ export const CounselingManagement = () => {
         </div>
       </div>
 
+      <CounselingStats />
+
       <Tabs defaultValue="sessions" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="sessions">Daftar Sesi</TabsTrigger>
+          <TabsTrigger value="calendar">Kalender</TabsTrigger>
           <TabsTrigger value="schedule">Jadwal Baru</TabsTrigger>
+          <TabsTrigger value="history">Riwayat</TabsTrigger>
+          <TabsTrigger value="reports">Laporan</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Pencarian & Filter
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Search className="h-5 w-5" />
+                  Pencarian & Filter
+                </CardTitle>
+                {selectedDate && (
+                  <Button variant="outline" onClick={() => setSelectedDate(null)}>
+                    Hapus Filter Tanggal
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
@@ -155,7 +175,25 @@ export const CounselingManagement = () => {
                     className="pl-10"
                   />
                 </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 border rounded-md"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="scheduled">Terjadwal</option>
+                  <option value="completed">Selesai</option>
+                  <option value="cancelled">Dibatalkan</option>
+                  <option value="no_show">Tidak Hadir</option>
+                </select>
               </div>
+              {selectedDate && (
+                <div className="mt-2">
+                  <Badge variant="outline">
+                    Filter: {format(selectedDate, 'dd MMMM yyyy', { locale: id })}
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -223,8 +261,39 @@ export const CounselingManagement = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="calendar">
+          <CounselingCalendar onDateSelect={setSelectedDate} />
+        </TabsContent>
+
         <TabsContent value="schedule">
           <CounselingForm onSuccess={() => refetch()} />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <StudentCounselingHistory />
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Laporan Konseling</CardTitle>
+              <CardDescription>
+                Analisis dan laporan kegiatan bimbingan konseling
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Button className="h-20 flex flex-col gap-2">
+                  <Calendar className="h-6 w-6" />
+                  <span>Laporan Bulanan</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex flex-col gap-2">
+                  <User className="h-6 w-6" />
+                  <span>Laporan per Siswa</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

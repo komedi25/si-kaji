@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster";
@@ -28,6 +27,7 @@ import AIManagement from '@/pages/AIManagement';
 import ParentPortal from '@/pages/ParentPortal';
 import DisciplinePointsManagement from '@/pages/DisciplinePointsManagement';
 import Settings from '@/pages/Settings';
+import SystemStatus from '@/pages/SystemStatus';
 import NotFound from '@/pages/NotFound';
 
 const queryClient = new QueryClient();
@@ -243,6 +243,13 @@ function App() {
               <Route path="/discipline-points" element={
                 <ProtectedRoute>
                   <DisciplinePointsManagement />
+                </ProtectedRoute>
+              } />
+              
+              {/* System Status Route */}
+              <Route path="/system-status" element={
+                <ProtectedRoute>
+                  <SystemStatus />
                 </ProtectedRoute>
               } />
               
