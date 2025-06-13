@@ -116,7 +116,14 @@ export function CoachAttendance() {
         .eq('attendance_date', selectedDate);
 
       if (error) throw error;
-      setAttendances(data || []);
+      
+      // Type cast the status field to ensure it matches our interface
+      const typedAttendances = (data || []).map(attendance => ({
+        ...attendance,
+        status: attendance.status as 'present' | 'absent' | 'excused' | 'sick'
+      }));
+      
+      setAttendances(typedAttendances);
     } catch (error) {
       console.error('Error loading attendances:', error);
     }

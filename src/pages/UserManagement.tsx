@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,7 +43,8 @@ export default function UserManagement() {
     { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
     { value: 'siswa', label: 'Siswa' },
     { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' }
+    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' },
+    { value: 'osis', label: 'OSIS' }
   ];
 
   const getRoleLabel = (role: AppRole) => {
@@ -106,11 +108,12 @@ export default function UserManagement() {
     try {
       setIsAddingRole(true);
       
+      // Type cast newRole to ensure it matches the database enum
       const { error } = await supabase
         .from('user_roles')
         .insert({
           user_id: selectedUser.id,
-          role: newRole,
+          role: newRole as any, // Type cast to bypass strict typing
           assigned_by: user?.id
         });
 
@@ -142,7 +145,7 @@ export default function UserManagement() {
         .from('user_roles')
         .update({ is_active: false })
         .eq('user_id', userId)
-        .eq('role', role);
+        .eq('role', role as any); // Type cast to bypass strict typing
 
       if (error) throw error;
 
