@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,8 @@ interface APIKeyConfig {
   deepseek: string;
   [key: string]: string; // Add index signature
 }
+
+type ProviderKey = 'openai' | 'gemini' | 'openrouter' | 'deepseek';
 
 export function APIKeyManager() {
   const { toast } = useToast();
@@ -58,7 +61,7 @@ export function APIKeyManager() {
     );
   }
 
-  const handleKeyChange = (provider: keyof APIKeyConfig, value: string) => {
+  const handleKeyChange = (provider: ProviderKey, value: string) => {
     setApiKeys(prev => ({
       ...prev,
       [provider]: value
@@ -72,7 +75,7 @@ export function APIKeyManager() {
     }));
   };
 
-  const testAPIKey = async (provider: keyof APIKeyConfig) => {
+  const testAPIKey = async (provider: ProviderKey) => {
     const key = apiKeys[provider];
     if (!key.trim()) {
       toast({
@@ -167,28 +170,28 @@ export function APIKeyManager() {
 
   const providers = [
     {
-      key: 'openai' as keyof APIKeyConfig,
+      key: 'openai' as ProviderKey,
       name: 'OpenAI',
       description: 'API key untuk GPT models',
       placeholder: 'sk-...',
       helpUrl: 'https://platform.openai.com/api-keys'
     },
     {
-      key: 'gemini' as keyof APIKeyConfig,
+      key: 'gemini' as ProviderKey,
       name: 'Google Gemini',
       description: 'API key untuk Gemini models (Gratis)',
       placeholder: 'AI...',
       helpUrl: 'https://makersuite.google.com/app/apikey'
     },
     {
-      key: 'openrouter' as keyof APIKeyConfig,
+      key: 'openrouter' as ProviderKey,
       name: 'OpenRouter',
       description: 'API key untuk multi-model access',
       placeholder: 'sk-or-...',
       helpUrl: 'https://openrouter.ai/keys'
     },
     {
-      key: 'deepseek' as keyof APIKeyConfig,
+      key: 'deepseek' as ProviderKey,
       name: 'DeepSeek',
       description: 'API key untuk DeepSeek models',
       placeholder: 'sk-...',
