@@ -14,22 +14,20 @@ import { Calendar, Users, Check, X, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-interface Attendance {
+interface StudentAttendance {
   id: string;
-  date: string;
-  extracurricular: string;
+  attendance_date: string;
   student_id: string;
-  student_name: string;
-  status: 'hadir' | 'tidak_hadir' | 'izin' | 'sakit';
+  status: 'present' | 'absent' | 'excused' | 'sick';
   notes?: string;
-  created_by: string;
+  recorded_by: string;
+  class_id: string;
 }
 
 interface Student {
   id: string;
   full_name: string;
   nis: string;
-  class: string;
 }
 
 interface Extracurricular {
@@ -41,7 +39,7 @@ interface Extracurricular {
 export function CoachAttendance() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [attendances, setAttendances] = useState<StudentAttendance[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,8 +86,7 @@ export function CoachAttendance() {
           students!inner (
             id,
             full_name,
-            nis,
-            class
+            nis
           )
         `)
         .eq('extracurricular_id', selectedExtracurricular)
@@ -99,9 +96,8 @@ export function CoachAttendance() {
       
       const studentData = data?.map(enrollment => ({
         id: enrollment.student_id,
-        full_name: enrollment.students.full_name,
-        nis: enrollment.students.nis,
-        class: enrollment.students.class
+        full_name: enrollment.students?.full_name || '',
+        nis: enrollment.students?.nis || ''
       })) || [];
       
       setStudents(studentData);
@@ -111,16 +107,13 @@ export function CoachAttendance() {
   };
 
   const loadAttendances = async () => {
-    if (!selectedExtracurricular || !selectedDate) return;
+    if (!selectedDate) return;
 
     try {
-      const selectedExt = extracurriculars.find(ext => ext.id === selectedExtracurricular);
-      
       const { data, error } = await supabase
-        .from('attendances')
+        .from('student_attendances')
         .select('*')
-        .eq('extracurricular', selectedExt?.name || '')
-        .eq('date', selectedDate);
+        .eq('attendance_date', selectedDate);
 
       if (error) throw error;
       setAttendances(data || []);
@@ -132,28 +125,24 @@ export function CoachAttendance() {
   const saveAttendance = async (studentId: string, status: string) => {
     setLoading(true);
     try {
-      const selectedExt = extracurriculars.find(ext => ext.id === selectedExtracurricular);
-      const student = students.find(s => s.id === studentId);
-      
       const existingAttendance = attendances.find(a => a.student_id === studentId);
       
       if (existingAttendance) {
         const { error } = await supabase
-          .from('attendances')
+          .from('student_attendances')
           .update({ status })
           .eq('id', existingAttendance.id);
         
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('attendances')
+          .from('student_attendances')
           .insert({
-            date: selectedDate,
-            extracurricular: selectedExt?.name || '',
+            attendance_date: selectedDate,
             student_id: studentId,
-            student_name: student?.full_name || '',
             status,
-            created_by: user?.id
+            recorded_by: user?.id,
+            class_id: '00000000-0000-0000-0000-000000000000' // Default class ID
           });
         
         if (error) throw error;
@@ -184,13 +173,13 @@ export function CoachAttendance() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'hadir':
+      case 'present':
         return <Badge className="bg-green-100 text-green-800">Hadir</Badge>;
-      case 'tidak_hadir':
+      case 'absent':
         return <Badge className="bg-red-100 text-red-800">Tidak Hadir</Badge>;
-      case 'izin':
+      case 'excused':
         return <Badge className="bg-yellow-100 text-yellow-800">Izin</Badge>;
-      case 'sakit':
+      case 'sick':
         return <Badge className="bg-blue-100 text-blue-800">Sakit</Badge>;
       default:
         return <Badge variant="outline">-</Badge>;
@@ -199,12 +188,12 @@ export function CoachAttendance() {
 
   const getAttendanceStats = () => {
     const totalStudents = students.length;
-    const hadir = attendances.filter(a => a.status === 'hadir').length;
-    const tidakHadir = attendances.filter(a => a.status === 'tidak_hadir').length;
-    const izin = attendances.filter(a => a.status === 'izin').length;
-    const sakit = attendances.filter(a => a.status === 'sakit').length;
+    const present = attendances.filter(a => a.status === 'present').length;
+    const absent = attendances.filter(a => a.status === 'absent').length;
+    const excused = attendances.filter(a => a.status === 'excused').length;
+    const sick = attendances.filter(a => a.status === 'sick').length;
     
-    return { totalStudents, hadir, tidakHadir, izin, sakit };
+    return { totalStudents, present, absent, excused, sick };
   };
 
   const stats = getAttendanceStats();
@@ -262,7 +251,7 @@ export function CoachAttendance() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <Check className="w-8 h-8 mx-auto text-green-600 mb-2" />
-                  <div className="text-2xl font-bold">{stats.hadir}</div>
+                  <div className="text-2xl font-bold">{stats.present}</div>
                   <div className="text-sm text-muted-foreground">Hadir</div>
                 </div>
               </CardContent>
@@ -272,7 +261,7 @@ export function CoachAttendance() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <X className="w-8 h-8 mx-auto text-red-600 mb-2" />
-                  <div className="text-2xl font-bold">{stats.tidakHadir}</div>
+                  <div className="text-2xl font-bold">{stats.absent}</div>
                   <div className="text-sm text-muted-foreground">Tidak Hadir</div>
                 </div>
               </CardContent>
@@ -282,7 +271,7 @@ export function CoachAttendance() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <Clock className="w-8 h-8 mx-auto text-yellow-600 mb-2" />
-                  <div className="text-2xl font-bold">{stats.izin}</div>
+                  <div className="text-2xl font-bold">{stats.excused}</div>
                   <div className="text-sm text-muted-foreground">Izin</div>
                 </div>
               </CardContent>
@@ -292,7 +281,7 @@ export function CoachAttendance() {
               <CardContent className="pt-6">
                 <div className="text-center">
                   <Calendar className="w-8 h-8 mx-auto text-blue-600 mb-2" />
-                  <div className="text-2xl font-bold">{stats.sakit}</div>
+                  <div className="text-2xl font-bold">{stats.sick}</div>
                   <div className="text-sm text-muted-foreground">Sakit</div>
                 </div>
               </CardContent>
@@ -317,7 +306,6 @@ export function CoachAttendance() {
                     <TableRow>
                       <TableHead>NIS</TableHead>
                       <TableHead>Nama Siswa</TableHead>
-                      <TableHead>Kelas</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Aksi</TableHead>
                     </TableRow>
@@ -327,7 +315,6 @@ export function CoachAttendance() {
                       <TableRow key={student.id}>
                         <TableCell className="font-mono">{student.nis}</TableCell>
                         <TableCell className="font-medium">{student.full_name}</TableCell>
-                        <TableCell>{student.class}</TableCell>
                         <TableCell>
                           {getStatusBadge(getAttendanceStatus(student.id))}
                         </TableCell>
@@ -335,32 +322,32 @@ export function CoachAttendance() {
                           <div className="flex gap-1">
                             <Button
                               size="sm"
-                              variant={getAttendanceStatus(student.id) === 'hadir' ? 'default' : 'outline'}
-                              onClick={() => saveAttendance(student.id, 'hadir')}
+                              variant={getAttendanceStatus(student.id) === 'present' ? 'default' : 'outline'}
+                              onClick={() => saveAttendance(student.id, 'present')}
                               disabled={loading}
                             >
                               Hadir
                             </Button>
                             <Button
                               size="sm"
-                              variant={getAttendanceStatus(student.id) === 'tidak_hadir' ? 'destructive' : 'outline'}
-                              onClick={() => saveAttendance(student.id, 'tidak_hadir')}
+                              variant={getAttendanceStatus(student.id) === 'absent' ? 'destructive' : 'outline'}
+                              onClick={() => saveAttendance(student.id, 'absent')}
                               disabled={loading}
                             >
                               Alpha
                             </Button>
                             <Button
                               size="sm"
-                              variant={getAttendanceStatus(student.id) === 'izin' ? 'secondary' : 'outline'}
-                              onClick={() => saveAttendance(student.id, 'izin')}
+                              variant={getAttendanceStatus(student.id) === 'excused' ? 'secondary' : 'outline'}
+                              onClick={() => saveAttendance(student.id, 'excused')}
                               disabled={loading}
                             >
                               Izin
                             </Button>
                             <Button
                               size="sm"
-                              variant={getAttendanceStatus(student.id) === 'sakit' ? 'secondary' : 'outline'}
-                              onClick={() => saveAttendance(student.id, 'sakit')}
+                              variant={getAttendanceStatus(student.id) === 'sick' ? 'secondary' : 'outline'}
+                              onClick={() => saveAttendance(student.id, 'sick')}
                               disabled={loading}
                             >
                               Sakit
