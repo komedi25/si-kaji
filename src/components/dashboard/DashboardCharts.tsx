@@ -112,42 +112,49 @@ export const DashboardCharts = () => {
   if (!user?.roles) return null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
       {/* Attendance Trend Chart */}
       {(user.roles.includes('admin') || user.roles.includes('wali_kelas')) && attendanceTrend && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tren Presensi 7 Hari Terakhir</CardTitle>
-            <CardDescription>Grafik presensi harian siswa</CardDescription>
+        <Card className="col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Tren Presensi 7 Hari Terakhir</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Grafik presensi harian siswa</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
+          <CardContent className="p-3 md:p-6">
+            <ChartContainer config={chartConfig} className="h-[250px] md:h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={attendanceTrend}>
+                <LineChart data={attendanceTrend} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <XAxis 
+                    dataKey="date" 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Line 
                     type="monotone" 
                     dataKey="hadir" 
                     stroke="#22c55e" 
                     strokeWidth={2}
-                    dot={{ fill: '#22c55e' }}
+                    dot={{ fill: '#22c55e', r: 3 }}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="tidak_hadir" 
                     stroke="#ef4444" 
                     strokeWidth={2}
-                    dot={{ fill: '#ef4444' }}
+                    dot={{ fill: '#ef4444', r: 3 }}
                   />
                   <Line 
                     type="monotone" 
                     dataKey="terlambat" 
                     stroke="#f59e0b" 
                     strokeWidth={2}
-                    dot={{ fill: '#f59e0b' }}
+                    dot={{ fill: '#f59e0b', r: 3 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -158,22 +165,22 @@ export const DashboardCharts = () => {
 
       {/* Violation Categories Chart */}
       {(user.roles.includes('admin') || user.roles.includes('tppk')) && violationCategories && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Kategori Pelanggaran</CardTitle>
-            <CardDescription>Distribusi pelanggaran berdasarkan kategori</CardDescription>
+        <Card className="col-span-1">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Kategori Pelanggaran</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Distribusi pelanggaran berdasarkan kategori</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[300px]">
+          <CardContent className="p-3 md:p-6">
+            <ChartContainer config={{}} className="h-[250px] md:h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                   <Pie
                     data={violationCategories}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius="70%"
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -191,20 +198,30 @@ export const DashboardCharts = () => {
 
       {/* Achievement Categories Chart */}
       {(user.roles.includes('admin') || user.roles.includes('wali_kelas')) && achievementCategories && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Kategori Prestasi</CardTitle>
-            <CardDescription>Distribusi prestasi berdasarkan kategori</CardDescription>
+        <Card className="col-span-1 xl:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base md:text-lg">Kategori Prestasi</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Distribusi prestasi berdasarkan kategori</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="h-[300px]">
+          <CardContent className="p-3 md:p-6">
+            <ChartContainer config={{}} className="h-[250px] md:h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={achievementCategories}>
+                <BarChart data={achievementCategories} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <XAxis 
+                    dataKey="name" 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
                   <ChartTooltip />
-                  <Bar dataKey="value" fill="#22c55e" />
+                  <Bar dataKey="value" fill="#22c55e" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
