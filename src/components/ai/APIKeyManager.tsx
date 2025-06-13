@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,7 @@ interface APIKeyConfig {
   gemini: string;
   openrouter: string;
   deepseek: string;
+  [key: string]: string; // Add index signature
 }
 
 export function APIKeyManager() {
