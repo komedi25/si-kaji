@@ -1,264 +1,145 @@
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import React, { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileUpload } from '@/components/common/FileUpload';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { FileText, User, Upload, Download } from 'lucide-react';
-
-const letterRequestSchema = z.object({
-  student_id: z.string().min(1, 'Pilih siswa'),
-  letter_type: z.enum(['surat_aktif', 'surat_mutasi', 'surat_keterangan', 'surat_rekomendasi', 'surat_lulus']),
-  purpose: z.string().min(1, 'Tujuan surat wajib diisi'),
-  additional_notes: z.string().optional(),
-});
-
-type LetterRequestFormData = z.infer<typeof letterRequestSchema>;
-
-interface Student {
-  id: string;
-  full_name: string;
-  nis: string;
-}
+import { useToast } from '@/hooks/use-toast';
+import { FileText, Send } from 'lucide-react';
 
 export const LetterRequestForm = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [generatingPDF, setGeneratingPDF] = useState(false);
-
-  const form = useForm<LetterRequestFormData>({
-    resolver: zodResolver(letterRequestSchema),
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    student_id: '',
+    letter_type: '',
+    purpose: '',
+    additional_notes: ''
   });
 
-  const searchStudents = async (search: string) => {
-    if (search.length < 2) return;
+  const letterTypes = [
+    { value: 'surat_keterangan_siswa', label: 'Surat Keterangan Siswa' },
+    { value: 'surat_keterangan_berkelakuan_baik', label: 'Surat Keterangan Berkelakuan Baik' },
+    { value: 'surat_rekomendasi', label: 'Surat Rekomendasi' },
+    { value: 'surat_izin_penelitian', label: 'Surat Izin Penelitian' },
+    { value: 'surat_keterangan_lulus', label: 'Surat Keterangan Lulus' },
+    { value: 'transkrip_nilai', label: 'Transkrip Nilai' },
+    { value: 'lainnya', label: 'Lainnya' }
+  ];
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('id, full_name, nis')
-        .or(`full_name.ilike.%${search}%,nis.ilike.%${search}%`)
-        .eq('status', 'active')
-        .limit(10);
+      const { error } = await supabase
+        .from('letter_requests')
+        .insert({
+          ...formData,
+          status: 'pending'
+        });
 
       if (error) throw error;
-      setStudents(data || []);
-    } catch (error) {
-      console.error('Error searching students:', error);
-    }
-  };
 
-  const generateLetterPDF = async (requestId: string) => {
-    setGeneratingPDF(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-letter-pdf', {
-        body: { requestId }
+      toast({
+        title: "Berhasil",
+        description: "Permohonan surat berhasil diajukan"
       });
 
-      if (error) throw error;
-
-      if (data.pdfUrl) {
-        // Open PDF in new tab
-        window.open(data.pdfUrl, '_blank');
-        toast.success('Surat PDF berhasil dibuat');
-      } else if (data.html) {
-        // Fallback: show HTML preview
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(data.html);
-          newWindow.document.close();
-        }
-        toast.success('Preview surat berhasil dibuat');
-      }
+      setFormData({
+        student_id: '',
+        letter_type: '',
+        purpose: '',
+        additional_notes: ''
+      });
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error('Gagal membuat surat PDF');
+      console.error('Error submitting letter request:', error);
+      toast({
+        title: "Error",
+        description: "Gagal mengajukan permohonan surat",
+        variant: "destructive"
+      });
     } finally {
-      setGeneratingPDF(false);
-    }
-  };
-
-  const onSubmit = async (data: LetterRequestFormData) => {
-    setIsSubmitting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Anda harus login terlebih dahulu');
-        return;
-      }
-
-      const requestData = {
-        student_id: data.student_id,
-        letter_type: data.letter_type,
-        purpose: data.purpose,
-        additional_notes: data.additional_notes || '',
-        attachment_urls: attachmentUrls,
-        status: 'pending',
-        request_number: '', // Will be auto-generated by trigger
-      };
-
-      const { data: insertedRequest, error } = await supabase
-        .from('letter_requests')
-        .insert(requestData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('Permohonan surat berhasil diajukan');
-      
-      // Ask if user wants to generate PDF preview
-      const generateNow = window.confirm('Apakah Anda ingin membuat preview surat sekarang?');
-      if (generateNow) {
-        await generateLetterPDF(insertedRequest.id);
-      }
-
-      form.reset();
-      setAttachmentUrls([]);
-      setStudents([]);
-      setSearchTerm('');
-    } catch (error) {
-      console.error('Error creating letter request:', error);
-      toast.error('Gagal mengajukan permohonan surat');
-    } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Form Permohonan Surat
+          <FileText className="w-5 h-5" />
+          Permohonan Surat Keterangan
         </CardTitle>
-        <CardDescription>
-          Ajukan permohonan surat keterangan dengan mudah
-        </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <User className="h-4 w-4" />
-                  Cari Siswa
-                </label>
-                <Input
-                  placeholder="Cari berdasarkan nama atau NIS..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    searchStudents(e.target.value);
-                  }}
-                />
-                {students.length > 0 && (
-                  <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                    {students.map((student) => (
-                      <div
-                        key={student.id}
-                        className="p-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
-                        onClick={() => {
-                          form.setValue('student_id', student.id);
-                          setSearchTerm(`${student.full_name} (${student.nis})`);
-                          setStudents([]);
-                        }}
-                      >
-                        <div className="font-medium">{student.full_name}</div>
-                        <div className="text-sm text-muted-foreground">NIS: {student.nis}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="student_id">Siswa</Label>
+            <Input
+              id="student_id"
+              placeholder="ID Siswa atau nama siswa"
+              value={formData.student_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, student_id: e.target.value }))}
+              required
+            />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="letter_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jenis Surat</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih jenis surat" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="surat_aktif">Surat Keterangan Aktif</SelectItem>
-                        <SelectItem value="surat_mutasi">Surat Keterangan Mutasi</SelectItem>
-                        <SelectItem value="surat_keterangan">Surat Keterangan Umum</SelectItem>
-                        <SelectItem value="surat_rekomendasi">Surat Rekomendasi</SelectItem>
-                        <SelectItem value="surat_lulus">Surat Keterangan Lulus</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="letter_type">Jenis Surat</Label>
+            <Select value={formData.letter_type} onValueChange={(value) => setFormData(prev => ({ ...prev, letter_type: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih jenis surat..." />
+              </SelectTrigger>
+              <SelectContent>
+                {letterTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <FormField
-                control={form.control}
-                name="purpose"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tujuan/Keperluan</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Untuk keperluan apa surat ini digunakan?" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="purpose">Tujuan Penggunaan</Label>
+            <Input
+              id="purpose"
+              placeholder="Untuk keperluan apa surat ini akan digunakan"
+              value={formData.purpose}
+              onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
+              required
+            />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="additional_notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catatan Tambahan (Opsional)</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Informasi tambahan yang diperlukan..."
-                        rows={3}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="additional_notes">Catatan Tambahan</Label>
+            <Textarea
+              id="additional_notes"
+              placeholder="Informasi tambahan yang diperlukan..."
+              value={formData.additional_notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, additional_notes: e.target.value }))}
+              className="min-h-[100px]"
+            />
+          </div>
 
-              <div>
-                <label className="text-sm font-medium flex items-center gap-2 mb-2">
-                  <Upload className="h-4 w-4" />
-                  Lampiran Dokumen Pendukung
-                </label>
-                <FileUpload
-                  onFilesUploaded={setAttachmentUrls}
-                  existingFiles={attachmentUrls}
-                  maxFiles={3}
-                  folder="letter-requests"
-                />
-              </div>
-            </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            <Send className="w-4 h-4 mr-2" />
+            {loading ? 'Mengajukan...' : 'Ajukan Permohonan'}
+          </Button>
+        </form>
 
-            <Button type="submit" disabled={isSubmitting || generatingPDF} className="w-full">
-              {isSubmitting ? 'Mengajukan...' : generatingPDF ? 'Membuat PDF...' : 'Ajukan Permohonan'}
-            </Button>
-          </form>
-        </Form>
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Catatan:</strong> Permohonan surat akan diproses dalam 3-5 hari kerja. Anda akan mendapat notifikasi ketika surat sudah siap diambil.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

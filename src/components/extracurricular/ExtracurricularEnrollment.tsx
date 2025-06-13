@@ -1,234 +1,252 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { Users, Clock, MapPin, User } from 'lucide-react';
 
 interface Extracurricular {
   id: string;
   name: string;
   description: string;
-  coach_id: string;
-  max_participants: number;
   schedule_day: string;
   schedule_time: string;
   location: string;
+  max_participants: number;
   is_active: boolean;
+  coach?: {
+    full_name: string;
+  };
+  _count?: {
+    extracurricular_enrollments: number;
+  };
 }
 
-interface Student {
+interface Enrollment {
   id: string;
-  full_name: string;
-  nis: string;
+  enrollment_date: string;
+  status: string;
+  extracurricular: {
+    name: string;
+    schedule_day: string;
+    schedule_time: string;
+  };
 }
 
 export const ExtracurricularEnrollment = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedExtracurricular, setSelectedExtracurricular] = useState<string>('');
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchExtracurriculars();
-    fetchStudents();
+    fetchEnrollments();
   }, []);
 
   const fetchExtracurriculars = async () => {
     try {
       const { data, error } = await supabase
         .from('extracurriculars')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .select(`
+          *,
+          coach:profiles(full_name),
+          extracurricular_enrollments(id)
+        `)
+        .eq('is_active', true);
 
       if (error) throw error;
-      setExtracurriculars(data || []);
+
+      const processedData = data?.map(item => ({
+        ...item,
+        _count: {
+          extracurricular_enrollments: item.extracurricular_enrollments?.length || 0
+        }
+      })) || [];
+
+      setExtracurriculars(processedData);
     } catch (error) {
       console.error('Error fetching extracurriculars:', error);
-      toast.error('Gagal memuat data ekstrakurikuler');
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchEnrollments = async () => {
     try {
       const { data, error } = await supabase
-        .from('students')
-        .select('id, full_name, nis')
+        .from('extracurricular_enrollments')
+        .select(`
+          *,
+          extracurricular:extracurriculars(name, schedule_day, schedule_time)
+        `)
         .eq('status', 'active')
-        .order('full_name');
+        .order('enrollment_date', { ascending: false });
 
       if (error) throw error;
-      setStudents(data || []);
+      setEnrollments(data || []);
     } catch (error) {
-      console.error('Error fetching students:', error);
-      toast.error('Gagal memuat data siswa');
+      console.error('Error fetching enrollments:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEnroll = async () => {
-    if (!selectedExtracurricular || !selectedStudent) {
-      toast.error('Pilih ekstrakurikuler dan siswa terlebih dahulu');
+  const handleEnrollment = async (extracurricularId: string) => {
+    if (!selectedStudent) {
+      toast({
+        title: "Error",
+        description: "Pilih siswa terlebih dahulu",
+        variant: "destructive"
+      });
       return;
     }
 
-    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('extracurricular_enrollments')
-        .insert([{
+        .insert({
           student_id: selectedStudent,
-          extracurricular_id: selectedExtracurricular,
+          extracurricular_id: extracurricularId,
           status: 'active'
-        }]);
+        });
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('Siswa sudah terdaftar di ekstrakurikuler ini');
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success('Siswa berhasil didaftarkan');
-        setSelectedStudent('');
-        setSelectedExtracurricular('');
-      }
-    } catch (error) {
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: "Siswa berhasil didaftarkan ke ekstrakurikuler"
+      });
+
+      fetchExtracurriculars();
+      fetchEnrollments();
+    } catch (error: any) {
       console.error('Error enrolling student:', error);
-      toast.error('Gagal mendaftarkan siswa');
-    } finally {
-      setIsLoading(false);
+      if (error.code === '23505') {
+        toast({
+          title: "Error",
+          description: "Siswa sudah terdaftar di ekstrakurikuler ini",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Gagal mendaftarkan siswa",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.nis.includes(searchTerm)
-  );
-
-  const selectedExtraData = extracurriculars.find(ext => ext.id === selectedExtracurricular);
+  if (loading) {
+    return <div>Memuat data ekstrakurikuler...</div>;
+  }
 
   return (
     <div className="space-y-6">
+      {/* Student Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Pendaftaran Ekstrakurikuler
-          </CardTitle>
-          <CardDescription>
-            Daftarkan siswa ke ekstrakurikuler yang tersedia
-          </CardDescription>
+          <CardTitle>Pilih Siswa</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pilih Ekstrakurikuler</label>
-              <Select value={selectedExtracurricular} onValueChange={setSelectedExtracurricular}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih ekstrakurikuler" />
-                </SelectTrigger>
-                <SelectContent>
-                  {extracurriculars.map((extra) => (
-                    <SelectItem key={extra.id} value={extra.id}>
-                      {extra.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cari Siswa</label>
-              <Input
-                placeholder="Cari nama atau NIS siswa"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="student">Siswa</Label>
+            <Input
+              id="student"
+              placeholder="ID Siswa atau nama siswa"
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+            />
           </div>
-
-          {searchTerm && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pilih Siswa</label>
-              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih siswa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredStudents.map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.full_name} - {student.nis}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <Button 
-            onClick={handleEnroll} 
-            disabled={!selectedExtracurricular || !selectedStudent || isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Mendaftarkan...' : 'Daftarkan Siswa'}
-          </Button>
         </CardContent>
       </Card>
 
-      {selectedExtraData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Detail Ekstrakurikuler</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Available Extracurriculars */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ekstrakurikuler Tersedia</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {extracurriculars.map((extra) => (
+              <div key={extra.id} className="border rounded-lg p-4 space-y-3">
+                <div>
+                  <h4 className="font-semibold">{extra.name}</h4>
+                  <p className="text-sm text-muted-foreground">{extra.description}</p>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    {extra.schedule_day} - {extra.schedule_time}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    {extra.location}
+                  </div>
+                  {extra.coach && (
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {extra.coach.full_name}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    {extra._count?.extracurricular_enrollments || 0}/{extra.max_participants} peserta
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => handleEnrollment(extra.id)}
+                  disabled={!selectedStudent || (extra._count?.extracurricular_enrollments || 0) >= extra.max_participants}
+                  className="w-full"
+                  size="sm"
+                >
+                  Daftarkan Siswa
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Current Enrollments */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pendaftaran Aktif</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {enrollments.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Belum ada pendaftaran ekstrakurikuler
+            </p>
+          ) : (
             <div className="space-y-3">
-              <div>
-                <h4 className="font-semibold text-lg">{selectedExtraData.name}</h4>
-                <p className="text-muted-foreground">{selectedExtraData.description}</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+              {enrollments.map((enrollment) => (
+                <div key={enrollment.id} className="flex justify-between items-center p-3 border rounded">
                   <div>
-                    <p className="text-sm font-medium">Jadwal</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedExtraData.schedule_day} - {selectedExtraData.schedule_time}
-                    </p>
+                    <div className="font-medium">{enrollment.extracurricular.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {enrollment.extracurricular.schedule_day} - {enrollment.extracurricular.schedule_time}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Terdaftar: {new Date(enrollment.enrollment_date).toLocaleDateString('id-ID')}
+                    </div>
                   </div>
+                  <Badge variant="default">Aktif</Badge>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Lokasi</p>
-                    <p className="text-sm text-muted-foreground">{selectedExtraData.location}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Kapasitas</p>
-                    <p className="text-sm text-muted-foreground">Max {selectedExtraData.max_participants} siswa</p>
-                  </div>
-                </div>
-              </div>
-
-              <Badge variant="outline" className="w-fit">
-                {selectedExtraData.is_active ? 'Aktif' : 'Tidak Aktif'}
-              </Badge>
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

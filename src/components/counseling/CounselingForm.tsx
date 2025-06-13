@@ -1,346 +1,185 @@
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Calendar, Clock, User } from 'lucide-react';
 
-const counselingSchema = z.object({
-  student_id: z.string().min(1, 'Pilih siswa'),
-  session_date: z.date({
-    required_error: 'Pilih tanggal sesi',
-  }),
-  session_time: z.string().min(1, 'Tentukan waktu sesi'),
-  duration_minutes: z.number().min(15, 'Durasi minimal 15 menit'),
-  session_type: z.enum(['individual', 'group', 'family']),
-  topic: z.string().optional(),
-  follow_up_required: z.boolean(),
-  follow_up_date: z.date().optional(),
-});
-
-type CounselingFormData = z.infer<typeof counselingSchema>;
-
-interface CounselingFormProps {
-  onSuccess: () => void;
-}
-
-export const CounselingForm = ({ onSuccess }: CounselingFormProps) => {
+export const CounselingForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<CounselingFormData>({
-    resolver: zodResolver(counselingSchema),
-    defaultValues: {
-      session_type: 'individual',
-      duration_minutes: 60,
-      follow_up_required: false,
-    },
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    student_id: '',
+    session_date: '',
+    session_time: '',
+    duration_minutes: '60',
+    topic: '',
+    session_type: '',
+    notes_encrypted: ''
   });
 
-  const { data: students } = useQuery({
-    queryKey: ['students-for-counseling'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select(`
-          id,
-          full_name,
-          nis,
-          current_class:student_enrollments!inner(
-            class:classes!inner(name)
-          )
-        `)
-        .eq('status', 'active')
-        .order('full_name');
+  const sessionTypes = [
+    { value: 'individual', label: 'Konseling Individual' },
+    { value: 'group', label: 'Konseling Kelompok' },
+    { value: 'career', label: 'Konseling Karir' },
+    { value: 'academic', label: 'Konseling Akademik' },
+    { value: 'social', label: 'Konseling Sosial' },
+    { value: 'crisis', label: 'Intervensi Krisis' }
+  ];
 
-      if (error) throw error;
-      
-      return data.map(student => ({
-        ...student,
-        current_class: student.current_class?.[0]?.class
-      }));
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
 
-  const onSubmit = async (data: CounselingFormData) => {
-    setIsSubmitting(true);
+    setLoading(true);
     try {
-      const sessionData = {
-        student_id: data.student_id,
-        counselor_id: user?.id!,
-        session_date: format(data.session_date, 'yyyy-MM-dd'),
-        session_time: data.session_time,
-        duration_minutes: data.duration_minutes,
-        session_type: data.session_type,
-        topic: data.topic || null,
-        follow_up_required: data.follow_up_required,
-        follow_up_date: data.follow_up_required && data.follow_up_date 
-          ? format(data.follow_up_date, 'yyyy-MM-dd') 
-          : null,
-        status: 'scheduled',
-      };
-
       const { error } = await supabase
         .from('counseling_sessions')
-        .insert(sessionData);
+        .insert({
+          counselor_id: user.id,
+          ...formData,
+          duration_minutes: parseInt(formData.duration_minutes),
+          status: 'scheduled'
+        });
 
       if (error) throw error;
 
       toast({
-        title: 'Berhasil',
-        description: 'Sesi konseling berhasil dijadwalkan',
+        title: "Berhasil",
+        description: "Sesi konseling berhasil dijadwalkan"
       });
 
-      form.reset();
-      onSuccess();
+      setFormData({
+        student_id: '',
+        session_date: '',
+        session_time: '',
+        duration_minutes: '60',
+        topic: '',
+        session_type: '',
+        notes_encrypted: ''
+      });
     } catch (error) {
       console.error('Error creating counseling session:', error);
       toast({
-        title: 'Gagal',
-        description: 'Gagal menjadwalkan sesi konseling',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal membuat jadwal konseling",
+        variant: "destructive"
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
+    <Card>
       <CardHeader>
-        <CardTitle>Jadwal Sesi Konseling</CardTitle>
-        <CardDescription>
-          Buat jadwal sesi bimbingan konseling untuk siswa
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <User className="w-5 h-5" />
+          Jadwal Sesi Konseling
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="student_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Siswa</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih siswa" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {students?.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.full_name} ({student.nis}) - {student.current_class?.name || 'Tanpa Kelas'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="student_id">Siswa</Label>
+            <Input
+              id="student_id"
+              placeholder="ID Siswa atau nama siswa"
+              value={formData.student_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, student_id: e.target.value }))}
+              required
             />
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="session_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Tanggal Sesi</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="pl-3 text-left font-normal"
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP', { locale: id })
-                            ) : (
-                              <span>Pilih tanggal</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date() || date < new Date('1900-01-01')
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="session_type">Jenis Konseling</Label>
+            <Select value={formData.session_type} onValueChange={(value) => setFormData(prev => ({ ...prev, session_type: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih jenis konseling..." />
+              </SelectTrigger>
+              <SelectContent>
+                {sessionTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <FormField
-                control={form.control}
-                name="session_time"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Waktu Sesi</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="session_date">Tanggal</Label>
+              <Input
+                id="session_date"
+                type="date"
+                value={formData.session_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, session_date: e.target.value }))}
+                required
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="duration_minutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Durasi (menit)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="15"
-                        max="240"
-                        {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="session_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jenis Sesi</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih jenis sesi" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="individual">Individual</SelectItem>
-                        <SelectItem value="group">Kelompok</SelectItem>
-                        <SelectItem value="family">Keluarga</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="session_time">Waktu</Label>
+              <Input
+                id="session_time"
+                type="time"
+                value={formData.session_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, session_time: e.target.value }))}
+                required
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="topic"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Topik/Tujuan Konseling</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Jelaskan topik atau tujuan sesi konseling..."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="duration_minutes">Durasi (menit)</Label>
+              <Select value={formData.duration_minutes} onValueChange={(value) => setFormData(prev => ({ ...prev, duration_minutes: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 menit</SelectItem>
+                  <SelectItem value="45">45 menit</SelectItem>
+                  <SelectItem value="60">60 menit</SelectItem>
+                  <SelectItem value="90">90 menit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="topic">Topik Konseling</Label>
+            <Input
+              id="topic"
+              placeholder="Masalah atau topik yang akan dibahas"
+              value={formData.topic}
+              onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+              required
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="follow_up_required"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Perlu Tindak Lanjut</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Centang jika sesi ini memerlukan tindak lanjut
-                    </p>
-                  </div>
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <Label htmlFor="notes_encrypted">Catatan Awal</Label>
+            <Textarea
+              id="notes_encrypted"
+              placeholder="Catatan persiapan atau latar belakang masalah..."
+              value={formData.notes_encrypted}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes_encrypted: e.target.value }))}
+              className="min-h-[100px]"
             />
+          </div>
 
-            {form.watch('follow_up_required') && (
-              <FormField
-                control={form.control}
-                name="follow_up_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Tanggal Tindak Lanjut</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className="pl-3 text-left font-normal"
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP', { locale: id })
-                            ) : (
-                              <span>Pilih tanggal tindak lanjut</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date < new Date() || date < new Date('1900-01-01')
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? 'Menjadwalkan...' : 'Jadwalkan Sesi'}
-            </Button>
-          </form>
-        </Form>
+          <Button type="submit" disabled={loading} className="w-full">
+            <Calendar className="w-4 h-4 mr-2" />
+            {loading ? 'Menjadwalkan...' : 'Jadwalkan Konseling'}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

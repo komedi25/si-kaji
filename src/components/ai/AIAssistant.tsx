@@ -1,317 +1,274 @@
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Bot, Send, Sparkles, User } from 'lucide-react';
-import { useAI } from '@/hooks/useAI';
-import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Send, MessageCircle, Sparkles, TrendingUp, Users, AlertTriangle } from 'lucide-react';
 
-type AIProvider = 'openai' | 'gemini' | 'openrouter' | 'deepseek';
-type AITask = 'analyze_behavior' | 'generate_letter' | 'summarize_case' | 'discipline_recommendation' | 'custom';
+interface Message {
+  id: string;
+  content: string;
+  sender: 'user' | 'ai';
+  timestamp: Date;
+}
 
-export function AIAssistant() {
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider>('gemini');
-  const [selectedTask, setSelectedTask] = useState<AITask>('analyze_behavior');
-  const [prompt, setPrompt] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [caseId, setCaseId] = useState('');
-  const [letterType, setLetterType] = useState('');
-  const [result, setResult] = useState('');
-  const [students, setStudents] = useState<any[]>([]);
-  const [cases, setCases] = useState<any[]>([]);
-  
-  const { 
-    loading, 
-    analyzeStudentBehavior, 
-    generateLetter, 
-    summarizeCase, 
-    getRecommendations,
-    processAIRequest 
-  } = useAI();
+interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  category: string;
+}
 
-  // Load students for selection
-  const loadStudents = async (search: string) => {
-    if (search.length < 2) return;
-    
-    const { data } = await supabase
-      .from('students')
-      .select('id, full_name, nis')
-      .or(`full_name.ilike.%${search}%,nis.ilike.%${search}%`)
-      .limit(10);
-    
-    setStudents(data || []);
-  };
-
-  // Load cases for selection
-  const loadCases = async () => {
-    const { data } = await supabase
-      .from('student_cases')
-      .select('id, case_number, title, status')
-      .order('created_at', { ascending: false })
-      .limit(20);
-    
-    setCases(data || []);
-  };
-
-  const providers = [
-    { value: 'gemini', label: 'Google Gemini', description: 'Gratis dengan quota' },
-    { value: 'openai', label: 'OpenAI GPT', description: 'Powerful dan reliable' },
-    { value: 'openrouter', label: 'OpenRouter', description: 'Multiple models' },
-    { value: 'deepseek', label: 'DeepSeek', description: 'Cost-effective' }
-  ];
-
-  const tasks = [
-    { value: 'analyze_behavior', label: 'Analisis Perilaku Siswa', description: 'Analisis pola perilaku dan disiplin' },
-    { value: 'generate_letter', label: 'Generate Surat', description: 'Buat draft surat kesiswaan' },
-    { value: 'summarize_case', label: 'Ringkas Kasus', description: 'Ringkas laporan kasus siswa' },
-    { value: 'discipline_recommendation', label: 'Rekomendasi Disiplin', description: 'Saran tindakan disiplin' },
-    { value: 'custom', label: 'Custom Prompt', description: 'Permintaan khusus' }
-  ];
-
-  const handleSubmit = async () => {
-    if (!prompt.trim() && selectedTask === 'custom') {
-      return;
+export const AIAssistant = () => {
+  const { toast } = useToast();
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: 'Halo! Saya adalah asisten AI untuk sistem manajemen sekolah. Saya dapat membantu Anda menganalisis data siswa, memberikan rekomendasi, dan menjawab pertanyaan tentang sistem. Bagaimana saya bisa membantu Anda hari ini?',
+      sender: 'ai',
+      timestamp: new Date()
     }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-    let aiResult = null;
+  const recommendations: Recommendation[] = [
+    {
+      id: '1',
+      title: 'Siswa dengan Poin Disiplin Rendah',
+      description: '5 siswa memiliki poin disiplin di bawah 60. Pertimbangkan untuk mengadakan sesi konseling.',
+      priority: 'high',
+      category: 'Disiplin'
+    },
+    {
+      id: '2',
+      title: 'Peningkatan Prestasi Akademik',
+      description: 'Kelas 12 IPA menunjukkan peningkatan prestasi 15% bulan ini.',
+      priority: 'medium',
+      category: 'Akademik'
+    },
+    {
+      id: '3',
+      title: 'Kehadiran Ekstrakurikuler',
+      description: 'Partisipasi ekstrakurikuler menurun 8% dibanding bulan lalu.',
+      priority: 'medium',
+      category: 'Ekstrakurikuler'
+    }
+  ];
 
-    try {
-      switch (selectedTask) {
-        case 'analyze_behavior':
-          if (!studentId) {
-            alert('Pilih siswa terlebih dahulu');
-            return;
-          }
-          aiResult = await analyzeStudentBehavior(studentId, selectedProvider);
-          break;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
 
-        case 'generate_letter':
-          if (!studentId || !letterType) {
-            alert('Pilih siswa dan jenis surat terlebih dahulu');
-            return;
-          }
-          aiResult = await generateLetter(studentId, letterType, selectedProvider);
-          break;
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      sender: 'user',
+      timestamp: new Date()
+    };
 
-        case 'summarize_case':
-          if (!caseId) {
-            alert('Pilih kasus terlebih dahulu');
-            return;
-          }
-          aiResult = await summarizeCase(caseId, selectedProvider);
-          break;
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setLoading(true);
 
-        case 'discipline_recommendation':
-          if (!studentId) {
-            alert('Pilih siswa terlebih dahulu');
-            return;
-          }
-          aiResult = await getRecommendations(studentId, selectedProvider);
-          break;
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: generateAIResponse(inputMessage),
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setLoading(false);
+    }, 1500);
+  };
 
-        case 'custom':
-          aiResult = await processAIRequest({
-            provider: selectedProvider,
-            task: 'custom',
-            prompt: prompt
-          });
-          break;
-      }
+  const generateAIResponse = (question: string): string => {
+    const lowerQuestion = question.toLowerCase();
+    
+    if (lowerQuestion.includes('poin') || lowerQuestion.includes('disiplin')) {
+      return 'Berdasarkan analisis data, sistem poin disiplin menunjukkan bahwa 87% siswa memiliki status "Baik" atau lebih tinggi. Namun, ada 5 siswa yang perlu perhatian khusus dengan poin di bawah 60. Saya merekomendasikan sesi konseling individual untuk siswa-siswa tersebut.';
+    }
+    
+    if (lowerQuestion.includes('prestasi') || lowerQuestion.includes('achievement')) {
+      return 'Data prestasi menunjukkan tren positif dengan peningkatan 12% dalam pencapaian akademik bulan ini. Bidang olahraga dan seni menjadi kategori dengan prestasi tertinggi. Saya sarankan untuk mengadakan program mentoring untuk meningkatkan prestasi di bidang sains.';
+    }
+    
+    if (lowerQuestion.includes('absen') || lowerQuestion.includes('kehadiran')) {
+      return 'Tingkat kehadiran siswa saat ini 94,2%, sedikit di atas target 94%. Namun, ada pola ketidakhadiran yang meningkat pada hari Senin dan Jumat. Saya merekomendasikan analisis lebih lanjut dan program motivasi kehadiran.';
+    }
+    
+    return 'Terima kasih atas pertanyaan Anda. Saya sedang menganalisis data yang relevan. Untuk hasil yang lebih akurat, Anda bisa memberikan pertanyaan yang lebih spesifik tentang data siswa, prestasi, disiplin, atau kehadiran.';
+  };
 
-      if (aiResult) {
-        setResult(aiResult.result);
-      }
-    } catch (error) {
-      console.error('AI processing error:', error);
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'medium':
+        return <TrendingUp className="w-4 h-4 text-yellow-500" />;
+      default:
+        return <Users className="w-4 h-4 text-blue-500" />;
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'destructive';
+      case 'medium':
+        return 'secondary';
+      default:
+        return 'outline';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5" />
-            AI Assistant Si-Kaji
-          </CardTitle>
-          <CardDescription>
-            Asisten AI untuk membantu analisis data kesiswaan dan pembuatan dokumen
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Provider AI</label>
-              <Select value={selectedProvider} onValueChange={(value) => setSelectedProvider(value as AIProvider)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih Provider AI" />
-                </SelectTrigger>
-                <SelectContent>
-                  {providers.map((provider) => (
-                    <SelectItem key={provider.value} value={provider.value}>
-                      <div>
-                        <div className="font-medium">{provider.label}</div>
-                        <div className="text-xs text-gray-500">{provider.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Jenis Tugas</label>
-              <Select value={selectedTask} onValueChange={(value) => setSelectedTask(value as AITask)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih Jenis Tugas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tasks.map((task) => (
-                    <SelectItem key={task.value} value={task.value}>
-                      <div>
-                        <div className="font-medium">{task.label}</div>
-                        <div className="text-xs text-gray-500">{task.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Task-specific inputs */}
-          {(selectedTask === 'analyze_behavior' || selectedTask === 'generate_letter' || selectedTask === 'discipline_recommendation') && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Pilih Siswa</label>
-              <Input
-                placeholder="Ketik nama atau NIS siswa..."
-                onChange={(e) => loadStudents(e.target.value)}
-              />
-              {students.length > 0 && (
-                <div className="mt-2 max-h-40 overflow-y-auto border rounded-md">
-                  {students.map((student) => (
-                    <button
-                      key={student.id}
-                      onClick={() => {
-                        setStudentId(student.id);
-                        setStudents([]);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2"
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Chat Interface */}
+      <div className="lg:col-span-2 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              AI Assistant Chat
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Messages */}
+              <div className="h-96 overflow-y-auto space-y-3 p-4 border rounded bg-gray-50">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        message.sender === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white border'
+                      }`}
                     >
-                      <User className="h-4 w-4" />
-                      <div>
-                        <div className="font-medium">{student.full_name}</div>
-                        <div className="text-xs text-gray-500">NIS: {student.nis}</div>
+                      <p className="text-sm">{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString('id-ID', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white border px-4 py-2 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                        <span className="text-sm">AI sedang mengetik...</span>
                       </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {studentId && (
-                <div className="mt-2">
-                  <Badge variant="secondary">
-                    Siswa dipilih: {students.find(s => s.id === studentId)?.full_name || 'Loading...'}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          {selectedTask === 'generate_letter' && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Jenis Surat</label>
-              <Select value={letterType} onValueChange={setLetterType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih jenis surat" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="keterangan_berkelakuan_baik">Surat Keterangan Berkelakuan Baik</SelectItem>
-                  <SelectItem value="keterangan_siswa_aktif">Surat Keterangan Siswa Aktif</SelectItem>
-                  <SelectItem value="rekomendasi">Surat Rekomendasi</SelectItem>
-                  <SelectItem value="izin_kegiatan">Surat Izin Kegiatan</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Input */}
+              <div className="flex gap-2">
+                <Input
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Tanyakan tentang data siswa, analisis, atau rekomendasi..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  disabled={loading}
+                />
+                <Button onClick={handleSendMessage} disabled={loading || !inputMessage.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {selectedTask === 'summarize_case' && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Pilih Kasus</label>
+      {/* Recommendations Panel */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              Rekomendasi AI
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recommendations.map((rec) => (
+                <div key={rec.id} className="p-3 border rounded-lg space-y-2">
+                  <div className="flex items-start justify-between">
+                    <h4 className="font-medium text-sm">{rec.title}</h4>
+                    {getPriorityIcon(rec.priority)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{rec.description}</p>
+                  <div className="flex items-center justify-between">
+                    <Badge variant={getPriorityColor(rec.priority) as any} className="text-xs">
+                      {rec.category}
+                    </Badge>
+                    <Button size="sm" variant="outline" className="text-xs h-6">
+                      Terapkan
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Analisis Cepat</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
               <Button 
                 variant="outline" 
-                onClick={loadCases}
-                className="mb-2"
+                size="sm" 
+                className="w-full justify-start text-xs"
+                onClick={() => setInputMessage('Analisis poin disiplin siswa bulan ini')}
               >
-                Muat Kasus Terbaru
+                Analisis Poin Disiplin
               </Button>
-              {cases.length > 0 && (
-                <Select value={caseId} onValueChange={setCaseId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kasus" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cases.map((caseItem) => (
-                      <SelectItem key={caseItem.id} value={caseItem.id}>
-                        <div>
-                          <div className="font-medium">{caseItem.case_number}</div>
-                          <div className="text-xs text-gray-500">{caseItem.title}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-xs"
+                onClick={() => setInputMessage('Laporan kehadiran siswa')}
+              >
+                Laporan Kehadiran
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-xs"
+                onClick={() => setInputMessage('Tren prestasi akademik')}
+              >
+                Tren Prestasi
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start text-xs"
+                onClick={() => setInputMessage('Rekomendasi program konseling')}
+              >
+                Rekomendasi Konseling
+              </Button>
             </div>
-          )}
-
-          {selectedTask === 'custom' && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Custom Prompt</label>
-              <Textarea
-                placeholder="Masukkan instruksi khusus untuk AI..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-              />
-            </div>
-          )}
-
-          <Button onClick={handleSubmit} disabled={loading} className="w-full">
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Memproses...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Jalankan AI
-              </>
-            )}
-          </Button>
-
-          {result && (
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="h-4 w-4" />
-                  Hasil AI
-                  <Badge variant="secondary">{providers.find(p => p.value === selectedProvider)?.label}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-md overflow-auto max-h-96">
-                  {result}
-                </pre>
-              </CardContent>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-}
+};

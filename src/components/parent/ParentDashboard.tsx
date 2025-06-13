@@ -1,442 +1,319 @@
 
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Calendar, Award, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { User, Award, AlertTriangle, Calendar, FileText, MessageCircle } from 'lucide-react';
+
+interface StudentData {
+  id: string;
+  full_name: string;
+  nis: string;
+  class?: {
+    name: string;
+    grade: number;
+  };
+}
+
+interface ViolationData {
+  id: string;
+  violation_date: string;
+  point_deduction: number;
+  violation_types: {
+    name: string;
+    category: string;
+  };
+}
+
+interface AchievementData {
+  id: string;
+  achievement_date: string;
+  point_reward: number;
+  achievement_types: {
+    name: string;
+    level: string;
+  };
+}
+
+interface PermitData {
+  id: string;
+  permit_type: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
 
 export const ParentDashboard = () => {
   const { user } = useAuth();
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [violations, setViolations] = useState<ViolationData[]>([]);
+  const [achievements, setAchievements] = useState<AchievementData[]>([]);
+  const [permits, setPermits] = useState<PermitData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get student data for this parent
-  const { data: studentAccess } = useQuery({
-    queryKey: ['parent-student-access', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
+  useEffect(() => {
+    fetchStudentData();
+  }, [user]);
+
+  const fetchStudentData = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Cari siswa berdasarkan parent access
+      const { data: parentAccess, error: parentError } = await supabase
         .from('parent_access')
         .select(`
-          *,
-          student:students!parent_access_student_id_fkey(
-            id,
-            full_name,
-            nis,
-            current_class:student_enrollments!inner(
-              class:classes!inner(name, grade)
+          student:students(
+            id, full_name, nis,
+            student_enrollments(
+              class:classes(name, grade)
             )
           )
         `)
-        .eq('parent_user_id', user?.id)
-        .eq('is_active', true);
+        .eq('parent_user_id', user.id)
+        .eq('is_active', true)
+        .single();
 
-      if (error) throw error;
-      
-      return data?.map(access => ({
-        ...access,
-        student: {
-          ...access.student,
-          current_class: access.student.current_class?.[0]?.class
-        }
-      }));
-    },
-    enabled: !!user?.id,
-  });
+      if (parentError) throw parentError;
 
-  const studentId = studentAccess?.[0]?.student_id;
+      const student = parentAccess.student;
+      setStudentData({
+        ...student,
+        class: student.student_enrollments?.[0]?.class || null
+      });
 
-  // Get recent attendance
-  const { data: recentAttendance } = useQuery({
-    queryKey: ['parent-student-attendance', studentId],
-    queryFn: async () => {
-      if (!studentId) return [];
-      
-      const { data, error } = await supabase
-        .from('student_attendances')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('attendance_date', { ascending: false })
-        .limit(10);
+      // Fetch violations
+      const { data: violationsData } = await supabase
+        .from('student_violations')
+        .select(`
+          *,
+          violation_types(name, category)
+        `)
+        .eq('student_id', student.id)
+        .order('violation_date', { ascending: false })
+        .limit(5);
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!studentId,
-  });
+      setViolations(violationsData || []);
 
-  // Get recent achievements
-  const { data: recentAchievements } = useQuery({
-    queryKey: ['parent-student-achievements', studentId],
-    queryFn: async () => {
-      if (!studentId) return [];
-      
-      const { data, error } = await supabase
+      // Fetch achievements
+      const { data: achievementsData } = await supabase
         .from('student_achievements')
         .select(`
           *,
-          achievement_type:achievement_types!student_achievements_achievement_type_id_fkey(name, category, level)
+          achievement_types(name, level)
         `)
-        .eq('student_id', studentId)
+        .eq('student_id', student.id)
         .eq('status', 'verified')
         .order('achievement_date', { ascending: false })
         .limit(5);
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!studentId,
-  });
+      setAchievements(achievementsData || []);
 
-  // Get recent violations
-  const { data: recentViolations } = useQuery({
-    queryKey: ['parent-student-violations', studentId],
-    queryFn: async () => {
-      if (!studentId) return [];
-      
-      const { data, error } = await supabase
-        .from('student_violations')
-        .select(`
-          *,
-          violation_type:violation_types!student_violations_violation_type_id_fkey(name, category, point_deduction)
-        `)
-        .eq('student_id', studentId)
-        .eq('status', 'active')
-        .order('violation_date', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!studentId,
-  });
-
-  // Get active permits
-  const { data: activePermits } = useQuery({
-    queryKey: ['parent-student-permits', studentId],
-    queryFn: async () => {
-      if (!studentId) return [];
-      
-      const { data, error } = await supabase
+      // Fetch permits
+      const { data: permitsData } = await supabase
         .from('student_permits')
         .select('*')
-        .eq('student_id', studentId)
-        .in('status', ['pending', 'approved'])
+        .eq('student_id', student.id)
         .order('submitted_at', { ascending: false })
         .limit(5);
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!studentId,
-  });
+      setPermits(permitsData || []);
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Get discipline points
-  const { data: disciplinePoints } = useQuery({
-    queryKey: ['parent-student-discipline', studentId],
-    queryFn: async () => {
-      if (!studentId) return null;
-      
-      const { data, error } = await supabase
-        .from('student_discipline_points')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('last_updated', { ascending: false })
-        .limit(1);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge variant="default">Disetujui</Badge>;
+      case 'pending':
+        return <Badge variant="secondary">Menunggu</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Ditolak</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
-      if (error) throw error;
-      return data?.[0];
-    },
-    enabled: !!studentId,
-  });
+  const getPermitTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      sick_leave: 'Izin Sakit',
+      family_leave: 'Izin Keluarga',
+      school_activity: 'Kegiatan Sekolah',
+      other: 'Lainnya'
+    };
+    return types[type] || type;
+  };
 
-  const student = studentAccess?.[0]?.student;
+  if (loading) {
+    return <div>Memuat data siswa...</div>;
+  }
 
-  if (!student) {
+  if (!studentData) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center h-32">
-          <p className="text-muted-foreground">Tidak ada akses ke data siswa</p>
+        <CardContent className="p-6">
+          <p className="text-center text-muted-foreground">
+            Tidak ada data siswa yang terkait dengan akun Anda.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
-  const getAttendanceStatusBadge = (status: string) => {
-    const statusConfig = {
-      present: { label: 'Hadir', variant: 'outline' as const, icon: CheckCircle },
-      absent: { label: 'Tidak Hadir', variant: 'destructive' as const, icon: AlertTriangle },
-      late: { label: 'Terlambat', variant: 'secondary' as const, icon: Clock },
-      excused: { label: 'Izin', variant: 'default' as const, icon: CheckCircle },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.present;
-    const Icon = config.icon;
-    
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const getPermitStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: 'Menunggu', variant: 'secondary' as const },
-      approved: { label: 'Disetujui', variant: 'outline' as const },
-      rejected: { label: 'Ditolak', variant: 'destructive' as const },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getDisciplineStatusBadge = (status: string) => {
-    const statusConfig = {
-      excellent: { label: 'Sangat Baik', variant: 'outline' as const },
-      good: { label: 'Baik', variant: 'default' as const },
-      warning: { label: 'Peringatan', variant: 'secondary' as const },
-      probation: { label: 'Masa Percobaan', variant: 'destructive' as const },
-      critical: { label: 'Kritis', variant: 'destructive' as const },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.good;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Portal Orang Tua</h1>
-          <p className="text-muted-foreground">
-            Monitoring perkembangan {student.full_name}
-          </p>
-        </div>
-      </div>
-
-      {/* Student Info Card */}
+      {/* Student Info */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
+            <User className="w-5 h-5" />
             Informasi Siswa
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
             <div>
-              <p className="text-sm text-muted-foreground">Nama Lengkap</p>
-              <p className="font-medium">{student.full_name}</p>
+              <span className="font-semibold">Nama:</span> {studentData.full_name}
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">NIS</p>
-              <p className="font-medium">{student.nis}</p>
+              <span className="font-semibold">NIS:</span> {studentData.nis}
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Kelas</p>
-              <p className="font-medium">
-                {student.current_class?.name || 'Belum Ada Kelas'}
-              </p>
-            </div>
+            {studentData.class && (
+              <div>
+                <span className="font-semibold">Kelas:</span> {studentData.class.grade} {studentData.class.name}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Discipline Points Summary */}
-      {disciplinePoints && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Recent Achievements */}
         <Card>
           <CardHeader>
-            <CardTitle>Status Disiplin</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="w-5 h-5" />
+              Prestasi Terbaru
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">+{disciplinePoints.total_achievement_points}</p>
-                <p className="text-sm text-muted-foreground">Poin Prestasi</p>
+            {achievements.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                Belum ada prestasi
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {achievements.map((achievement) => (
+                  <div key={achievement.id} className="border-l-4 border-green-500 pl-3">
+                    <div className="font-medium">{achievement.achievement_types.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {achievement.achievement_types.level} • +{achievement.point_reward} poin
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(achievement.achievement_date).toLocaleDateString('id-ID')}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-red-600">-{disciplinePoints.total_violation_points}</p>
-                <p className="text-sm text-muted-foreground">Poin Pelanggaran</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold">{disciplinePoints.final_score}</p>
-                <p className="text-sm text-muted-foreground">Skor Akhir</p>
-              </div>
-              <div className="text-center">
-                {getDisciplineStatusBadge(disciplinePoints.discipline_status)}
-                <p className="text-sm text-muted-foreground mt-1">Status</p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
-      <Tabs defaultValue="attendance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="attendance">Presensi</TabsTrigger>
-          <TabsTrigger value="achievements">Prestasi</TabsTrigger>
-          <TabsTrigger value="violations">Pelanggaran</TabsTrigger>
-          <TabsTrigger value="permits">Perizinan</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="attendance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Presensi Terbaru
-              </CardTitle>
-              <CardDescription>10 catatan presensi terbaru</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentAttendance?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Belum ada data presensi</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentAttendance?.map((attendance) => (
-                    <div key={attendance.id} className="flex justify-between items-center p-3 border rounded">
-                      <div>
-                        <p className="font-medium">
-                          {format(new Date(attendance.attendance_date), 'dd MMMM yyyy', { locale: id })}
-                        </p>
-                        {attendance.notes && (
-                          <p className="text-sm text-muted-foreground">{attendance.notes}</p>
-                        )}
-                      </div>
-                      <div>
-                        {getAttendanceStatusBadge(attendance.status)}
-                      </div>
+        {/* Recent Violations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Pelanggaran Terbaru
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {violations.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                Tidak ada pelanggaran
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {violations.map((violation) => (
+                  <div key={violation.id} className="border-l-4 border-red-500 pl-3">
+                    <div className="font-medium">{violation.violation_types.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {violation.violation_types.category} • -{violation.point_deduction} poin
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="achievements" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                Prestasi Terbaru
-              </CardTitle>
-              <CardDescription>5 prestasi terbaru yang telah diverifikasi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentAchievements?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Belum ada prestasi tercatat</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentAchievements?.map((achievement) => (
-                    <div key={achievement.id} className="flex justify-between items-start p-3 border rounded">
-                      <div className="flex-1">
-                        <p className="font-medium">{achievement.achievement_type?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {achievement.achievement_type?.category} • {achievement.achievement_type?.level}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(achievement.achievement_date), 'dd MMMM yyyy', { locale: id })}
-                        </p>
-                        {achievement.description && (
-                          <p className="text-sm mt-1">{achievement.description}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline" className="text-green-600">
-                          +{achievement.point_reward}
-                        </Badge>
-                      </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(violation.violation_date).toLocaleDateString('id-ID')}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="violations" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Pelanggaran Terbaru
-              </CardTitle>
-              <CardDescription>5 pelanggaran terbaru yang masih aktif</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentViolations?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Tidak ada pelanggaran tercatat</p>
-              ) : (
-                <div className="space-y-3">
-                  {recentViolations?.map((violation) => (
-                    <div key={violation.id} className="flex justify-between items-start p-3 border rounded">
-                      <div className="flex-1">
-                        <p className="font-medium">{violation.violation_type?.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {violation.violation_type?.category}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(violation.violation_date), 'dd MMMM yyyy', { locale: id })}
-                        </p>
-                        {violation.description && (
-                          <p className="text-sm mt-1">{violation.description}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="destructive">
-                          -{violation.point_deduction}
-                        </Badge>
-                      </div>
+      {/* Recent Permits */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Izin Terbaru
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {permits.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              Belum ada pengajuan izin
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {permits.map((permit) => (
+                <div key={permit.id} className="flex justify-between items-center p-3 border rounded">
+                  <div>
+                    <div className="font-medium">{getPermitTypeLabel(permit.permit_type)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(permit.start_date).toLocaleDateString('id-ID')} - {new Date(permit.end_date).toLocaleDateString('id-ID')}
                     </div>
-                  ))}
+                  </div>
+                  {getStatusBadge(permit.status)}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="permits" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perizinan Aktif</CardTitle>
-              <CardDescription>Daftar perizinan yang sedang berlangsung atau menunggu persetujuan</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activePermits?.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">Tidak ada perizinan aktif</p>
-              ) : (
-                <div className="space-y-3">
-                  {activePermits?.map((permit) => (
-                    <div key={permit.id} className="flex justify-between items-start p-3 border rounded">
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {permit.permit_type === 'sick_leave' ? 'Sakit' : 
-                           permit.permit_type === 'family_leave' ? 'Keperluan Keluarga' :
-                           permit.permit_type === 'school_activity' ? 'Kegiatan Sekolah' : 'Lainnya'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(permit.start_date), 'dd MMM', { locale: id })} - {format(new Date(permit.end_date), 'dd MMM yyyy', { locale: id })}
-                        </p>
-                        <p className="text-sm mt-1">{permit.reason}</p>
-                      </div>
-                      <div className="text-right">
-                        {getPermitStatusBadge(permit.status)}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(permit.submitted_at), 'dd MMM', { locale: id })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aksi Cepat</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-20 flex flex-col gap-2">
+              <Calendar className="w-6 h-6" />
+              <span className="text-sm">Ajukan Izin</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col gap-2">
+              <Award className="w-6 h-6" />
+              <span className="text-sm">Input Prestasi</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col gap-2">
+              <MessageCircle className="w-6 h-6" />
+              <span className="text-sm">Hubungi Wali Kelas</span>
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col gap-2">
+              <FileText className="w-6 h-6" />
+              <span className="text-sm">Riwayat Lengkap</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
