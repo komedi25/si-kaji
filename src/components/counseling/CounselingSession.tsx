@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +20,7 @@ interface CounselingSessionData {
   session_type: string;
   status: string;
   topic: string | null;
+  notes_encrypted: string | null;
   follow_up_required: boolean;
   follow_up_date: string | null;
   created_at: string;

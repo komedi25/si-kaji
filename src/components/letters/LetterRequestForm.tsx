@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +39,12 @@ export const LetterRequestForm = () => {
     try {
       const { error } = await supabase
         .from('letter_requests')
-        .insert(formData);
+        .insert({
+          student_id: formData.student_id,
+          letter_type: formData.letter_type,
+          purpose: formData.purpose,
+          additional_notes: formData.additional_notes
+        });
 
       if (error) throw error;
 
