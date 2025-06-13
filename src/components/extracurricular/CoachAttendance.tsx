@@ -1,39 +1,20 @@
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { UserCheck, Calendar, Clock, Users } from 'lucide-react';
+import { Calendar, Clock, Users, Plus, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-const attendanceSchema = z.object({
-  extracurricular_id: z.string().min(1, 'Pilih ekstrakurikuler'),
-  attendance_date: z.string().min(1, 'Tanggal wajib diisi'),
-  start_time: z.string().min(1, 'Waktu mulai wajib diisi'),
-  end_time: z.string().optional(),
-  status: z.enum(['present', 'absent', 'late']),
-  participant_count: z.number().min(0).optional(),
-  activities_conducted: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-type AttendanceFormData = z.infer<typeof attendanceSchema>;
-
-interface Extracurricular {
-  id: string;
-  name: string;
-  coach_id: string;
-}
-
-interface CoachAttendance {
+interface Attendance {
   id: string;
   attendance_date: string;
   start_time: string;
@@ -41,163 +22,223 @@ interface CoachAttendance {
   status: string;
   participant_count: number;
   activities_conducted: string;
-  extracurriculars: { name: string };
+  notes: string;
+  extracurricular: {
+    name: string;
+  };
 }
 
-export const CoachAttendance = () => {
-  const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
-  const [attendances, setAttendances] = useState<CoachAttendance[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+interface Extracurricular {
+  id: string;
+  name: string;
+}
 
-  const form = useForm<AttendanceFormData>({
-    resolver: zodResolver(attendanceSchema),
-    defaultValues: {
-      attendance_date: new Date().toISOString().split('T')[0],
-      status: 'present',
-      participant_count: 0,
-    },
+export function CoachAttendance() {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAttendance, setEditingAttendance] = useState<Attendance | null>(null);
+  const [formData, setFormData] = useState({
+    extracurricular_id: '',
+    attendance_date: new Date().toISOString().split('T')[0],
+    start_time: '14:00',
+    end_time: '16:00',
+    status: 'present',
+    participant_count: 0,
+    activities_conducted: '',
+    notes: ''
   });
 
   useEffect(() => {
-    getCurrentUser();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (currentUserId) {
-      fetchExtracurriculars();
-      fetchAttendances();
-    }
-  }, [currentUserId]);
-
-  const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setCurrentUserId(user.id);
-    }
-  };
-
-  const fetchExtracurriculars = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch extracurriculars where user is coach
+      const { data: extrasData, error: extrasError } = await supabase
         .from('extracurriculars')
-        .select('id, name, coach_id')
-        .eq('coach_id', currentUserId)
+        .select('id, name')
+        .eq('coach_id', user?.id)
         .eq('is_active', true);
 
-      if (error) throw error;
-      setExtracurriculars(data || []);
-    } catch (error) {
-      console.error('Error fetching extracurriculars:', error);
-      toast.error('Gagal memuat data ekstrakurikuler');
-    }
-  };
+      if (extrasError) throw extrasError;
+      setExtracurriculars(extrasData || []);
 
-  const fetchAttendances = async () => {
-    try {
-      const { data, error } = await supabase
+      // Fetch coach attendances
+      const { data: attendanceData, error: attendanceError } = await supabase
         .from('coach_attendances')
         .select(`
-          id,
-          attendance_date,
-          start_time,
-          end_time,
-          status,
-          participant_count,
-          activities_conducted,
-          extracurriculars (name)
+          *,
+          extracurricular:extracurriculars(name)
         `)
-        .eq('coach_id', currentUserId)
+        .eq('coach_id', user?.id)
         .order('attendance_date', { ascending: false });
 
-      if (error) throw error;
-      setAttendances(data || []);
+      if (attendanceError) throw attendanceError;
+      setAttendances(attendanceData || []);
     } catch (error) {
-      console.error('Error fetching attendances:', error);
-      toast.error('Gagal memuat data presensi');
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data kehadiran",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onSubmit = async (data: AttendanceFormData) => {
-    setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
     try {
-      const attendanceData = {
-        coach_id: currentUserId,
-        extracurricular_id: data.extracurricular_id,
-        attendance_date: data.attendance_date,
-        start_time: data.start_time,
-        end_time: data.end_time,
-        status: data.status,
-        participant_count: data.participant_count,
-        activities_conducted: data.activities_conducted,
-        notes: data.notes,
+      const payload = {
+        ...formData,
+        coach_id: user?.id,
+        participant_count: Number(formData.participant_count)
       };
 
-      const { error } = await supabase
-        .from('coach_attendances')
-        .insert([attendanceData]);
+      if (editingAttendance) {
+        const { error } = await supabase
+          .from('coach_attendances')
+          .update(payload)
+          .eq('id', editingAttendance.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('coach_attendances')
+          .insert([payload]);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
+      toast({
+        title: "Berhasil",
+        description: editingAttendance ? "Kehadiran diperbarui" : "Kehadiran dicatat"
+      });
 
-      toast.success('Presensi berhasil disimpan');
-      form.reset();
-      fetchAttendances();
+      resetForm();
+      setDialogOpen(false);
+      fetchData();
     } catch (error) {
       console.error('Error saving attendance:', error);
-      toast.error('Gagal menyimpan presensi');
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan kehadiran",
+        variant: "destructive"
+      });
     } finally {
-      setIsSubmitting(false);
+      setSaving(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      extracurricular_id: '',
+      attendance_date: new Date().toISOString().split('T')[0],
+      start_time: '14:00',
+      end_time: '16:00',
+      status: 'present',
+      participant_count: 0,
+      activities_conducted: '',
+      notes: ''
+    });
+    setEditingAttendance(null);
+  };
+
+  const handleEdit = (attendance: Attendance) => {
+    setEditingAttendance(attendance);
+    setFormData({
+      extracurricular_id: attendance.extracurricular_id,
+      attendance_date: attendance.attendance_date,
+      start_time: attendance.start_time,
+      end_time: attendance.end_time || '16:00',
+      status: attendance.status,
+      participant_count: attendance.participant_count || 0,
+      activities_conducted: attendance.activities_conducted || '',
+      notes: attendance.notes || ''
+    });
+    setDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      present: 'default',
-      absent: 'destructive',
-      late: 'secondary'
-    } as const;
-    
-    const labels = {
-      present: 'Hadir',
-      absent: 'Tidak Hadir',
-      late: 'Terlambat'
-    };
-    
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
-    );
+    switch (status) {
+      case 'present':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Hadir
+          </Badge>
+        );
+      case 'absent':
+        return (
+          <Badge variant="destructive">
+            <XCircle className="w-3 h-3 mr-1" />
+            Tidak Hadir
+          </Badge>
+        );
+      case 'sick':
+        return (
+          <Badge variant="secondary">
+            Sakit
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
+
+  if (loading) {
+    return <div>Memuat data kehadiran...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5" />
-            Presensi Pelatih
-          </CardTitle>
-          <CardDescription>
-            Catat kehadiran Anda sebagai pelatih ekstrakurikuler
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="extracurricular_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ekstrakurikuler</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih ekstrakurikuler" />
-                          </SelectTrigger>
-                        </FormControl>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Kehadiran Pelatih
+              </CardTitle>
+              <CardDescription>
+                Catat kehadiran dan aktivitas pelatihan ekstrakurikuler
+              </CardDescription>
+            </div>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Catat Kehadiran
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingAttendance ? 'Edit Kehadiran' : 'Catat Kehadiran'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Isi detail kehadiran dan aktivitas pelatihan
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="extracurricular_id">Ekstrakurikuler</Label>
+                      <Select
+                        value={formData.extracurricular_id}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, extracurricular_id: value }))}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih ekstrakurikuler" />
+                        </SelectTrigger>
                         <SelectContent>
                           {extracurriculars.map((extra) => (
                             <SelectItem key={extra.id} value={extra.id}>
@@ -206,186 +247,164 @@ export const CoachAttendance = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="attendance_date">Tanggal</Label>
+                      <Input
+                        id="attendance_date"
+                        type="date"
+                        value={formData.attendance_date}
+                        onChange={(e) => setFormData(prev => ({ ...prev, attendance_date: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="attendance_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Tanggal
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="start_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Waktu Mulai
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="end_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Waktu Selesai</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status Kehadiran</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih status" />
-                          </SelectTrigger>
-                        </FormControl>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="start_time">Waktu Mulai</Label>
+                      <Input
+                        id="start_time"
+                        type="time"
+                        value={formData.start_time}
+                        onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end_time">Waktu Selesai</Label>
+                      <Input
+                        id="end_time"
+                        type="time"
+                        value={formData.end_time}
+                        onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status Kehadiran</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="present">Hadir</SelectItem>
-                          <SelectItem value="late">Terlambat</SelectItem>
                           <SelectItem value="absent">Tidak Hadir</SelectItem>
+                          <SelectItem value="sick">Sakit</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </div>
+                  </div>
 
-                <FormField
-                  control={form.control}
-                  name="participant_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Jumlah Peserta
-                      </FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="Jumlah siswa yang hadir"
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="participant_count">Jumlah Peserta</Label>
+                    <Input
+                      id="participant_count"
+                      type="number"
+                      min="0"
+                      value={formData.participant_count}
+                      onChange={(e) => setFormData(prev => ({ ...prev, participant_count: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
 
-              <FormField
-                control={form.control}
-                name="activities_conducted"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kegiatan yang Dilakukan</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Deskripsi kegiatan yang dilakukan"
-                        rows={3}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <div className="space-y-2">
+                    <Label htmlFor="activities_conducted">Aktivitas yang Dilakukan</Label>
+                    <Textarea
+                      id="activities_conducted"
+                      value={formData.activities_conducted}
+                      onChange={(e) => setFormData(prev => ({ ...prev, activities_conducted: e.target.value }))}
+                      placeholder="Jelaskan aktivitas pelatihan yang dilakukan"
+                      rows={3}
+                    />
+                  </div>
 
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Catatan</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Catatan tambahan"
-                        rows={2}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Catatan</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Catatan tambahan (opsional)"
+                      rows={2}
+                    />
+                  </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Riwayat Presensi</CardTitle>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Batal
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {saving ? 'Menyimpan...' : (editingAttendance ? 'Perbarui' : 'Simpan')}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {attendances.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Belum ada data presensi
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {attendances.map((attendance) => (
-                <div key={attendance.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">{attendance.extracurriculars?.name}</h4>
-                    {getStatusBadge(attendance.status)}
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
-                    <div>
-                      <span className="font-medium">Tanggal:</span> {new Date(attendance.attendance_date).toLocaleDateString('id-ID')}
-                    </div>
-                    <div>
-                      <span className="font-medium">Waktu:</span> {attendance.start_time} - {attendance.end_time}
-                    </div>
-                    <div>
-                      <span className="font-medium">Peserta:</span> {attendance.participant_count} siswa
-                    </div>
-                  </div>
-                  {attendance.activities_conducted && (
-                    <p className="text-sm mt-2">{attendance.activities_conducted}</p>
-                  )}
-                </div>
-              ))}
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Belum ada catatan kehadiran. Mulai catat kehadiran pelatihan Anda.</p>
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Ekstrakurikuler</TableHead>
+                  <TableHead>Waktu</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Peserta</TableHead>
+                  <TableHead>Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attendances.map((attendance) => (
+                  <TableRow key={attendance.id}>
+                    <TableCell>
+                      {new Date(attendance.attendance_date).toLocaleDateString('id-ID')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {attendance.extracurricular?.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {attendance.start_time} - {attendance.end_time || '--:--'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(attendance.status)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {attendance.participant_count || 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(attendance)}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
     </div>
   );
-};
+}

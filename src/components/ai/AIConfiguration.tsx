@@ -1,340 +1,352 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { useAIPreferences } from '@/hooks/useAIPreferences';
-import { Bot, Settings, Zap, AlertTriangle, Users, FileText, Brain } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Settings, Brain, Clock, Target, Zap } from 'lucide-react';
 
-const AI_PROVIDERS = [
-  { 
-    value: 'openai', 
-    label: 'OpenAI', 
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
-    supportCustom: true
-  },
-  { 
-    value: 'gemini', 
-    label: 'Google Gemini', 
-    models: ['gemini-pro', 'gemini-pro-vision'],
-    supportCustom: false
-  },
-  { 
-    value: 'openrouter', 
-    label: 'OpenRouter', 
-    models: [
-      'meta-llama/llama-3.2-3b-instruct:free',
-      'microsoft/phi-3-mini-128k-instruct:free',
-      'huggingfaceh4/zephyr-7b-beta:free',
-      'google/gemma-7b-it:free',
-      'meta-llama/llama-3.1-8b-instruct:free',
-      'gryphe/mythomist-7b:free'
-    ],
-    supportCustom: true
-  },
-  { 
-    value: 'deepseek', 
-    label: 'DeepSeek', 
-    models: ['deepseek-chat', 'deepseek-coder'],
-    supportCustom: true
-  }
-];
-
-const ANALYSIS_SCHEDULES = [
-  { value: 'daily', label: 'Harian' },
-  { value: 'weekly', label: 'Mingguan' },
-  { value: 'monthly', label: 'Bulanan' }
-];
+interface AIPreferences {
+  preferred_provider: string;
+  preferred_model: string;
+  auto_analysis_enabled: boolean;
+  auto_analysis_schedule: string;
+  notification_enabled: boolean;
+}
 
 export function AIConfiguration() {
-  const { preferences, loading, savePreferences } = useAIPreferences();
-  const [customModel, setCustomModel] = useState('');
+  const { toast } = useToast();
+  const { user, hasRole } = useAuth();
+  const [preferences, setPreferences] = useState<AIPreferences>({
+    preferred_provider: 'gemini',
+    preferred_model: 'gemini-pro',
+    auto_analysis_enabled: false,
+    auto_analysis_schedule: 'weekly',
+    notification_enabled: true
+  });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const selectedProvider = AI_PROVIDERS.find(p => p.value === preferences.preferred_provider);
-  const availableModels = selectedProvider?.models || [];
+  if (!hasRole('admin')) {
+    return (
+      <Alert>
+        <Settings className="h-4 w-4" />
+        <AlertDescription>
+          Hanya Admin yang dapat mengakses konfigurasi AI.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const loadPreferences = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('ai_preferences')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading AI preferences:', error);
+        return;
+      }
+
+      if (data) {
+        setPreferences({
+          preferred_provider: data.preferred_provider || 'gemini',
+          preferred_model: data.preferred_model || 'gemini-pro',
+          auto_analysis_enabled: data.auto_analysis_enabled || false,
+          auto_analysis_schedule: data.auto_analysis_schedule || 'weekly',
+          notification_enabled: data.notification_enabled || true
+        });
+      }
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePreferences = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('ai_preferences')
+        .upsert({
+          user_id: user?.id,
+          ...preferences
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: "Konfigurasi AI telah disimpan"
+      });
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menyimpan konfigurasi",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleProviderChange = (provider: string) => {
-    savePreferences({ 
+    setPreferences(prev => ({
+      ...prev,
       preferred_provider: provider,
-      preferred_model: '' // Reset model when provider changes
-    });
+      preferred_model: getDefaultModel(provider)
+    }));
   };
 
-  const handleModelChange = (model: string) => {
-    if (model === 'custom') {
-      // Don't save yet, wait for custom model input
-      return;
-    } else {
-      savePreferences({ preferred_model: model });
+  const getDefaultModel = (provider: string) => {
+    switch (provider) {
+      case 'openai':
+        return 'gpt-4o-mini';
+      case 'gemini':
+        return 'gemini-pro';
+      case 'openrouter':
+        return 'meta-llama/llama-3.1-8b-instruct:free';
+      case 'deepseek':
+        return 'deepseek-chat';
+      default:
+        return 'gemini-pro';
     }
   };
 
-  const handleCustomModelSubmit = () => {
-    if (customModel.trim()) {
-      savePreferences({ preferred_model: customModel.trim() });
-      setCustomModel('');
+  const getModelOptions = (provider: string) => {
+    switch (provider) {
+      case 'openai':
+        return [
+          { value: 'gpt-4o', label: 'GPT-4O' },
+          { value: 'gpt-4o-mini', label: 'GPT-4O Mini' },
+          { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
+        ];
+      case 'gemini':
+        return [
+          { value: 'gemini-pro', label: 'Gemini Pro' },
+          { value: 'gemini-pro-vision', label: 'Gemini Pro Vision' }
+        ];
+      case 'openrouter':
+        return [
+          { value: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (Free)' },
+          { value: 'microsoft/phi-3-medium-128k-instruct:free', label: 'Phi-3 Medium (Free)' },
+          { value: 'google/gemma-2-9b-it:free', label: 'Gemma 2 9B (Free)' }
+        ];
+      case 'deepseek':
+        return [
+          { value: 'deepseek-chat', label: 'DeepSeek Chat' },
+          { value: 'deepseek-coder', label: 'DeepSeek Coder' }
+        ];
+      default:
+        return [];
     }
   };
 
-  const isCustomModelSelected = preferences.preferred_model && 
-    !availableModels.includes(preferences.preferred_model);
+  if (loading) {
+    return <div>Memuat konfigurasi AI...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Provider Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5" />
-            Konfigurasi Provider AI
-          </CardTitle>
-          <CardDescription>
-            Pilih provider AI dan model yang akan digunakan untuk analisis
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="provider">Provider AI</Label>
-            <Select value={preferences.preferred_provider} onValueChange={handleProviderChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih Provider AI" />
-              </SelectTrigger>
-              <SelectContent>
-                {AI_PROVIDERS.map(provider => (
-                  <SelectItem key={provider.value} value={provider.value}>
-                    {provider.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="general">Umum</TabsTrigger>
+          <TabsTrigger value="automation">Otomasi</TabsTrigger>
+          <TabsTrigger value="performance">Performa</TabsTrigger>
+        </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="model">Model AI</Label>
-            <Select 
-              value={isCustomModelSelected ? 'custom' : (preferences.preferred_model || '')} 
-              onValueChange={handleModelChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih Model AI" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableModels.map(model => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-                {selectedProvider?.supportCustom && (
-                  <SelectItem value="custom">Custom Model</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+        <TabsContent value="general" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5" />
+                Pengaturan AI Provider
+              </CardTitle>
+              <CardDescription>
+                Pilih provider AI dan model yang akan digunakan untuk analisis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="provider">Provider AI</Label>
+                <Select value={preferences.preferred_provider} onValueChange={handleProviderChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih provider AI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gemini">Google Gemini (Gratis)</SelectItem>
+                    <SelectItem value="openai">OpenAI GPT</SelectItem>
+                    <SelectItem value="openrouter">OpenRouter (Multi-model)</SelectItem>
+                    <SelectItem value="deepseek">DeepSeek (Cost-effective)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {(isCustomModelSelected || selectedProvider?.supportCustom) && (
-            <div className="space-y-2">
-              <Label htmlFor="custom-model">
-                {isCustomModelSelected ? 'Model Saat Ini' : 'Custom Model Name'}
-              </Label>
-              {isCustomModelSelected ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={preferences.preferred_model}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                  <Button 
-                    variant="outline" 
-                    onClick={() => savePreferences({ preferred_model: '' })}
-                  >
-                    Reset
-                  </Button>
+              <div className="space-y-2">
+                <Label htmlFor="model">Model AI</Label>
+                <Select 
+                  value={preferences.preferred_model} 
+                  onValueChange={(value) => setPreferences(prev => ({ ...prev, preferred_model: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih model AI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getModelOptions(preferences.preferred_provider).map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Alert>
+                <Zap className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Rekomendasi:</strong> Gunakan Gemini untuk analisis gratis atau OpenAI GPT-4O Mini untuk performa terbaik.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="automation" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Analisis Otomatis
+              </CardTitle>
+              <CardDescription>
+                Atur kapan AI akan melakukan analisis otomatis terhadap data siswa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Aktifkan Analisis Otomatis</Label>
+                  <p className="text-sm text-muted-foreground">
+                    AI akan menganalisis data siswa secara berkala
+                  </p>
                 </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    id="custom-model"
-                    value={customModel}
-                    onChange={(e) => setCustomModel(e.target.value)}
-                    placeholder="Masukkan nama model custom"
-                    onKeyPress={(e) => e.key === 'Enter' && handleCustomModelSubmit()}
-                  />
-                  <Button onClick={handleCustomModelSubmit} size="sm" disabled={!customModel.trim()}>
-                    Set
-                  </Button>
+                <Switch
+                  checked={preferences.auto_analysis_enabled}
+                  onCheckedChange={(checked) => 
+                    setPreferences(prev => ({ ...prev, auto_analysis_enabled: checked }))
+                  }
+                />
+              </div>
+
+              {preferences.auto_analysis_enabled && (
+                <div className="space-y-2">
+                  <Label htmlFor="schedule">Jadwal Analisis</Label>
+                  <Select 
+                    value={preferences.auto_analysis_schedule} 
+                    onValueChange={(value) => setPreferences(prev => ({ ...prev, auto_analysis_schedule: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jadwal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">Harian</SelectItem>
+                      <SelectItem value="weekly">Mingguan</SelectItem>
+                      <SelectItem value="monthly">Bulanan</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
-            </div>
-          )}
 
-          {selectedProvider && (
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>{selectedProvider.label}:</strong> {
-                  selectedProvider.value === 'openai' ? 'Memerlukan API key berbayar, namun memberikan hasil terbaik' :
-                  selectedProvider.value === 'gemini' ? 'Tersedia gratis dengan batas penggunaan yang cukup besar' :
-                  selectedProvider.value === 'openrouter' ? 'Akses ke berbagai model, beberapa gratis' :
-                  selectedProvider.value === 'deepseek' ? 'Model yang sangat cost-effective dengan performa tinggi' :
-                  'Provider AI terpilih'
-                }
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Auto Analysis Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Analisis Otomatis
-          </CardTitle>
-          <CardDescription>
-            Konfigurasi analisis otomatis untuk siswa bermasalah
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Aktifkan Analisis Otomatis</Label>
-              <p className="text-sm text-muted-foreground">
-                AI akan menganalisis siswa dengan poin disiplin rendah secara otomatis
-              </p>
-            </div>
-            <Switch
-              checked={preferences.auto_analysis_enabled}
-              onCheckedChange={(checked) => savePreferences({ auto_analysis_enabled: checked })}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label htmlFor="schedule">Jadwal Analisis</Label>
-            <Select 
-              value={preferences.auto_analysis_schedule} 
-              onValueChange={(schedule) => savePreferences({ auto_analysis_schedule: schedule })}
-              disabled={!preferences.auto_analysis_enabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih jadwal analisis" />
-              </SelectTrigger>
-              <SelectContent>
-                {ANALYSIS_SCHEDULES.map(schedule => (
-                  <SelectItem key={schedule.value} value={schedule.value}>
-                    {schedule.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Notifikasi Rekomendasi</Label>
-              <p className="text-sm text-muted-foreground">
-                Terima notifikasi saat AI menghasilkan rekomendasi baru
-              </p>
-            </div>
-            <Switch
-              checked={preferences.notification_enabled}
-              onCheckedChange={(checked) => savePreferences({ notification_enabled: checked })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* General Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Preferensi Umum
-          </CardTitle>
-          <CardDescription>
-            Pengaturan umum untuk fitur AI dan stakeholder rekomendasi
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 bg-amber-50 rounded-lg">
-            <h4 className="font-medium text-amber-800 mb-2">Kriteria Analisis Otomatis</h4>
-            <ul className="text-sm text-amber-700 space-y-1">
-              <li>• Siswa dengan skor disiplin di bawah 60 poin</li>
-              <li>• Siswa dengan 3+ pelanggaran dalam sebulan terakhir</li>
-              <li>• Siswa dengan tingkat kehadiran di bawah 80%</li>
-              <li>• Siswa yang dilaporkan dalam kasus disiplin aktif</li>
-            </ul>
-          </div>
-
-          <div className="p-4 bg-green-50 rounded-lg">
-            <h4 className="font-medium text-green-800 mb-2">Stakeholder Rekomendasi</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Wali Kelas</span>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notifikasi AI</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Terima notifikasi ketika AI menghasilkan rekomendasi baru
+                  </p>
                 </div>
-                <p className="text-xs text-green-700 ml-6">Rekomendasi pembinaan harian dan monitoring siswa</p>
+                <Switch
+                  checked={preferences.notification_enabled}
+                  onCheckedChange={(checked) => 
+                    setPreferences(prev => ({ ...prev, notification_enabled: checked }))
+                  }
+                />
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Guru BK</span>
-                </div>
-                <p className="text-xs text-green-700 ml-6">Rekomendasi konseling dan intervensi psikologis</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">TPPK</span>
-                </div>
-                <p className="text-xs text-green-700 ml-6">Pencegahan kekerasan & penanganan kedisiplinan</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">ARPS</span>
-                </div>
-                <p className="text-xs text-green-700 ml-6">Pencegahan anak rentan putus sekolah</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">P4GN</span>
-                </div>
-                <p className="text-xs text-green-700 ml-6">Satgas anti narkotika dan pencegahan penyalahgunaan</p>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Fitur AI Tersedia</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Analisis pola perilaku siswa</li>
-                <li>• Prediksi risiko putus sekolah</li>
-                <li>• Deteksi indikasi kekerasan</li>
-                <li>• Monitoring kedisiplinan</li>
-              </ul>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Generator surat otomatis</li>
-                <li>• Ringkasan kasus siswa</li>
-                <li>• Rekomendasi tindakan intervensi</li>
-                <li>• Laporan analisis komprehensif</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="performance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Optimasi Performa
+              </CardTitle>
+              <CardDescription>
+                Pengaturan untuk mengoptimalkan performa AI
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  <strong>Tips Performa:</strong>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    <li>• Gunakan Gemini untuk analisis rutin (gratis)</li>
+                    <li>• Gunakan GPT-4O untuk analisis kompleks</li>
+                    <li>• OpenRouter memberikan akses ke berbagai model</li>
+                    <li>• DeepSeek cost-effective untuk volume tinggi</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Status Provider</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Google Gemini</span>
+                    <span className="text-green-600">Tersedia (Gratis)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>OpenAI GPT</span>
+                    <span className="text-yellow-600">Perlu API Key</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>OpenRouter</span>
+                    <span className="text-yellow-600">Perlu API Key</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>DeepSeek</span>
+                    <span className="text-yellow-600">Perlu API Key</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex justify-end">
+        <Button onClick={savePreferences} disabled={saving}>
+          {saving ? 'Menyimpan...' : 'Simpan Konfigurasi'}
+        </Button>
+      </div>
     </div>
   );
 }
