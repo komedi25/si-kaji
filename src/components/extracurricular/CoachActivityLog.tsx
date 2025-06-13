@@ -11,81 +11,74 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { BookOpen, Users, Calendar, Plus, Edit, Trash2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar, FileText, Users, Clock, Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 interface ActivityLog {
   id: string;
-  log_date: string;
-  session_topic: string;
-  session_description: string;
-  attendance_count: number;
-  student_progress_notes: string;
-  materials_used: string;
-  next_session_plan: string;
-  extracurricular: {
-    name: string;
-  };
+  date: string;
+  extracurricular: string;
+  activity_type: string;
+  description: string;
+  participant_count: number;
+  notes?: string;
+  created_by: string;
+  created_at: string;
 }
 
 interface Extracurricular {
   id: string;
   name: string;
+  coach_id: string;
 }
 
 export function CoachActivityLog() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
+    date: format(new Date(), 'yyyy-MM-dd'),
     extracurricular_id: '',
-    log_date: new Date().toISOString().split('T')[0],
-    session_topic: '',
-    session_description: '',
-    attendance_count: 0,
-    student_progress_notes: '',
-    materials_used: '',
-    next_session_plan: ''
+    activity_type: '',
+    description: '',
+    participant_count: 0,
+    notes: ''
   });
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  const fetchData = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      // Fetch extracurriculars where user is coach
-      const { data: extrasData, error: extrasError } = await supabase
+      // Load extracurriculars where user is coach
+      const { data: extracurricularData, error: extracurricularError } = await supabase
         .from('extracurriculars')
-        .select('id, name')
-        .eq('coach_id', user?.id)
-        .eq('is_active', true);
+        .select('*')
+        .eq('coach_id', user?.id);
 
-      if (extrasError) throw extrasError;
-      setExtracurriculars(extrasData || []);
+      if (extracurricularError) throw extracurricularError;
+      setExtracurriculars(extracurricularData || []);
 
-      // Fetch activity logs
-      const { data: logsData, error: logsError } = await supabase
-        .from('coach_activity_logs')
-        .select(`
-          *,
-          extracurricular:extracurriculars(name)
-        `)
-        .eq('coach_id', user?.id)
-        .order('log_date', { ascending: false });
+      // Load activity logs
+      const { data: activityData, error: activityError } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('created_by', user?.id)
+        .order('date', { ascending: false });
 
-      if (logsError) throw logsError;
-      setLogs(logsData || []);
+      if (activityError) throw activityError;
+      setActivities(activityData || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data aktivitas",
+        description: "Gagal memuat data",
         variant: "destructive"
       });
     } finally {
@@ -95,255 +88,201 @@ export function CoachActivityLog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setLoading(true);
 
     try {
-      const payload = {
-        ...formData,
-        coach_id: user?.id,
-        attendance_count: Number(formData.attendance_count)
-      };
-
-      if (editingLog) {
-        const { error } = await supabase
-          .from('coach_activity_logs')
-          .update(payload)
-          .eq('id', editingLog.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('coach_activity_logs')
-          .insert([payload]);
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Berhasil",
-        description: editingLog ? "Log aktivitas diperbarui" : "Log aktivitas disimpan"
-      });
-
-      resetForm();
-      setDialogOpen(false);
-      fetchData();
-    } catch (error) {
-      console.error('Error saving log:', error);
-      toast({
-        title: "Error",
-        description: "Gagal menyimpan log aktivitas",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      extracurricular_id: '',
-      log_date: new Date().toISOString().split('T')[0],
-      session_topic: '',
-      session_description: '',
-      attendance_count: 0,
-      student_progress_notes: '',
-      materials_used: '',
-      next_session_plan: ''
-    });
-    setEditingLog(null);
-  };
-
-  const handleEdit = (log: ActivityLog) => {
-    setEditingLog(log);
-    setFormData({
-      extracurricular_id: log.extracurricular_id,
-      log_date: log.log_date,
-      session_topic: log.session_topic,
-      session_description: log.session_description || '',
-      attendance_count: log.attendance_count || 0,
-      student_progress_notes: log.student_progress_notes || '',
-      materials_used: log.materials_used || '',
-      next_session_plan: log.next_session_plan || ''
-    });
-    setDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus log aktivitas ini?')) return;
-
-    try {
+      const selectedExtracurricular = extracurriculars.find(ext => ext.id === formData.extracurricular_id);
+      
       const { error } = await supabase
-        .from('coach_activity_logs')
-        .delete()
-        .eq('id', id);
+        .from('activity_logs')
+        .insert({
+          date: formData.date,
+          extracurricular: selectedExtracurricular?.name || '',
+          activity_type: formData.activity_type,
+          description: formData.description,
+          participant_count: formData.participant_count,
+          notes: formData.notes,
+          created_by: user?.id
+        });
 
       if (error) throw error;
 
       toast({
         title: "Berhasil",
-        description: "Log aktivitas dihapus"
+        description: "Jurnal kegiatan berhasil disimpan"
       });
 
-      fetchData();
+      setShowForm(false);
+      setFormData({
+        date: format(new Date(), 'yyyy-MM-dd'),
+        extracurricular_id: '',
+        activity_type: '',
+        description: '',
+        participant_count: 0,
+        notes: ''
+      });
+      
+      loadData();
     } catch (error) {
-      console.error('Error deleting log:', error);
+      console.error('Error saving activity log:', error);
       toast({
         title: "Error",
-        description: "Gagal menghapus log aktivitas",
+        description: "Gagal menyimpan jurnal kegiatan",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div>Memuat data aktivitas...</div>;
+  const getActivityTypeColor = (type: string) => {
+    switch (type) {
+      case 'latihan':
+        return 'bg-blue-100 text-blue-800';
+      case 'pertandingan':
+        return 'bg-green-100 text-green-800';
+      case 'evaluasi':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rapat':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading && activities.length === 0) {
+    return <div>Memuat jurnal kegiatan...</div>;
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Jurnal Kegiatan Pelatih</h2>
+          <p className="text-muted-foreground">
+            Catat dan pantau kegiatan ekstrakurikuler
+          </p>
+        </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Tambah Jurnal
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tambah Jurnal Kegiatan</CardTitle>
+            <CardDescription>
+              Catat kegiatan ekstrakurikuler yang telah dilaksanakan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Tanggal Kegiatan</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="extracurricular">Ekstrakurikuler</Label>
+                  <Select value={formData.extracurricular_id} onValueChange={(value) => setFormData(prev => ({ ...prev, extracurricular_id: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih ekstrakurikuler" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {extracurriculars.map((ext) => (
+                        <SelectItem key={ext.id} value={ext.id}>
+                          {ext.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="activity_type">Jenis Kegiatan</Label>
+                  <Select value={formData.activity_type} onValueChange={(value) => setFormData(prev => ({ ...prev, activity_type: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jenis kegiatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="latihan">Latihan</SelectItem>
+                      <SelectItem value="pertandingan">Pertandingan</SelectItem>
+                      <SelectItem value="evaluasi">Evaluasi</SelectItem>
+                      <SelectItem value="rapat">Rapat</SelectItem>
+                      <SelectItem value="lainnya">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="participant_count">Jumlah Peserta</Label>
+                  <Input
+                    id="participant_count"
+                    type="number"
+                    min="0"
+                    value={formData.participant_count}
+                    onChange={(e) => setFormData(prev => ({ ...prev, participant_count: parseInt(e.target.value) }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Deskripsi Kegiatan</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Catatan Tambahan</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Simpan Jurnal'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                  Batal
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5" />
-                Log Aktivitas Pelatih
-              </CardTitle>
-              <CardDescription>
-                Catat dan kelola aktivitas pelatihan ekstrakurikuler
-              </CardDescription>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Tambah Log
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingLog ? 'Edit Log Aktivitas' : 'Tambah Log Aktivitas'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Isi detail aktivitas pelatihan yang telah dilakukan
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="extracurricular_id">Ekstrakurikuler</Label>
-                      <Select
-                        value={formData.extracurricular_id}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, extracurricular_id: value }))}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih ekstrakurikuler" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {extracurriculars.map((extra) => (
-                            <SelectItem key={extra.id} value={extra.id}>
-                              {extra.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="log_date">Tanggal</Label>
-                      <Input
-                        id="log_date"
-                        type="date"
-                        value={formData.log_date}
-                        onChange={(e) => setFormData(prev => ({ ...prev, log_date: e.target.value }))}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="session_topic">Topik Sesi</Label>
-                    <Input
-                      id="session_topic"
-                      value={formData.session_topic}
-                      onChange={(e) => setFormData(prev => ({ ...prev, session_topic: e.target.value }))}
-                      placeholder="Masukkan topik sesi pelatihan"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="session_description">Deskripsi Sesi</Label>
-                    <Textarea
-                      id="session_description"
-                      value={formData.session_description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, session_description: e.target.value }))}
-                      placeholder="Jelaskan aktivitas yang dilakukan dalam sesi ini"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="attendance_count">Jumlah Peserta Hadir</Label>
-                    <Input
-                      id="attendance_count"
-                      type="number"
-                      min="0"
-                      value={formData.attendance_count}
-                      onChange={(e) => setFormData(prev => ({ ...prev, attendance_count: parseInt(e.target.value) || 0 }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="student_progress_notes">Catatan Progress Siswa</Label>
-                    <Textarea
-                      id="student_progress_notes"
-                      value={formData.student_progress_notes}
-                      onChange={(e) => setFormData(prev => ({ ...prev, student_progress_notes: e.target.value }))}
-                      placeholder="Catat perkembangan dan pencapaian siswa"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="materials_used">Materi/Peralatan Digunakan</Label>
-                    <Textarea
-                      id="materials_used"
-                      value={formData.materials_used}
-                      onChange={(e) => setFormData(prev => ({ ...prev, materials_used: e.target.value }))}
-                      placeholder="Daftar materi, peralatan, atau fasilitas yang digunakan"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="next_session_plan">Rencana Sesi Selanjutnya</Label>
-                    <Textarea
-                      id="next_session_plan"
-                      value={formData.next_session_plan}
-                      onChange={(e) => setFormData(prev => ({ ...prev, next_session_plan: e.target.value }))}
-                      placeholder="Rencana aktivitas untuk sesi pelatihan berikutnya"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Batal
-                    </Button>
-                    <Button type="submit" disabled={saving}>
-                      {saving ? 'Menyimpan...' : (editingLog ? 'Perbarui' : 'Simpan')}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Riwayat Jurnal Kegiatan
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {logs.length === 0 ? (
+          {activities.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Belum ada log aktivitas. Mulai catat aktivitas pelatihan Anda.</p>
+              Belum ada jurnal kegiatan yang tercatat
             </div>
           ) : (
             <Table>
@@ -351,47 +290,35 @@ export function CoachActivityLog() {
                 <TableRow>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Ekstrakurikuler</TableHead>
-                  <TableHead>Topik Sesi</TableHead>
+                  <TableHead>Jenis Kegiatan</TableHead>
+                  <TableHead>Deskripsi</TableHead>
                   <TableHead>Peserta</TableHead>
-                  <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.id}>
+                {activities.map((activity) => (
+                  <TableRow key={activity.id}>
                     <TableCell>
-                      {new Date(log.log_date).toLocaleDateString('id-ID')}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {log.extracurricular?.name}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        {format(new Date(activity.date), 'dd MMM yyyy', { locale: id })}
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {log.session_topic}
+                      {activity.extracurricular}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getActivityTypeColor(activity.activity_type)}>
+                        {activity.activity_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {activity.description}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {log.attendance_count || 0}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(log)}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(log.id)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        {activity.participant_count}
                       </div>
                     </TableCell>
                   </TableRow>

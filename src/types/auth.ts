@@ -1,3 +1,4 @@
+
 export type AppRole = 
   | 'admin'
   | 'kepala_sekolah'
@@ -11,7 +12,8 @@ export type AppRole =
   | 'pelatih_ekstrakurikuler'
   | 'siswa'
   | 'orang_tua'
-  | 'penanggung_jawab_sarpras';
+  | 'penanggung_jawab_sarpras'
+  | 'osis';
 
 export interface UserProfile {
   id: string;
