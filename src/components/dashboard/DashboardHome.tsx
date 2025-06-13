@@ -1,6 +1,9 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, School, BookOpen, Shield, BarChart3, CheckCircle, Calendar, Trophy, FileText } from 'lucide-react';
+import { RoleBasedStats } from './RoleBasedStats';
+import { DashboardCharts } from './DashboardCharts';
 
 export const DashboardHome = () => {
   const { user } = useAuth();
@@ -102,7 +105,7 @@ export const DashboardHome = () => {
   const quickActions = getQuickActions();
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 overflow-hidden shadow rounded-lg">
         <div className="px-4 py-6 md:px-6 md:py-8 text-white">
@@ -117,6 +120,18 @@ export const DashboardHome = () => {
             Sistem Aktif dan Siap Digunakan
           </div>
         </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Statistik Dashboard</h2>
+        <RoleBasedStats />
+      </div>
+
+      {/* Charts Section */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Analisis Data</h2>
+        <DashboardCharts />
       </div>
 
       {/* User Profile Info */}
