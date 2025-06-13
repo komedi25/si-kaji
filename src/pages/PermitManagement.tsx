@@ -5,8 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PermitInputForm } from '@/components/permits/PermitInputForm';
 import { PermitApproval } from '@/components/permits/PermitApproval';
 import { PermitForm } from '@/components/permits/PermitForm';
-import { PermitReport } from '@/components/permits/PermitReport';
-import { PermitLetter } from '@/components/permits/PermitLetter';
+import PermitReport from '@/components/permits/PermitReport';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const PermitManagement = () => {
@@ -32,12 +31,11 @@ const PermitManagement = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="input">Input Izin</TabsTrigger>
             <TabsTrigger value="approval">Persetujuan</TabsTrigger>
             <TabsTrigger value="form">Form Izin</TabsTrigger>
             <TabsTrigger value="report">Laporan</TabsTrigger>
-            <TabsTrigger value="letter">Surat Izin</TabsTrigger>
           </TabsList>
 
           <TabsContent value="input" className="space-y-4">
@@ -54,10 +52,6 @@ const PermitManagement = () => {
 
           <TabsContent value="report" className="space-y-4">
             <PermitReport />
-          </TabsContent>
-
-          <TabsContent value="letter" className="space-y-4">
-            <PermitLetter />
           </TabsContent>
         </Tabs>
       </div>
