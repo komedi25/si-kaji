@@ -40,10 +40,7 @@ export const LetterRequestForm = () => {
     try {
       const { error } = await supabase
         .from('letter_requests')
-        .insert({
-          ...formData,
-          status: 'pending'
-        });
+        .insert(formData);
 
       if (error) throw error;
 

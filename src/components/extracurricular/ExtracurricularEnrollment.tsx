@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Clock, MapPin, User } from 'lucide-react';
+
+interface Coach {
+  full_name: string;
+}
 
 interface Extracurricular {
   id: string;
@@ -20,9 +23,7 @@ interface Extracurricular {
   location: string;
   max_participants: number;
   is_active: boolean;
-  coach?: {
-    full_name: string;
-  };
+  coach?: Coach | null;
   _count?: {
     extracurricular_enrollments: number;
   };
@@ -67,6 +68,9 @@ export const ExtracurricularEnrollment = () => {
 
       const processedData = data?.map(item => ({
         ...item,
+        coach: item.coach && typeof item.coach === 'object' && !Array.isArray(item.coach) 
+          ? item.coach as Coach
+          : null,
         _count: {
           extracurricular_enrollments: item.extracurricular_enrollments?.length || 0
         }

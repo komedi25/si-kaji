@@ -11,7 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock, User } from 'lucide-react';
 
-export const CounselingForm = () => {
+interface CounselingFormProps {
+  onSuccess?: () => void;
+}
+
+export const CounselingForm = ({ onSuccess }: CounselingFormProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -65,6 +69,10 @@ export const CounselingForm = () => {
         session_type: '',
         notes_encrypted: ''
       });
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error('Error creating counseling session:', error);
       toast({
