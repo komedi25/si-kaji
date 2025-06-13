@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -96,10 +95,10 @@ export const RoleBasedStats = () => {
       if (error) throw error;
       
       const pending = data?.filter(c => c.status === 'pending').length || 0;
-      const inProgress = data?.filter(c => c.status === 'in_progress').length || 0;
+      const investigating = data?.filter(c => c.status === 'investigating').length || 0;
       const resolved = data?.filter(c => c.status === 'resolved').length || 0;
       
-      return { pending, inProgress, resolved, total: data?.length || 0 };
+      return { pending, investigating, resolved, total: data?.length || 0 };
     },
     enabled: !!user && (user.roles?.includes('admin') || user.roles?.includes('guru_bk') || user.roles?.includes('tppk')),
   });
@@ -230,10 +229,10 @@ export const RoleBasedStats = () => {
     if (user.roles.includes('guru_bk')) {
       stats.push(
         <StatisticsCard
-          key="cases-in-progress"
+          key="cases-investigating"
           title="Kasus Ditangani"
-          value={caseStats?.inProgress || 0}
-          description="Sedang berlangsung"
+          value={caseStats?.investigating || 0}
+          description="Sedang diselidiki"
           icon={FileText}
           trend="neutral"
         />,
