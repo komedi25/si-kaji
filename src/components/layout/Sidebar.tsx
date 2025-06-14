@@ -39,8 +39,7 @@ import {
   MessageSquare,
   TrendingUp,
   ChevronDown,
-  Bot,
-  Key
+  Bot
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -65,11 +64,10 @@ export const Sidebar = () => {
       title: 'Dashboard',
       href: '/dashboard',
       icon: Home,
-      // No requiredRoles - available for all authenticated users
     },
     {
       title: 'Data Siswa',
-      href: '/student-management',
+      href: '/students',
       icon: UserCheck,
       requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
     },
@@ -86,13 +84,13 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Input Presensi',
-              href: '/attendance-management?tab=record',
+              href: '/attendance?tab=record',
               icon: Calendar,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
             {
               title: 'Laporan Presensi',
-              href: '/attendance-management?tab=report',
+              href: '/attendance?tab=report',
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
@@ -106,13 +104,13 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Input Pelanggaran',
-              href: '/violation-management?tab=record',
+              href: '/violations?tab=record',
               icon: AlertTriangle,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
             {
               title: 'Laporan Pelanggaran',
-              href: '/violation-management?tab=report',
+              href: '/violations?tab=report',
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
@@ -126,13 +124,13 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Input Prestasi',
-              href: '/achievement-management?tab=record',
+              href: '/achievements?tab=record',
               icon: Award,
               requiredRoles: ['admin', 'wali_kelas'],
             },
             {
               title: 'Laporan Prestasi',
-              href: '/achievement-management?tab=report',
+              href: '/achievements?tab=report',
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas'],
             },
@@ -140,7 +138,7 @@ export const Sidebar = () => {
         },
         {
           title: 'Poin Disiplin',
-          href: '/discipline-points-management',
+          href: '/discipline-points',
           icon: BarChart3,
           requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
         },
@@ -185,25 +183,25 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Pendaftaran Siswa',
-              href: '/extracurricular-management?tab=enrollment',
+              href: '/extracurricular?tab=enrollment',
               icon: Users,
               requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Jurnal Pelatih',
-              href: '/extracurricular-management?tab=activity-log',
+              href: '/extracurricular?tab=activity-log',
               icon: BookOpen,
               requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Presensi Pelatih',
-              href: '/extracurricular-management?tab=attendance',
+              href: '/extracurricular?tab=attendance',
               icon: Calendar,
               requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
             {
               title: 'Data Ekstrakurikuler',
-              href: '/extracurricular-management?tab=master-data',
+              href: '/extracurricular?tab=master-data',
               icon: Database,
               requiredRoles: ['koordinator_ekstrakurikuler', 'pelatih_ekstrakurikuler', 'admin'],
             },
@@ -256,13 +254,13 @@ export const Sidebar = () => {
         },
         {
           title: 'Sesi Konseling',
-          href: '/counseling-management',
+          href: '/counseling',
           icon: Heart,
           requiredRoles: ['guru_bk', 'admin'],
         },
         {
           title: 'Manajemen Kasus',
-          href: '/case-management',
+          href: '/cases',
           icon: Shield,
           requiredRoles: ['guru_bk', 'tppk', 'arps', 'p4gn', 'admin'],
         },
@@ -281,19 +279,19 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Buat Izin',
-              href: '/permit-management?tab=form',
+              href: '/permits?tab=form',
               icon: FileX,
               requiredRoles: ['admin', 'wali_kelas'],
             },
             {
               title: 'Persetujuan',
-              href: '/permit-management?tab=approval',
+              href: '/permits?tab=approval',
               icon: ListChecks,
               requiredRoles: ['admin', 'wali_kelas'],
             },
             {
               title: 'Laporan Izin',
-              href: '/permit-management?tab=report',
+              href: '/permits?tab=report',
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas'],
             },
@@ -307,19 +305,19 @@ export const Sidebar = () => {
           children: [
             {
               title: 'Permohonan Surat',
-              href: '/document-management?tab=letters',
+              href: '/documents?tab=letters',
               icon: FileText,
               requiredRoles: ['admin'],
             },
             {
               title: 'Mutasi Siswa',
-              href: '/document-management?tab=mutations',
+              href: '/documents?tab=mutations',
               icon: Users,
               requiredRoles: ['admin'],
             },
             {
               title: 'Template Surat',
-              href: '/document-management?tab=templates',
+              href: '/documents?tab=templates',
               icon: Archive,
               requiredRoles: ['admin'],
             },
@@ -384,7 +382,7 @@ export const Sidebar = () => {
       children: [
         {
           title: 'Manajemen User',
-          href: '/user-management',
+          href: '/users',
           icon: Users,
           requiredRoles: ['admin'],
         },
@@ -433,44 +431,20 @@ export const Sidebar = () => {
           ],
         },
         {
-          title: 'API Keys AI',
-          href: '/settings/ai-keys',
-          icon: Key,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Konfigurasi AI',
-          href: '/settings/ai-config',
-          icon: Bot,
-          requiredRoles: ['admin'],
-        },
-        {
           title: 'Notifikasi',
-          href: '/settings/notifications',
+          href: '/notifications',
           icon: Bell,
           requiredRoles: ['admin'],
         },
         {
-          title: 'Analytics',
-          href: '/settings/analytics',
+          title: 'Status Sistem',
+          href: '/system-status',
           icon: LineChart,
           requiredRoles: ['admin'],
         },
         {
-          title: 'Global Search',
-          href: '/settings/search',
-          icon: Search,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Export System',
-          href: '/settings/export',
-          icon: Download,
-          requiredRoles: ['admin'],
-        },
-        {
-          title: 'Preferensi',
-          href: '/settings/preferences',
+          title: 'Pengaturan',
+          href: '/settings',
           icon: Sliders,
         },
       ],
