@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -240,7 +239,10 @@ export const ReportGenerator = () => {
               {/* Date Range */}
               <div>
                 <label className="text-sm font-medium mb-2 block">Periode Laporan</label>
-                <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+                <DatePickerWithRange
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                />
               </div>
 
               {/* Class Filter */}
