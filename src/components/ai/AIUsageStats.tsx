@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -170,30 +169,11 @@ export function AIUsageStats() {
 
       // Recent activity
       const { data: recentData, error: recentError } = await supabase
-        .from('ai_usage_logs')
-        .select(`
-          id,
-          task_type,
-          created_at,
-          provider,
-          tokens_used,
-          profiles(full_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .rpc('get_recent_ai_activities', { limit_count: 10 });
 
       if (recentError) throw recentError;
-
-      const formattedRecentActivity: RecentActivity[] = recentData?.map(activity => ({
-        id: activity.id,
-        task_type: activity.task_type,
-        created_at: activity.created_at,
-        user_name: (activity.profiles as { full_name: string } | null)?.full_name || 'System',
-        provider: activity.provider,
-        tokens_used: activity.tokens_used,
-      })) || [];
       
-      setRecentActivity(formattedRecentActivity);
+      setRecentActivity(recentData || []);
 
     } catch (error) {
       console.error('Error fetching usage stats:', error);
