@@ -1,23 +1,24 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useAI } from '@/hooks/useAI';
+import { useAIPreferences } from '@/hooks/useAIPreferences';
 import { 
   MessageSquare, 
   Send, 
   Bot, 
   User, 
-  Lightbulb, 
-  FileText, 
-  BarChart3,
-  Users,
-  AlertCircle
+  Loader2, 
+  RefreshCw,
+  Copy,
+  Download,
+  Settings
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -25,105 +26,114 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  task_type?: string;
+  task?: string;
+  provider?: string;
+  tokens?: number;
 }
+
+interface AITaskOption {
+  value: string;
+  label: string;
+  description: string;
+}
+
+const AI_TASKS: AITaskOption[] = [
+  {
+    value: 'general_inquiry',
+    label: 'Pertanyaan Umum',
+    description: 'Bertanya tentang sistem, kebijakan, atau prosedur sekolah'
+  },
+  {
+    value: 'student_analysis',
+    label: 'Analisis Siswa', 
+    description: 'Analisis perilaku, prestasi, atau perkembangan siswa'
+  },
+  {
+    value: 'discipline_advice',
+    label: 'Saran Disiplin',
+    description: 'Mendapatkan saran tindakan disiplin yang tepat'
+  },
+  {
+    value: 'data_insight',
+    label: 'Insight Data',
+    description: 'Analisis data dan trend dalam sistem kesiswaan'
+  },
+  {
+    value: 'case_consultation',
+    label: 'Konsultasi Kasus',
+    description: 'Diskusi tentang penanganan kasus siswa'
+  },
+  {
+    value: 'recommendation',
+    label: 'Rekomendasi',
+    description: 'Mendapatkan rekomendasi untuk berbagai situasi'
+  }
+];
 
 export function AIAssistant() {
   const { toast } = useToast();
-  const { processAIRequest, loading } = useAI();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Halo! Saya AI Assistant untuk SMK Negeri 1 Kendal. Saya bisa membantu Anda dengan:\n\n• Analisis perilaku siswa\n• Rekomendasi tindakan disiplin\n• Insight dari data presensi dan pelanggaran\n• Saran penanganan kasus siswa\n\nAda yang bisa saya bantu hari ini?',
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [taskType, setTaskType] = useState('general_inquiry');
+  const { processAIRequest, loading: aiLoading } = useAI();
+  const { preferences } = useAIPreferences();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedTask, setSelectedTask] = useState('general_inquiry');
+  const [selectedProvider, setSelectedProvider] = useState(preferences.preferred_provider);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const taskTypes = [
-    { value: 'general_inquiry', label: 'Pertanyaan Umum', icon: MessageSquare },
-    { value: 'student_analysis', label: 'Analisis Siswa', icon: Users },
-    { value: 'discipline_advice', label: 'Saran Disiplin', icon: AlertCircle },
-    { value: 'data_insight', label: 'Insight Data', icon: BarChart3 },
-    { value: 'case_consultation', label: 'Konsultasi Kasus', icon: FileText },
-    { value: 'recommendation', label: 'Rekomendasi', icon: Lightbulb }
-  ];
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  const getTaskTypeLabel = (type: string) => {
-    return taskTypes.find(t => t.value === type)?.label || 'Pertanyaan Umum';
+  useEffect(() => {
+    setSelectedProvider(preferences.preferred_provider);
+  }, [preferences.preferred_provider]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || aiLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: inputMessage,
       timestamp: new Date(),
-      task_type: taskType
+      task: selectedTask
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInputMessage('');
 
     try {
-      // Create context-aware prompt based on task type
-      let systemPrompt = `Anda adalah AI Assistant untuk SMK Negeri 1 Kendal. Anda membantu staf sekolah dalam manajemen siswa, analisis perilaku, dan pengambilan keputusan akademik.
-
-Konteks tugas: ${getTaskTypeLabel(taskType)}
-
-Berikan jawaban yang:
-1. Profesional dan mudah dipahami
-2. Relevan dengan konteks pendidikan SMK
-3. Actionable dan praktis untuk diterapkan
-4. Menggunakan bahasa Indonesia yang formal namun ramah
-5. Menyertakan saran konkret jika diminta
-
-Jika ditanya tentang data spesifik yang tidak Anda miliki, sarankan untuk mengecek sistem database sekolah.`;
-
-      const response = await processAIRequest({
-        provider: 'gemini', // Default to free provider
-        task: taskType,
-        prompt: `${systemPrompt}\n\nPertanyaan: ${input}`,
+      const aiResponse = await processAIRequest({
+        provider: selectedProvider as any,
+        task: selectedTask,
+        prompt: inputMessage,
         context: {
           conversation_history: messages.slice(-5), // Last 5 messages for context
-          task_type: taskType,
-          timestamp: new Date().toISOString()
+          task_type: selectedTask
         }
       });
 
-      if (response) {
+      if (aiResponse) {
         const assistantMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: response.result,
+          content: aiResponse.result,
           timestamp: new Date(),
-          task_type: taskType
+          provider: selectedProvider,
+          tokens: aiResponse.usage.tokens
         };
 
         setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        throw new Error('No response from AI');
       }
-
     } catch (error) {
-      console.error('Error sending message:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Maaf, saya mengalami masalah teknis. Silakan coba lagi dalam beberapa saat atau hubungi administrator jika masalah berlanjut.',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-      
+      console.error('AI Assistant Error:', error);
       toast({
         title: "Error",
-        description: "Gagal mengirim pesan ke AI Assistant",
+        description: "Gagal mengirim pesan ke AI",
         variant: "destructive"
       });
     }
@@ -132,190 +142,235 @@ Jika ditanya tentang data spesifik yang tidak Anda miliki, sarankan untuk mengec
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
-  const quickPrompts = [
-    {
-      text: "Bagaimana cara menangani siswa yang sering terlambat?",
-      type: "discipline_advice"
-    },
-    {
-      text: "Analisis trend kehadiran siswa bulan ini",
-      type: "data_insight"
-    },
-    {
-      text: "Rekomendasi program pembinaan untuk siswa bermasalah",
-      type: "recommendation"
-    },
-    {
-      text: "Cara efektif berkomunikasi dengan orang tua siswa",
-      type: "case_consultation"
-    }
-  ];
+  const clearChat = () => {
+    setMessages([]);
+    toast({
+      title: "Berhasil",
+      description: "Riwayat chat telah dihapus"
+    });
+  };
 
-  const useQuickPrompt = (prompt: string, type: string) => {
-    setInput(prompt);
-    setTaskType(type);
+  const copyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast({
+        title: "Berhasil",
+        description: "Pesan berhasil disalin"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menyalin pesan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportChat = () => {
+    const chatText = messages.map(msg => 
+      `[${msg.timestamp.toLocaleString('id-ID')}] ${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`
+    ).join('\n\n');
+    
+    const blob = new Blob([chatText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-chat-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Berhasil",
+      description: "Chat berhasil diekspor"
+    });
+  };
+
+  const getTaskInfo = (taskValue: string) => {
+    return AI_TASKS.find(task => task.value === taskValue);
   };
 
   return (
     <div className="space-y-4">
-      {/* Task Type Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5" />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
             AI Assistant
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Chat dengan AI untuk mendapatkan bantuan dan insight
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportChat} disabled={messages.length === 0}>
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" onClick={clearChat} disabled={messages.length === 0}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Clear
+          </Button>
+        </div>
+      </div>
+
+      {/* Configuration */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Konfigurasi Chat
           </CardTitle>
-          <CardDescription>
-            Pilih jenis pertanyaan untuk mendapatkan jawaban yang lebih tepat
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Jenis Pertanyaan</label>
-              <Select value={taskType} onValueChange={setTaskType}>
-                <SelectTrigger className="mt-1">
+              <label className="text-sm font-medium mb-1 block">Jenis Tugas</label>
+              <Select value={selectedTask} onValueChange={setSelectedTask}>
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {taskTypes.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          {type.label}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  {AI_TASKS.map(task => (
+                    <SelectItem key={task.value} value={task.value}>
+                      <div>
+                        <div className="font-medium">{task.label}</div>
+                        <div className="text-xs text-muted-foreground">{task.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Quick Prompts */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Contoh Pertanyaan</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {quickPrompts.map((prompt, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    className="text-left h-auto p-2 whitespace-normal"
-                    onClick={() => useQuickPrompt(prompt.text, prompt.type)}
-                  >
-                    <div className="text-xs">{prompt.text}</div>
-                  </Button>
-                ))}
-              </div>
+              <label className="text-sm font-medium mb-1 block">AI Provider</label>
+              <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="openai">OpenAI GPT</SelectItem>
+                  <SelectItem value="openrouter">OpenRouter</SelectItem>
+                  <SelectItem value="deepseek">DeepSeek</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          {selectedTask && (
+            <div className="mt-3 p-3 bg-muted rounded-lg">
+              <div className="text-sm">
+                <strong>{getTaskInfo(selectedTask)?.label}:</strong> {getTaskInfo(selectedTask)?.description}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Chat Messages */}
-      <Card>
+      <Card className="min-h-96">
         <CardContent className="p-0">
           <div className="h-96 overflow-y-auto p-4 space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-              >
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                  message.role === 'user' 
-                    ? 'bg-blue-100 text-blue-600' 
-                    : 'bg-green-100 text-green-600'
-                }`}>
-                  {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                </div>
-                
-                <div className={`flex-1 space-y-1 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {message.role === 'user' ? 'Anda' : 'AI Assistant'}
-                    </span>
-                    {message.task_type && (
-                      <Badge variant="outline" className="text-xs">
-                        {getTaskTypeLabel(message.task_type)}
-                      </Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString('id-ID', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </span>
-                  </div>
-                  
-                  <div className={`p-3 rounded-lg max-w-[80%] ${
-                    message.role === 'user'
-                      ? 'bg-blue-500 text-white ml-auto'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}>
-                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                  </div>
-                </div>
+            {messages.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Mulai percakapan dengan AI Assistant</p>
+                <p className="text-sm">Pilih jenis tugas dan ajukan pertanyaan Anda</p>
               </div>
-            ))}
-            
-            {loading && (
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                  <Bot className="h-4 w-4" />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-gray-100 p-3 rounded-lg max-w-[80%]">
-                    <div className="flex items-center gap-2">
-                      <div className="animate-pulse">AI sedang mengetik...</div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex gap-3 max-w-4xl ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className="flex-shrink-0">
+                      {message.role === 'user' ? (
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 text-white" />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                          <Bot className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className={`flex-1 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block max-w-full p-3 rounded-lg ${
+                        message.role === 'user' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-muted'
+                      }`}>
+                        <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span>{message.timestamp.toLocaleTimeString('id-ID')}</span>
+                        {message.task && (
+                          <Badge variant="outline" className="text-xs">
+                            {getTaskInfo(message.task)?.label}
+                          </Badge>
+                        )}
+                        {message.provider && (
+                          <Badge variant="secondary" className="text-xs">
+                            {message.provider}
+                          </Badge>
+                        )}
+                        {message.tokens && (
+                          <span>{message.tokens} tokens</span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0"
+                          onClick={() => copyMessage(message.content)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              ))
             )}
+            <div ref={messagesEndRef} />
           </div>
         </CardContent>
       </Card>
 
       {/* Input Area */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="space-y-3">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                AI Assistant menggunakan data umum dan tidak memiliki akses real-time ke database sekolah. 
-                Untuk informasi spesifik, silakan cek sistem database langsung.
-              </AlertDescription>
-            </Alert>
-            
-            <div className="flex gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={`Ketik pertanyaan Anda tentang ${getTaskTypeLabel(taskType).toLowerCase()}...`}
-                className="min-h-[80px] resize-none"
-                disabled={loading}
-              />
-              <Button 
-                onClick={sendMessage} 
-                disabled={loading || !input.trim()}
-                className="self-end flex items-center gap-2"
-              >
+        <CardContent className="p-4">
+          <div className="flex gap-2">
+            <Textarea
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ketik pesan Anda di sini... (Enter untuk kirim, Shift+Enter untuk baris baru)"
+              className="min-h-12 max-h-32 resize-none"
+              disabled={aiLoading}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || aiLoading}
+              className="px-4"
+            >
+              {aiLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <Send className="h-4 w-4" />
-                Kirim
-              </Button>
-            </div>
-            
-            <div className="text-xs text-muted-foreground">
-              Tekan Shift+Enter untuk baris baru. Enter untuk mengirim.
-            </div>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
