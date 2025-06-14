@@ -173,7 +173,7 @@ export function useNotificationSystem() {
       const { data: userRoles, error } = await supabase
         .from('user_roles')
         .select('user_id')
-        .eq('role', role)
+        .eq('role', role as any) // Cast to any to handle the enum type
         .eq('is_active', true);
 
       if (error) throw error;
@@ -242,19 +242,31 @@ export function useNotificationSystem() {
   };
 
   // Function to create or update channel
-  const createOrUpdateChannel = async (channel: Partial<NotificationChannel> & { id?: string }) => {
+  const createOrUpdateChannel = async (channelData: Partial<NotificationChannel> & { id?: string }) => {
     try {
-      if (channel.id) {
+      // Ensure required fields are present
+      if (!channelData.name || !channelData.type) {
+        throw new Error('Channel name and type are required');
+      }
+
+      const channelPayload = {
+        name: channelData.name,
+        type: channelData.type,
+        config: channelData.config || {},
+        is_active: channelData.is_active !== undefined ? channelData.is_active : true
+      };
+
+      if (channelData.id) {
         const { error } = await supabase
           .from('notification_channels')
-          .update(channel)
-          .eq('id', channel.id);
+          .update(channelPayload)
+          .eq('id', channelData.id);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('notification_channels')
-          .insert(channel);
+          .insert(channelPayload);
 
         if (error) throw error;
       }
