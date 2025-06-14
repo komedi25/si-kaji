@@ -3,13 +3,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { RealDataStats } from './RealDataStats';
 import { DashboardCharts } from './DashboardCharts';
 import { RealtimeUpdates } from './RealtimeUpdates';
+import { ProductionReadinessWidget } from './ProductionReadinessWidget';
 import { DataExporter } from '../exports/DataExporter';
+import { CaseStatistics } from '../cases/CaseStatistics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, Calendar, Users, TrendingUp, AlertTriangle, CheckCircle, Download } from 'lucide-react';
+import { Bell, Calendar, Users, TrendingUp, AlertTriangle, CheckCircle, Download, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
@@ -129,11 +131,17 @@ export const EnhancedDashboard = () => {
         </div>
       </div>
 
+      {/* Production Readiness Widget for Admin */}
+      {user?.roles?.includes('admin') && (
+        <ProductionReadinessWidget />
+      )}
+
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analisis</TabsTrigger>
+          <TabsTrigger value="cases">Kasus</TabsTrigger>
           <TabsTrigger value="activities">Aktivitas</TabsTrigger>
           <TabsTrigger value="export">Export Data</TabsTrigger>
         </TabsList>
@@ -224,6 +232,13 @@ export const EnhancedDashboard = () => {
           <div>
             <h2 className="text-xl font-semibold mb-4">Analisis Data Terkini</h2>
             <DashboardCharts />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cases" className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Statistik Kasus</h2>
+            <CaseStatistics />
           </div>
         </TabsContent>
 

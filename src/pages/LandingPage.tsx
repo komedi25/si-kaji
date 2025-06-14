@@ -3,8 +3,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Users, Award, Shield, BookOpen, AlertTriangle, Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LandingPage() {
+  // Fetch real statistics from database
+  const { data: stats } = useQuery({
+    queryKey: ['landing-stats'],
+    queryFn: async () => {
+      const [studentsResult, teachersResult, majorsResult, achievementsResult] = await Promise.all([
+        supabase.from('students').select('id').eq('status', 'active'),
+        supabase.from('profiles').select('id').limit(100), // Approximation for staff
+        supabase.from('majors').select('id').eq('is_active', true),
+        supabase.from('student_achievements').select('id').eq('status', 'verified')
+          .gte('achievement_date', new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+      ]);
+
+      return {
+        activeStudents: studentsResult.data?.length || 0,
+        staffCount: Math.min(teachersResult.data?.length || 0, 85), // Cap at reasonable number
+        majors: majorsResult.data?.length || 0,
+        achievements: achievementsResult.data?.length || 0
+      };
+    },
+  });
+
   const features = [
     {
       icon: Users,
@@ -38,11 +61,11 @@ export default function LandingPage() {
     }
   ];
 
-  const stats = [
-    { label: 'Siswa Aktif', value: '1,200+' },
+  const displayStats = [
+    { label: 'Siswa Aktif', value: stats ? `${stats.activeStudents}+` : '1,200+' },
     { label: 'Guru & Staff', value: '85+' },
-    { label: 'Program Keahlian', value: '5' },
-    { label: 'Prestasi Tahun Ini', value: '150+' }
+    { label: 'Program Keahlian', value: stats ? `${stats.majors}` : '5' },
+    { label: 'Prestasi Tahun Ini', value: stats ? `${stats.achievements}+` : '150+' }
   ];
 
   return (
@@ -109,7 +132,7 @@ export default function LandingPage() {
       <section className="py-16 bg-blue-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
+            {displayStats.map((stat, index) => (
               <div key={index} className="text-center text-white">
                 <div className="text-3xl md:text-4xl font-bold mb-2">{stat.value}</div>
                 <div className="text-blue-100">{stat.label}</div>
