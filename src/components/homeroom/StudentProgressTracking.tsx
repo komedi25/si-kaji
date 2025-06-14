@@ -20,7 +20,9 @@ import {
   Target,
   BookOpen,
   Users,
-  BarChart3
+  BarChart3,
+  Clock,
+  CheckCircle
 } from 'lucide-react';
 import {
   LineChart,
