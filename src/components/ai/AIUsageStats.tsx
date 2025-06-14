@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -173,7 +174,7 @@ export function AIUsageStats() {
 
       if (recentError) throw recentError;
       
-      setRecentActivity(recentData || []);
+      setRecentActivity((recentData as RecentActivity[]) || []);
 
     } catch (error) {
       console.error('Error fetching usage stats:', error);

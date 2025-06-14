@@ -2442,6 +2442,8 @@ export type Database = {
           task_type: string
           created_at: string
           user_name: string
+          provider: string
+          tokens_used: number
         }[]
       }
       get_user_roles: {
