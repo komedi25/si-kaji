@@ -7,13 +7,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 export default function CaseManagement() {
   const { hasRole } = useAuth();
 
-  if (!hasRole('guru_bk') && !hasRole('tppk') && !hasRole('arps') && !hasRole('p4gn')) {
+  // Admin sekarang bisa mengakses manajemen kasus
+  if (!hasRole('admin') && !hasRole('guru_bk') && !hasRole('tppk') && !hasRole('arps') && !hasRole('p4gn')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <Alert className="max-w-md">
             <AlertDescription>
-              Anda tidak memiliki akses ke halaman ini. Hanya Guru BK, TPPK, ARPS, dan P4GN yang dapat mengakses manajemen kasus.
+              Anda tidak memiliki akses ke halaman ini. Silakan hubungi administrator untuk mendapatkan akses.
             </AlertDescription>
           </Alert>
         </div>

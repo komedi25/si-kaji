@@ -91,8 +91,9 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* Cases route - sekarang admin bisa akses */}
       <Route path="/cases" element={
-        <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'tppk']}>
+        <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'tppk', 'arps', 'p4gn']}>
           <CaseManagement />
         </ProtectedRoute>
       } />
