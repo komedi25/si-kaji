@@ -14,7 +14,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload, Download, Search, Filter } from 'lucide-react';
-import type { StudentWithClass } from '@/types/student';
+
+interface StudentWithClass {
+  id: string;
+  full_name: string;
+  nis: string;
+  nisn: string | null;
+  gender: 'L' | 'P';
+  status: string;
+  phone: string | null;
+  birth_date: string | null;
+  birth_place: string | null;
+  address: string | null;
+  admission_date: string;
+  created_at: string;
+  updated_at: string;
+  current_class: {
+    id: string;
+    name: string;
+    grade: number;
+    major?: {
+      name: string;
+    };
+  } | null;
+}
 
 export default function StudentManagement() {
   const { user } = useAuth();
@@ -23,8 +46,38 @@ export default function StudentManagement() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
-    class: '',
-    status: 'active'
+    class: 'all',
+    status: 'all'
+  });
+
+  // Fetch majors and classes for dialog props
+  const { data: majors } = useQuery({
+    queryKey: ['majors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('majors')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: classes } = useQuery({
+    queryKey: ['classes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select(`
+          *,
+          major:majors(name)
+        `)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   const { data: students, isLoading, refetch } = useQuery({
@@ -36,9 +89,10 @@ export default function StudentManagement() {
           *,
           current_enrollment:student_enrollments!inner(
             classes!inner(
+              id,
               name,
               grade,
-              majors(name)
+              major:majors(name)
             )
           )
         `)
@@ -48,7 +102,7 @@ export default function StudentManagement() {
         query = query.or(`full_name.ilike.%${filters.search}%,nis.ilike.%${filters.search}%`);
       }
 
-      if (filters.status) {
+      if (filters.status && filters.status !== 'all') {
         query = query.eq('status', filters.status);
       }
 
@@ -171,11 +225,11 @@ export default function StudentManagement() {
                         </div>
                         <div>
                           <span className="font-medium">Jurusan:</span>{' '}
-                          {student.current_class?.majors?.name || '-'}
+                          {student.current_class?.major?.name || '-'}
                         </div>
                         <div>
                           <span className="font-medium">Jenis Kelamin:</span>{' '}
-                          {student.gender === 'male' ? 'Laki-laki' : 'Perempuan'}
+                          {student.gender === 'L' ? 'Laki-laki' : 'Perempuan'}
                         </div>
                         {student.phone && (
                           <div>
@@ -220,6 +274,8 @@ export default function StudentManagement() {
         <AddStudentDialog 
           open={showAddDialog} 
           onOpenChange={setShowAddDialog}
+          majors={majors || []}
+          classes={classes || []}
           onSuccess={() => {
             setShowAddDialog(false);
             refetch();
@@ -231,6 +287,8 @@ export default function StudentManagement() {
             open={showEditDialog}
             onOpenChange={setShowEditDialog}
             student={selectedStudent}
+            majors={majors || []}
+            classes={classes || []}
             onSuccess={() => {
               setShowEditDialog(false);
               setSelectedStudent(null);

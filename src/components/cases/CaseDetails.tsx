@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +23,7 @@ export const CaseDetails = ({ caseData, onBack, onUpdate }: CaseDetailsProps) =>
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newStatus, setNewStatus] = useState(caseData.status);
-  const [assignedHandler, setAssignedHandler] = useState(caseData.assigned_handler || '');
+  const [assignedHandler, setAssignedHandler] = useState(caseData.assigned_handler || 'none');
   const [resolutionNotes, setResolutionNotes] = useState(caseData.resolution_notes || '');
 
   const { data: activities, isLoading: activitiesLoading } = useQuery({
@@ -74,7 +73,7 @@ export const CaseDetails = ({ caseData, onBack, onUpdate }: CaseDetailsProps) =>
   const handleStatusUpdate = () => {
     const updates: any = {
       status: newStatus,
-      assigned_handler: assignedHandler || null,
+      assigned_handler: assignedHandler === 'none' ? null : assignedHandler,
       updated_at: new Date().toISOString(),
     };
 
@@ -281,7 +280,7 @@ export const CaseDetails = ({ caseData, onBack, onUpdate }: CaseDetailsProps) =>
                     <SelectValue placeholder="Pilih penanganan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tidak Ada</SelectItem>
+                    <SelectItem value="none">Tidak Ada</SelectItem>
                     <SelectItem value="tppk">TPPK</SelectItem>
                     <SelectItem value="arps">ARPS</SelectItem>
                     <SelectItem value="p4gn">P4GN</SelectItem>
