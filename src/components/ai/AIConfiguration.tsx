@@ -19,7 +19,8 @@ import {
   Bell,
   Shield,
   Database,
-  Zap
+  Zap,
+  Plus
 } from 'lucide-react';
 
 interface ModelOption {
@@ -28,6 +29,7 @@ interface ModelOption {
   description: string;
   maxTokens: number;
   costPer1k: number;
+  isCustom?: boolean;
 }
 
 const AVAILABLE_MODELS: ModelOption[] = [
@@ -87,10 +89,22 @@ export function AIConfiguration() {
   const { preferences, loading, savePreferences } = useAIPreferences();
   const [localPreferences, setLocalPreferences] = useState(preferences);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isCustomModel, setIsCustomModel] = useState(false);
+  const [customModelName, setCustomModelName] = useState('');
 
   useEffect(() => {
     setLocalPreferences(preferences);
     setHasChanges(false);
+    
+    // Check if current model is custom (not in predefined list)
+    const isCurrentModelCustom = !AVAILABLE_MODELS.some(
+      model => model.provider === preferences.preferred_provider && 
+               model.model === preferences.preferred_model
+    );
+    setIsCustomModel(isCurrentModelCustom);
+    if (isCurrentModelCustom) {
+      setCustomModelName(preferences.preferred_model || '');
+    }
   }, [preferences]);
 
   const handlePreferenceChange = (key: string, value: any) => {
@@ -113,6 +127,8 @@ export function AIConfiguration() {
   const handleReset = () => {
     setLocalPreferences(preferences);
     setHasChanges(false);
+    setIsCustomModel(false);
+    setCustomModelName('');
   };
 
   const getModelsByProvider = (provider: string) => {
@@ -120,10 +136,39 @@ export function AIConfiguration() {
   };
 
   const getCurrentModel = () => {
+    if (isCustomModel) {
+      return {
+        provider: localPreferences.preferred_provider,
+        model: customModelName,
+        description: 'Model kustom',
+        maxTokens: 0,
+        costPer1k: 0,
+        isCustom: true
+      };
+    }
     return AVAILABLE_MODELS.find(
       model => model.provider === localPreferences.preferred_provider && 
                model.model === localPreferences.preferred_model
     );
+  };
+
+  const handleCustomModelToggle = (checked: boolean) => {
+    setIsCustomModel(checked);
+    if (checked) {
+      setCustomModelName(localPreferences.preferred_model || '');
+    } else {
+      // Reset to first available model for current provider
+      const availableModels = getModelsByProvider(localPreferences.preferred_provider);
+      if (availableModels.length > 0) {
+        handlePreferenceChange('preferred_model', availableModels[0].model);
+      }
+      setCustomModelName('');
+    }
+  };
+
+  const handleCustomModelChange = (value: string) => {
+    setCustomModelName(value);
+    handlePreferenceChange('preferred_model', value);
   };
 
   return (
@@ -178,7 +223,16 @@ export function AIConfiguration() {
               <Label htmlFor="provider">Provider AI</Label>
               <Select 
                 value={localPreferences.preferred_provider} 
-                onValueChange={(value) => handlePreferenceChange('preferred_provider', value)}
+                onValueChange={(value) => {
+                  handlePreferenceChange('preferred_provider', value);
+                  // Reset model selection when provider changes
+                  if (!isCustomModel) {
+                    const availableModels = getModelsByProvider(value);
+                    if (availableModels.length > 0) {
+                      handlePreferenceChange('preferred_model', availableModels[0].model);
+                    }
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -194,24 +248,46 @@ export function AIConfiguration() {
 
             <div>
               <Label htmlFor="model">Model</Label>
-              <Select 
-                value={localPreferences.preferred_model || ''} 
-                onValueChange={(value) => handlePreferenceChange('preferred_model', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih model..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {getModelsByProvider(localPreferences.preferred_provider).map(model => (
-                    <SelectItem key={model.model} value={model.model}>
-                      <div>
-                        <div className="font-medium">{model.model}</div>
-                        <div className="text-xs text-muted-foreground">{model.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="custom-model"
+                    checked={isCustomModel}
+                    onCheckedChange={handleCustomModelToggle}
+                  />
+                  <Label htmlFor="custom-model" className="text-sm">
+                    <Plus className="h-3 w-3 inline mr-1" />
+                    Model Kustom
+                  </Label>
+                </div>
+                
+                {isCustomModel ? (
+                  <Input
+                    placeholder="Masukkan nama model kustom..."
+                    value={customModelName}
+                    onChange={(e) => handleCustomModelChange(e.target.value)}
+                  />
+                ) : (
+                  <Select 
+                    value={localPreferences.preferred_model || ''} 
+                    onValueChange={(value) => handlePreferenceChange('preferred_model', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih model..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getModelsByProvider(localPreferences.preferred_provider).map(model => (
+                        <SelectItem key={model.model} value={model.model}>
+                          <div>
+                            <div className="font-medium">{model.model}</div>
+                            <div className="text-xs text-muted-foreground">{model.description}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
           </div>
 
@@ -220,20 +296,26 @@ export function AIConfiguration() {
               <h4 className="font-medium mb-2">Informasi Model</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
+                  <span className="text-muted-foreground">Model:</span>
+                  <div className="font-medium">{getCurrentModel()?.model}</div>
+                </div>
+                <div>
                   <span className="text-muted-foreground">Max Tokens:</span>
-                  <div className="font-medium">{getCurrentModel()?.maxTokens.toLocaleString()}</div>
+                  <div className="font-medium">
+                    {getCurrentModel()?.isCustom ? 'Custom' : getCurrentModel()?.maxTokens.toLocaleString()}
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Biaya per 1K:</span>
-                  <div className="font-medium">${getCurrentModel()?.costPer1k}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Provider:</span>
-                  <div className="font-medium capitalize">{getCurrentModel()?.provider}</div>
+                  <div className="font-medium">
+                    {getCurrentModel()?.isCustom ? 'Custom' : `$${getCurrentModel()?.costPer1k}`}
+                  </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>
-                  <Badge variant="secondary">Aktif</Badge>
+                  <Badge variant={getCurrentModel()?.isCustom ? "outline" : "secondary"}>
+                    {getCurrentModel()?.isCustom ? 'Kustom' : 'Aktif'}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -318,7 +400,6 @@ export function AIConfiguration() {
         </CardContent>
       </Card>
 
-      {/* System Status */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -352,7 +433,6 @@ export function AIConfiguration() {
         </CardContent>
       </Card>
 
-      {/* Advanced Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Pengaturan Lanjutan</CardTitle>

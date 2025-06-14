@@ -1,0 +1,526 @@
+
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  GraduationCap, 
+  Shield, 
+  Users, 
+  BookOpen, 
+  Award, 
+  TrendingUp,
+  AlertTriangle,
+  Send,
+  Phone,
+  Mail,
+  MapPin,
+  ArrowRight,
+  CheckCircle
+} from 'lucide-react';
+
+export default function LandingPage() {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    reporter_name: '',
+    reporter_contact: '',
+    reported_student_name: '',
+    reported_student_class: '',
+    category: '',
+    title: '',
+    description: '',
+    incident_location: '',
+    incident_date: ''
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('student_cases')
+        .insert({
+          ...formData,
+          is_anonymous: !formData.reporter_name,
+          status: 'pending',
+          priority: 'medium'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Laporan Berhasil Dikirim",
+        description: "Terima kasih atas laporan Anda. Tim kami akan segera menindaklanjuti.",
+      });
+
+      // Reset form
+      setFormData({
+        reporter_name: '',
+        reporter_contact: '',
+        reported_student_name: '',
+        reported_student_class: '',
+        category: '',
+        title: '',
+        description: '',
+        incident_location: '',
+        incident_date: ''
+      });
+
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      toast({
+        title: "Error",
+        description: "Gagal mengirim laporan. Silakan coba lagi.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-3">
+              <GraduationCap className="h-8 w-8 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Si-Kaji</h1>
+                <p className="text-sm text-gray-600">SMK Negeri 1 Kendal</p>
+              </div>
+            </div>
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#tentang" className="text-gray-600 hover:text-blue-600 transition-colors">Tentang</a>
+              <a href="#fitur" className="text-gray-600 hover:text-blue-600 transition-colors">Fitur</a>
+              <a href="#lapor" className="text-gray-600 hover:text-blue-600 transition-colors">Lapor Kasus</a>
+              <a href="#kontak" className="text-gray-600 hover:text-blue-600 transition-colors">Kontak</a>
+              <Link to="/dashboard">
+                <Button variant="outline">Login</Button>
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              Sistem Informasi
+              <span className="text-blue-600 block">Kesiswaan Terpadu</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Platform digital modern untuk pengelolaan data siswa, kedisiplinan, 
+              dan prestasi di SMK Negeri 1 Kendal dengan teknologi AI terdepan.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a href="#lapor">
+                <Button size="lg" className="w-full sm:w-auto">
+                  <AlertTriangle className="h-5 w-5 mr-2" />
+                  Laporkan Kasus
+                </Button>
+              </a>
+              <Link to="/dashboard">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  Masuk Sistem
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="fitur" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Fitur Unggulan
+            </h2>
+            <p className="text-xl text-gray-600">
+              Teknologi canggih untuk pengelolaan kesiswaan yang efektif
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <Shield className="h-12 w-12 text-blue-600 mb-4" />
+                <CardTitle>Manajemen Disiplin</CardTitle>
+                <CardDescription>
+                  Sistem poin disiplin otomatis dengan analisis AI untuk pembinaan siswa
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <Award className="h-12 w-12 text-green-600 mb-4" />
+                <CardTitle>Pencatatan Prestasi</CardTitle>
+                <CardDescription>
+                  Dokumentasi lengkap prestasi akademik dan non-akademik siswa
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <Users className="h-12 w-12 text-purple-600 mb-4" />
+                <CardTitle>Konseling Digital</CardTitle>
+                <CardDescription>
+                  Platform konseling terintegrasi dengan jadwal dan follow-up otomatis
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <BookOpen className="h-12 w-12 text-orange-600 mb-4" />
+                <CardTitle>Jurnal Wali Kelas</CardTitle>
+                <CardDescription>
+                  Pencatatan harian aktivitas dan perkembangan siswa di kelas
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <TrendingUp className="h-12 w-12 text-red-600 mb-4" />
+                <CardTitle>Analisis AI</CardTitle>
+                <CardDescription>
+                  Insight mendalam dan rekomendasi berbasis kecerdasan buatan
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <AlertTriangle className="h-12 w-12 text-yellow-600 mb-4" />
+                <CardTitle>Pelaporan Kasus</CardTitle>
+                <CardDescription>
+                  Sistem pelaporan cepat dengan tracking dan penanganan kasus
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="tentang" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+                Tentang Si-Kaji
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Si-Kaji (Sistem Informasi Kesiswaan SMK Negeri 1 Kendal) adalah platform 
+                digital komprehensif yang dirancang khusus untuk mendukung pengelolaan 
+                kesiswaan modern dengan teknologi terdepan.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Teknologi AI</h3>
+                    <p className="text-gray-600">Analisis perilaku dan rekomendasi pembinaan otomatis</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Terintegrasi</h3>
+                    <p className="text-gray-600">Semua aspek kesiswaan dalam satu platform</p>
+                  </div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">User-Friendly</h3>
+                    <p className="text-gray-600">Interface modern dan mudah digunakan</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-blue-100 to-indigo-200 rounded-lg p-8">
+              <div className="grid grid-cols-2 gap-6 text-center">
+                <div>
+                  <div className="text-3xl font-bold text-blue-600">1000+</div>
+                  <div className="text-gray-600">Siswa Aktif</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-green-600">50+</div>
+                  <div className="text-gray-600">Guru & Staff</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-purple-600">98%</div>
+                  <div className="text-gray-600">Tingkat Kepuasan</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-orange-600">24/7</div>
+                  <div className="text-gray-600">Akses Sistem</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Case Reporting Section */}
+      <section id="lapor" className="py-20 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Laporkan Kasus
+            </h2>
+            <p className="text-xl text-gray-600">
+              Sampaikan laporan dengan cepat dan aman. Identitas Anda akan dijaga kerahasiaannya.
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Form Pelaporan Kasus</CardTitle>
+              <CardDescription>
+                Isi form di bawah untuk melaporkan kasus. Semua laporan akan ditangani dengan profesional.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitReport} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="reporter_name">Nama Pelapor (Opsional)</Label>
+                    <Input
+                      id="reporter_name"
+                      value={formData.reporter_name}
+                      onChange={(e) => handleInputChange('reporter_name', e.target.value)}
+                      placeholder="Kosongkan untuk laporan anonim"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="reporter_contact">Kontak Pelapor (Opsional)</Label>
+                    <Input
+                      id="reporter_contact"
+                      value={formData.reporter_contact}
+                      onChange={(e) => handleInputChange('reporter_contact', e.target.value)}
+                      placeholder="Email atau No. HP"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="reported_student_name">Nama Siswa Terlibat</Label>
+                    <Input
+                      id="reported_student_name"
+                      value={formData.reported_student_name}
+                      onChange={(e) => handleInputChange('reported_student_name', e.target.value)}
+                      placeholder="Nama lengkap siswa"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="reported_student_class">Kelas</Label>
+                    <Input
+                      id="reported_student_class"
+                      value={formData.reported_student_class}
+                      onChange={(e) => handleInputChange('reported_student_class', e.target.value)}
+                      placeholder="Contoh: XII RPL 1"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="category">Kategori Kasus</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kategori kasus" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="disciplinary">Pelanggaran Disiplin</SelectItem>
+                      <SelectItem value="academic">Masalah Akademik</SelectItem>
+                      <SelectItem value="social">Masalah Sosial</SelectItem>
+                      <SelectItem value="bullying">Bullying</SelectItem>
+                      <SelectItem value="substance_abuse">Penyalahgunaan Zat</SelectItem>
+                      <SelectItem value="other">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="title">Judul Laporan</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    placeholder="Ringkas judul kasus"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="incident_location">Lokasi Kejadian</Label>
+                    <Input
+                      id="incident_location"
+                      value={formData.incident_location}
+                      onChange={(e) => handleInputChange('incident_location', e.target.value)}
+                      placeholder="Dimana kejadian berlangsung"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="incident_date">Tanggal Kejadian</Label>
+                    <Input
+                      type="date"
+                      id="incident_date"
+                      value={formData.incident_date}
+                      onChange={(e) => handleInputChange('incident_date', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="description">Deskripsi Kejadian</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Jelaskan secara detail kronologi kejadian..."
+                    rows={5}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  {isSubmitting ? (
+                    <>Mengirim...</>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Kirim Laporan
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="kontak" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Hubungi Kami
+            </h2>
+            <p className="text-xl text-gray-600">
+              Butuh bantuan atau memiliki pertanyaan? Tim kami siap membantu Anda.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <Phone className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Telepon</h3>
+                <p className="text-gray-600">(0294) 381645</p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <Mail className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
+                <p className="text-gray-600">info@smkn1kendal.sch.id</p>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <MapPin className="h-12 w-12 text-red-600 mx-auto mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Alamat</h3>
+                <p className="text-gray-600">Jl. Soekarno Hatta KM 4, Kendal, Jawa Tengah</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <GraduationCap className="h-8 w-8" />
+                <div>
+                  <h3 className="text-lg font-bold">Si-Kaji</h3>
+                  <p className="text-sm text-gray-400">SMK Negeri 1 Kendal</p>
+                </div>
+              </div>
+              <p className="text-gray-400">
+                Sistem informasi kesiswaan modern untuk mendukung pendidikan berkualitas.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Fitur</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>Manajemen Disiplin</li>
+                <li>Pencatatan Prestasi</li>
+                <li>Konseling Digital</li>
+                <li>Analisis AI</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Bantuan</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>Panduan Pengguna</li>
+                <li>FAQ</li>
+                <li>Dukungan Teknis</li>
+                <li>Pelatihan</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Kontak</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li>(0294) 381645</li>
+                <li>info@smkn1kendal.sch.id</li>
+                <li>Jl. Soekarno Hatta KM 4</li>
+                <li>Kendal, Jawa Tengah</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 SMK Negeri 1 Kendal. Semua hak cipta dilindungi.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

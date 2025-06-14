@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/useAuth';
 import { NotificationProvider } from '@/hooks/useNotifications';
 import { AppRoutes } from '@/components/routing/AppRoutes';
+import LandingPage from '@/pages/LandingPage';
 
 const queryClient = new QueryClient();
 
@@ -15,7 +16,10 @@ function App() {
         <NotificationProvider>
           <Router>
             <div className="App">
-              <AppRoutes />
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/*" element={<AppRoutes />} />
+              </Routes>
               <Toaster />
             </div>
           </Router>
