@@ -84,7 +84,7 @@ export function AIRecommendations() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRecommendations(data || []);
+      setRecommendations((data as AIRecommendation[]) || []);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
       toast({
