@@ -1,7 +1,8 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { StatisticsCard } from './StatisticsCard';
+import { StatsCard } from './StatsCard';
 import { 
   Users, 
   BookOpen, 
@@ -156,7 +157,7 @@ export const RoleBasedStats = () => {
     // Admin stats
     if (user.roles.includes('admin')) {
       stats.push(
-        <StatisticsCard
+        <StatsCard
           key="total-students"
           title="Total Siswa"
           value={studentStats?.total || 0}
@@ -164,7 +165,7 @@ export const RoleBasedStats = () => {
           icon={Users}
           trend="neutral"
         />,
-        <StatisticsCard
+        <StatsCard
           key="total-violations"
           title="Pelanggaran Aktif"
           value={violationStats?.total || 0}
@@ -173,7 +174,7 @@ export const RoleBasedStats = () => {
           trend={violationStats?.total && violationStats.total > 10 ? "up" : "neutral"}
           className="border-red-200"
         />,
-        <StatisticsCard
+        <StatsCard
           key="total-achievements"
           title="Prestasi Terverifikasi"
           value={achievementStats?.total || 0}
@@ -182,7 +183,7 @@ export const RoleBasedStats = () => {
           trend="up"
           className="border-yellow-200"
         />,
-        <StatisticsCard
+        <StatsCard
           key="total-cases"
           title="Kasus Pending"
           value={caseStats?.pending || 0}
@@ -196,7 +197,7 @@ export const RoleBasedStats = () => {
     // Wali Kelas stats
     if (user.roles.includes('wali_kelas')) {
       stats.push(
-        <StatisticsCard
+        <StatsCard
           key="attendance-present"
           title="Hadir Hari Ini"
           value={attendanceStats?.present || 0}
@@ -205,7 +206,7 @@ export const RoleBasedStats = () => {
           trend="up"
           className="border-green-200"
         />,
-        <StatisticsCard
+        <StatsCard
           key="attendance-absent"
           title="Tidak Hadir"
           value={attendanceStats?.absent || 0}
@@ -214,7 +215,7 @@ export const RoleBasedStats = () => {
           trend={attendanceStats?.absent && attendanceStats.absent > 3 ? "up" : "neutral"}
           className="border-red-200"
         />,
-        <StatisticsCard
+        <StatsCard
           key="permits-pending"
           title="Izin Pending"
           value={permitStats?.pending || 0}
@@ -228,7 +229,7 @@ export const RoleBasedStats = () => {
     // Guru BK stats
     if (user.roles.includes('guru_bk')) {
       stats.push(
-        <StatisticsCard
+        <StatsCard
           key="cases-investigating"
           title="Kasus Ditangani"
           value={caseStats?.investigating || 0}
@@ -236,7 +237,7 @@ export const RoleBasedStats = () => {
           icon={FileText}
           trend="neutral"
         />,
-        <StatisticsCard
+        <StatsCard
           key="cases-resolved"
           title="Kasus Selesai"
           value={caseStats?.resolved || 0}
@@ -251,7 +252,7 @@ export const RoleBasedStats = () => {
     // Koordinator Ekstrakurikuler stats
     if (user.roles.includes('koordinator_ekstrakurikuler')) {
       stats.push(
-        <StatisticsCard
+        <StatsCard
           key="extracurricular-activities"
           title="Kegiatan Aktif"
           value={extracurricularStats?.totalActivities || 0}
@@ -259,7 +260,7 @@ export const RoleBasedStats = () => {
           icon={BookOpen}
           trend="neutral"
         />,
-        <StatisticsCard
+        <StatsCard
           key="extracurricular-enrollments"
           title="Total Peserta"
           value={extracurricularStats?.totalEnrollments || 0}
@@ -274,7 +275,7 @@ export const RoleBasedStats = () => {
     // TPPK stats
     if (user.roles.includes('tppk')) {
       stats.push(
-        <StatisticsCard
+        <StatsCard
           key="security-violations"
           title="Pelanggaran Keamanan"
           value={violationStats?.total || 0}
