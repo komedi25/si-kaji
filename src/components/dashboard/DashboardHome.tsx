@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { RoleBasedStats } from './RoleBasedStats';
 import { DashboardCharts } from './DashboardCharts';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, Calendar, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Bell, Calendar, Users, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const DashboardHome = () => {
