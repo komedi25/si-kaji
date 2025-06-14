@@ -14,21 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload, Download, Search, Filter } from 'lucide-react';
+import { Student, Class, Major, StudentWithClass } from '@/types/student';
 
-interface LocalStudentWithClass {
-  id: string;
-  full_name: string;
-  nis: string;
-  nisn: string | null;
-  gender: 'L' | 'P';
-  status: string;
-  phone: string | null;
-  birth_date: string | null;
-  birth_place: string | null;
-  address: string | null;
-  admission_date: string;
-  created_at: string;
-  updated_at: string;
+interface LocalStudentWithClass extends Student {
   current_class: {
     id: string;
     name: string;
@@ -39,26 +27,11 @@ interface LocalStudentWithClass {
   } | null;
 }
 
-interface LocalMajor {
-  id: string;
-  name: string;
-  code: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+interface LocalMajor extends Major {
+  // Already compatible with Major type
 }
 
-interface LocalClass {
-  id: string;
-  name: string;
-  grade: number;
-  academic_year_id: string;
-  major_id: string;
-  homeroom_teacher_id: string;
-  max_students: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+interface LocalClass extends Class {
   major?: {
     name: string;
   };
@@ -163,6 +136,65 @@ export default function StudentManagement() {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // Convert LocalStudentWithClass to StudentWithClass for the ExcelExport component
+  const convertedStudents: StudentWithClass[] = students?.map(student => ({
+    ...student,
+    current_class: student.current_class ? {
+      ...student.current_class,
+      major_id: '', // Add required properties
+      academic_year_id: '',
+      homeroom_teacher_id: '',
+      max_students: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      major: student.current_class.major ? {
+        id: '',
+        code: '',
+        name: student.current_class.major.name,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } : undefined
+    } as Class : undefined
+  })) || [];
+
+  // Convert LocalClass to Class for the dialog components
+  const convertedClasses: Class[] = classes?.map(cls => ({
+    ...cls,
+    major: cls.major ? {
+      id: '',
+      code: '',
+      name: cls.major.name,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } : undefined
+  })) || [];
+
+  // Convert selectedStudent to StudentWithClass for EditStudentDialog
+  const convertedSelectedStudent: StudentWithClass | null = selectedStudent ? {
+    ...selectedStudent,
+    current_class: selectedStudent.current_class ? {
+      ...selectedStudent.current_class,
+      major_id: '',
+      academic_year_id: '',
+      homeroom_teacher_id: '',
+      max_students: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      major: selectedStudent.current_class.major ? {
+        id: '',
+        code: '',
+        name: selectedStudent.current_class.major.name,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      } : undefined
+    } as Class : undefined
+  } : null;
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -186,7 +218,7 @@ export default function StudentManagement() {
               <StudentFilters filters={filters} onFiltersChange={setFilters} />
               <div className="flex gap-2">
                 <ExcelExport 
-                  students={students || []} 
+                  students={convertedStudents} 
                   filename="data-siswa-smkn1kendal" 
                 />
                 <Button onClick={() => setShowAddDialog(true)}>
@@ -300,20 +332,20 @@ export default function StudentManagement() {
           open={showAddDialog} 
           onOpenChange={setShowAddDialog}
           majors={majors || []}
-          classes={classes || []}
+          classes={convertedClasses}
           onSuccess={() => {
             setShowAddDialog(false);
             refetch();
           }}
         />
 
-        {selectedStudent && (
+        {convertedSelectedStudent && (
           <EditStudentDialog 
             open={showEditDialog}
             onOpenChange={setShowEditDialog}
-            student={selectedStudent}
+            student={convertedSelectedStudent}
             majors={majors || []}
-            classes={classes || []}
+            classes={convertedClasses}
             onSuccess={() => {
               setShowEditDialog(false);
               setSelectedStudent(null);
