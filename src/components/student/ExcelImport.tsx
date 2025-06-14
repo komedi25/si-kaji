@@ -41,13 +41,37 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim());
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"(.*)"$/, '$1'));
     const data = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'));
-      const row: any = {};
+      const line = lines[i].trim();
+      if (!line) continue;
       
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (char === '"') {
+          if (inQuotes && line[j + 1] === '"') {
+            current += '"';
+            j++; // Skip next quote
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      
+      const row: any = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
       });
@@ -68,12 +92,20 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
       }
 
       const file = event.target.files[0];
+      
+      // Validate file type
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        throw new Error('File harus berformat CSV');
+      }
+
       const text = await file.text();
       const data = parseCSV(text);
 
       if (data.length === 0) {
         throw new Error('File CSV kosong atau format tidak valid');
       }
+
+      console.log('Parsed CSV data:', data);
 
       const results = { success: 0, errors: [] as string[] };
 
@@ -97,6 +129,26 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
             continue;
           }
 
+          // Parse date if provided
+          let birthDate = null;
+          if (row['Tanggal Lahir']) {
+            try {
+              // Handle various date formats
+              const dateStr = row['Tanggal Lahir'];
+              if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  // Assume DD/MM/YYYY format
+                  birthDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+              } else if (dateStr.includes('-')) {
+                birthDate = dateStr; // Assume YYYY-MM-DD format
+              }
+            } catch (e) {
+              console.warn(`Invalid date format for row ${index + 2}:`, row['Tanggal Lahir']);
+            }
+          }
+
           // Insert new student
           const { error } = await supabase
             .from('students')
@@ -106,7 +158,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
               full_name: row['Nama Lengkap'],
               gender: row['Jenis Kelamin'] === 'L' ? 'L' : 'P',
               birth_place: row['Tempat Lahir'] || null,
-              birth_date: row['Tanggal Lahir'] || null,
+              birth_date: birthDate,
               religion: row['Agama'] || null,
               address: row['Alamat'] || null,
               phone: row['Telepon'] || null,
@@ -118,11 +170,13 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
             });
 
           if (error) {
+            console.error('Insert error:', error);
             results.errors.push(`Baris ${index + 2}: ${error.message}`);
           } else {
             results.success++;
           }
         } catch (error) {
+          console.error('Row processing error:', error);
           results.errors.push(`Baris ${index + 2}: ${error instanceof Error ? error.message : 'Error tidak diketahui'}`);
         }
       }
@@ -155,7 +209,9 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
     } finally {
       setImporting(false);
       // Reset file input
-      event.target.value = '';
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -221,6 +277,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
           <li>Upload file CSV yang sudah diisi</li>
           <li>NIS dan Nama Lengkap wajib diisi</li>
           <li>Jenis Kelamin: L (Laki-laki) atau P (Perempuan)</li>
+          <li>Format tanggal: DD/MM/YYYY atau YYYY-MM-DD</li>
         </ul>
       </div>
     </div>

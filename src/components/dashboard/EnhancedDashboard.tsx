@@ -3,7 +3,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { RealDataStats } from './RealDataStats';
 import { DashboardCharts } from './DashboardCharts';
 import { RealtimeUpdates } from './RealtimeUpdates';
-import { ProductionReadinessWidget } from './ProductionReadinessWidget';
 import { DataExporter } from '../exports/DataExporter';
 import { CaseStatistics } from '../cases/CaseStatistics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -130,11 +129,6 @@ export const EnhancedDashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Production Readiness Widget for Admin */}
-      {user?.roles?.includes('admin') && (
-        <ProductionReadinessWidget />
-      )}
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

@@ -17,6 +17,8 @@ export const AchievementTypeManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    competition_name: '',
+    rank: '',
     description: '',
     point_reward: '',
     category: 'akademik' as 'akademik' | 'non_akademik' | 'prestasi',
@@ -107,6 +109,8 @@ export const AchievementTypeManager = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      competition_name: '',
+      rank: '',
       description: '',
       point_reward: '',
       category: 'akademik',
@@ -117,8 +121,15 @@ export const AchievementTypeManager = () => {
   };
 
   const handleEdit = (achievementType: AchievementType) => {
+    // Parse existing name to extract components
+    const nameParts = achievementType.name.split(' - ');
+    const competitionName = nameParts[0] || '';
+    const rank = nameParts[1] || '';
+    
     setFormData({
       name: achievementType.name,
+      competition_name: competitionName,
+      rank: rank,
       description: achievementType.description || '',
       point_reward: achievementType.point_reward.toString(),
       category: achievementType.category,
@@ -131,8 +142,11 @@ export const AchievementTypeManager = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Create full name from competition name and rank
+    const fullName = formData.competition_name + (formData.rank ? ` - ${formData.rank}` : '');
+    
     const data = {
-      name: formData.name,
+      name: fullName,
       description: formData.description || null,
       point_reward: parseInt(formData.point_reward),
       category: formData.category,
@@ -175,26 +189,48 @@ export const AchievementTypeManager = () => {
       <form onSubmit={handleSubmit} className="space-y-4 border-b pb-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="name">Nama Prestasi</Label>
+            <Label htmlFor="competition_name">Nama Kegiatan/Lomba</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Juara 1 Olimpiade Matematika"
+              id="competition_name"
+              value={formData.competition_name}
+              onChange={(e) => setFormData({ ...formData, competition_name: e.target.value })}
+              placeholder="Olimpiade Matematika"
               required
             />
           </div>
           <div>
-            <Label htmlFor="point_reward">Poin Reward</Label>
-            <Input
-              id="point_reward"
-              type="number"
-              value={formData.point_reward}
-              onChange={(e) => setFormData({ ...formData, point_reward: e.target.value })}
-              placeholder="100"
-              required
-            />
+            <Label htmlFor="rank">Juara/Peringkat</Label>
+            <Select
+              value={formData.rank}
+              onValueChange={(value) => setFormData({ ...formData, rank: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih juara/peringkat" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Juara 1">Juara 1</SelectItem>
+                <SelectItem value="Juara 2">Juara 2</SelectItem>
+                <SelectItem value="Juara 3">Juara 3</SelectItem>
+                <SelectItem value="Juara Harapan 1">Juara Harapan 1</SelectItem>
+                <SelectItem value="Juara Harapan 2">Juara Harapan 2</SelectItem>
+                <SelectItem value="Finalis">Finalis</SelectItem>
+                <SelectItem value="Peserta Terbaik">Peserta Terbaik</SelectItem>
+                <SelectItem value="Lainnya">Lainnya</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="point_reward">Poin Reward</Label>
+          <Input
+            id="point_reward"
+            type="number"
+            value={formData.point_reward}
+            onChange={(e) => setFormData({ ...formData, point_reward: e.target.value })}
+            placeholder="100"
+            required
+          />
         </div>
         
         <div>
@@ -209,18 +245,18 @@ export const AchievementTypeManager = () => {
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <Label htmlFor="category">Kategori</Label>
+            <Label htmlFor="category">Bidang</Label>
             <Select
               value={formData.category}
               onValueChange={(value) => setFormData({ ...formData, category: value as any })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
+                <SelectValue placeholder="Pilih bidang" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="akademik">Akademik</SelectItem>
                 <SelectItem value="non_akademik">Non Akademik</SelectItem>
-                <SelectItem value="prestasi">Prestasi</SelectItem>
+                <SelectItem value="prestasi">Prestasi Lainnya</SelectItem>
               </SelectContent>
             </Select>
           </div>

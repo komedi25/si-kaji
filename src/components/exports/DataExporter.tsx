@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
-type ExportType = 'violations' | 'achievements' | 'attendance' | 'students' | 'all';
+type ExportType = 'violations' | 'achievements' | 'attendance' | 'students' | 'cases' | 'all';
 
 export const DataExporter = () => {
   const [exportType, setExportType] = useState<ExportType>('violations');
@@ -38,6 +38,11 @@ export const DataExporter = () => {
     students: {
       title: 'Data Master Siswa',
       description: 'Export data lengkap siswa dan kelas',
+      icon: FileText
+    },
+    cases: {
+      title: 'Data Kasus Siswa',
+      description: 'Export data kasus yang dilaporkan',
       icon: FileText
     },
     all: {
@@ -108,6 +113,34 @@ export const DataExporter = () => {
           filename = `Data_Prestasi_${format(new Date(startDate), 'ddMMyyyy')}_${format(new Date(endDate), 'ddMMyyyy')}`;
           break;
 
+        case 'cases':
+          const { data: cases } = await supabase
+            .from('student_cases')
+            .select(`
+              *
+            `)
+            .gte('created_at', startDate)
+            .lte('created_at', endDate)
+            .order('created_at', { ascending: false });
+          
+          data = cases?.map(c => ({
+            'Nomor Kasus': c.case_number,
+            'Tanggal': format(new Date(c.created_at), 'dd/MM/yyyy'),
+            'Judul': c.title,
+            'Kategori': c.category,
+            'Prioritas': c.priority,
+            'Status': c.status,
+            'Nama Siswa': c.reported_student_name || '-',
+            'Kelas': c.reported_student_class || '-',
+            'Pelapor': c.reporter_name || 'Anonim',
+            'Lokasi Kejadian': c.incident_location || '-',
+            'Deskripsi': c.description,
+            'Catatan Penyelesaian': c.resolution_notes || '-'
+          })) || [];
+          
+          filename = `Data_Kasus_${format(new Date(startDate), 'ddMMyyyy')}_${format(new Date(endDate), 'ddMMyyyy')}`;
+          break;
+
         case 'students':
           const { data: students } = await supabase
             .from('students')
@@ -123,7 +156,7 @@ export const DataExporter = () => {
             'NIS': s.nis,
             'NISN': s.nisn || '-',
             'Nama Lengkap': s.full_name,
-            'Jenis Kelamin': s.gender === 'male' ? 'Laki-laki' : 'Perempuan',
+            'Jenis Kelamin': s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
             'Tempat Lahir': s.birth_place || '-',
             'Tanggal Lahir': s.birth_date ? format(new Date(s.birth_date), 'dd/MM/yyyy') : '-',
             'Kelas': s.current_enrollment?.[0]?.classes?.name || '-',
