@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,7 +37,11 @@ const Header = () => {
         
         <div className="mr-4 flex items-center">
           <Link className="flex items-center space-x-2" to="/dashboard">
-            <GraduationCap className="h-6 w-6" />
+            <img 
+              src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
+              alt="Logo SMKN 1 Kendal" 
+              className="h-8 w-8 object-contain"
+            />
             <span className="hidden font-bold sm:inline-block">
               Si-Kaji SMK N 1 Kendal
             </span>

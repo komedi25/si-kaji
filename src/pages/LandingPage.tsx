@@ -109,7 +109,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-3">
-              <GraduationCap className="h-8 w-8 text-blue-600" />
+              <img 
+                src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
+                alt="Logo SMKN 1 Kendal" 
+                className="h-12 w-12 object-contain"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Si-Kaji</h1>
                 <p className="text-sm text-gray-600">SMK Negeri 1 Kendal</p>
@@ -234,7 +238,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* About Section */}
       <section id="tentang" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -295,7 +298,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Case Reporting Section */}
       <section id="lapor" className="py-20 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -437,7 +439,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Contact Section */}
       <section id="kontak" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -477,13 +478,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <GraduationCap className="h-8 w-8" />
+                <img 
+                  src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
+                  alt="Logo SMKN 1 Kendal" 
+                  className="h-8 w-8 object-contain"
+                />
                 <div>
                   <h3 className="text-lg font-bold">Si-Kaji</h3>
                   <p className="text-sm text-gray-400">SMK Negeri 1 Kendal</p>
