@@ -356,7 +356,6 @@ export const StudentProgressTracking = () => {
               </TabsList>
 
               <TabsContent value="overview" className="space-y-4">
-                {/* Class Statistics Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Card>
                     <CardContent className="pt-6">
@@ -399,7 +398,6 @@ export const StudentProgressTracking = () => {
                   </Card>
                 </div>
 
-                {/* Risk Level Distribution */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
