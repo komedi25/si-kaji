@@ -38,9 +38,9 @@ export const CaseManagement = () => {
   const { user } = useAuth();
   const [selectedCase, setSelectedCase] = useState<StudentCase | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
 
   const { data: cases, isLoading, refetch } = useQuery({
     queryKey: ['student-cases', searchTerm, statusFilter, categoryFilter, priorityFilter],
@@ -54,15 +54,15 @@ export const CaseManagement = () => {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,case_number.ilike.%${searchTerm}%`);
       }
 
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter as any);
       }
 
-      if (categoryFilter) {
+      if (categoryFilter && categoryFilter !== 'all') {
         query = query.eq('category', categoryFilter as any);
       }
 
-      if (priorityFilter) {
+      if (priorityFilter && priorityFilter !== 'all') {
         query = query.eq('priority', priorityFilter as any);
       }
 
@@ -168,7 +168,7 @@ export const CaseManagement = () => {
                     <SelectValue placeholder="Semua Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Status</SelectItem>
+                    <SelectItem value="all">Semua Status</SelectItem>
                     <SelectItem value="pending">Menunggu</SelectItem>
                     <SelectItem value="under_review">Ditinjau</SelectItem>
                     <SelectItem value="investigating">Investigasi</SelectItem>
@@ -183,7 +183,7 @@ export const CaseManagement = () => {
                     <SelectValue placeholder="Semua Kategori" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Kategori</SelectItem>
+                    <SelectItem value="all">Semua Kategori</SelectItem>
                     <SelectItem value="bullying">Bullying</SelectItem>
                     <SelectItem value="kekerasan">Kekerasan</SelectItem>
                     <SelectItem value="narkoba">Narkoba</SelectItem>
@@ -200,7 +200,7 @@ export const CaseManagement = () => {
                     <SelectValue placeholder="Semua Prioritas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Semua Prioritas</SelectItem>
+                    <SelectItem value="all">Semua Prioritas</SelectItem>
                     <SelectItem value="low">Rendah</SelectItem>
                     <SelectItem value="medium">Sedang</SelectItem>
                     <SelectItem value="high">Tinggi</SelectItem>

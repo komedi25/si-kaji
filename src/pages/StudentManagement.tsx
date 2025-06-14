@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload, Download, Search, Filter } from 'lucide-react';
 
-interface StudentWithClass {
+interface LocalStudentWithClass {
   id: string;
   full_name: string;
   nis: string;
@@ -39,9 +39,34 @@ interface StudentWithClass {
   } | null;
 }
 
+interface LocalMajor {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface LocalClass {
+  id: string;
+  name: string;
+  grade: number;
+  academic_year_id: string;
+  major_id: string;
+  homeroom_teacher_id: string;
+  max_students: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  major?: {
+    name: string;
+  };
+}
+
 export default function StudentManagement() {
   const { user } = useAuth();
-  const [selectedStudent, setSelectedStudent] = useState<StudentWithClass | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<LocalStudentWithClass | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [filters, setFilters] = useState({
@@ -60,7 +85,7 @@ export default function StudentManagement() {
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      return data || [];
+      return data as LocalMajor[] || [];
     },
   });
 
@@ -76,7 +101,7 @@ export default function StudentManagement() {
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      return data || [];
+      return data as LocalClass[] || [];
     },
   });
 
@@ -112,12 +137,12 @@ export default function StudentManagement() {
       return data?.map(student => ({
         ...student,
         current_class: student.current_enrollment?.[0]?.classes || null
-      })) as StudentWithClass[];
+      })) as LocalStudentWithClass[];
     },
     enabled: !!user,
   });
 
-  const handleEditStudent = (student: StudentWithClass) => {
+  const handleEditStudent = (student: LocalStudentWithClass) => {
     setSelectedStudent(student);
     setShowEditDialog(true);
   };
