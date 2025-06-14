@@ -418,7 +418,7 @@ export const StudentProgressTracking = () => {
                         <Progress value={(classStats.riskLevels.medium / studentsProgress.length) * 100} className="h-2" />
                         
                         <div className="flex justify-between items-center">
-                          <span className="text-red-600">Risiko Tinggi (<60)</span>
+                          <span className="text-red-600">Risiko Tinggi (&lt;60)</span>
                           <span className="font-bold">{classStats.riskLevels.high} siswa</span>
                         </div>
                         <Progress value={(classStats.riskLevels.high / studentsProgress.length) * 100} className="h-2" />
@@ -432,7 +432,7 @@ export const StudentProgressTracking = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {classStats.topPerformers.map((student: any, index) => (
+                        {classStats.topPerformers.map((student: any, index: number) => (
                           <div key={student.id} className="flex items-center justify-between p-2 border rounded">
                             <div className="flex items-center gap-2">
                               <span className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-sm font-bold">
