@@ -31,7 +31,17 @@ interface LocalMajor extends Major {
   // Already compatible with Major type
 }
 
-interface LocalClass extends Class {
+interface LocalClass {
+  id: string;
+  name: string;
+  grade: number;
+  major_id?: string;
+  academic_year_id?: string;
+  homeroom_teacher_id?: string;
+  max_students?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
   major?: {
     name: string;
   };
