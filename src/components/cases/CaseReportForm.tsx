@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,8 +54,9 @@ export const CaseReportForm = () => {
     console.log('Submitting case report:', data);
     
     try {
-      // Prepare the case data for submission - let database generate case_number
+      // Prepare the case data for submission - provide empty case_number for trigger to generate
       const caseData = {
+        case_number: '', // This will be overridden by the database trigger
         title: data.title,
         description: data.description,
         category: data.category,
