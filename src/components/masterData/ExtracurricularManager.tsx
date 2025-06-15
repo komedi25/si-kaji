@@ -84,6 +84,19 @@ export const ExtracurricularManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if extracurricular is used in extracurricular_enrollments
+      const { data: enrollments, error: checkError } = await supabase
+        .from('extracurricular_enrollments')
+        .select('id')
+        .eq('extracurricular_id', id)
+        .limit(1);
+      
+      if (checkError) throw checkError;
+      
+      if (enrollments && enrollments.length > 0) {
+        throw new Error('Ekstrakurikuler tidak dapat dihapus karena sudah memiliki peserta terdaftar');
+      }
+
       const { error } = await supabase
         .from('extracurriculars')
         .delete()
@@ -289,6 +302,7 @@ export const ExtracurricularManager = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => deleteMutation.mutate(extracurricular.id)}
+                  disabled={deleteMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

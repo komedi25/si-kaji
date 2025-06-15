@@ -84,6 +84,19 @@ export const ViolationTypeManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if violation type is used in student_violations
+      const { data: violations, error: checkError } = await supabase
+        .from('student_violations')
+        .select('id')
+        .eq('violation_type_id', id)
+        .limit(1);
+      
+      if (checkError) throw checkError;
+      
+      if (violations && violations.length > 0) {
+        throw new Error('Jenis pelanggaran tidak dapat dihapus karena sudah digunakan dalam data pelanggaran siswa');
+      }
+
       const { error } = await supabase
         .from('violation_types')
         .delete()
@@ -259,6 +272,7 @@ export const ViolationTypeManager = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => deleteMutation.mutate(violationType.id)}
+                disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

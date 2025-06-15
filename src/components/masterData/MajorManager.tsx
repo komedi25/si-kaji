@@ -81,6 +81,19 @@ export const MajorManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if major is used in classes
+      const { data: classes, error: checkError } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('major_id', id)
+        .limit(1);
+      
+      if (checkError) throw checkError;
+      
+      if (classes && classes.length > 0) {
+        throw new Error('Jurusan tidak dapat dihapus karena sudah digunakan dalam data kelas');
+      }
+
       const { error } = await supabase
         .from('majors')
         .delete()
@@ -224,6 +237,7 @@ export const MajorManager = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => deleteMutation.mutate(major.id)}
+                disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

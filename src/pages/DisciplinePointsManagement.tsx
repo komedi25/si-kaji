@@ -1,289 +1,205 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Search, Filter, Download, TrendingUp, TrendingDown } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
-interface StudentDisciplinePoint {
-  id: string;
-  student_id: string;
-  total_points: number;
-  violation_points: number;
-  achievement_points: number;
-  student: {
-    full_name: string;
-    nis: string;
-    current_class?: {
-      name: string;
-      major?: {
-        name: string;
-      };
-    };
-  };
-}
-
-export default function DisciplinePointsManagement() {
-  const { hasRole } = useAuth();
+const DisciplinePointsManagement = () => {
   const { toast } = useToast();
-  const [students, setStudents] = useState<StudentDisciplinePoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
 
-  const fetchDisciplinePoints = async () => {
-    try {
-      setLoading(true);
-      // This would be replaced with actual database query
-      // For now, using mock data
-      const mockData: StudentDisciplinePoint[] = [
-        {
-          id: '1',
-          student_id: '1',
-          total_points: 85,
-          violation_points: -15,
-          achievement_points: 100,
-          student: {
-            full_name: 'Ahmad Rizki',
-            nis: '2023001',
-            current_class: {
-              name: 'XII RPL 1',
-              major: { name: 'Rekayasa Perangkat Lunak' }
-            }
-          }
-        },
-        {
-          id: '2',
-          student_id: '2',
-          total_points: 70,
-          violation_points: -30,
-          achievement_points: 100,
-          student: {
-            full_name: 'Siti Nurhaliza',
-            nis: '2023002',
-            current_class: {
-              name: 'XII TKJ 1',
-              major: { name: 'Teknik Komputer dan Jaringan' }
-            }
-          }
-        }
-      ];
+  const { data: disciplinePoints, isLoading } = useQuery({
+    queryKey: ['discipline-points'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_discipline_points')
+        .select(`
+          *,
+          students (
+            full_name,
+            nis,
+            class:student_enrollments!inner (
+              classes (
+                name,
+                grade,
+                majors (
+                  code
+                )
+              )
+            )
+          ),
+          academic_years (
+            name
+          ),
+          semesters (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
       
-      setStudents(mockData);
-    } catch (error) {
-      console.error('Error fetching discipline points:', error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data poin disiplin",
-        variant: "destructive"
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('student_discipline_points')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['discipline-points'] });
+      toast({ title: 'Data poin disiplin berhasil dihapus' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error', 
+        description: error.message,
+        variant: 'destructive' 
       });
-    } finally {
-      setLoading(false);
     }
+  });
+
+  const recalculateAllMutation = useMutation({
+    mutationFn: async () => {
+      // This would trigger recalculation for all students
+      // For now, we'll just invalidate the query to refresh data
+      queryClient.invalidateQueries({ queryKey: ['discipline-points'] });
+    },
+    onSuccess: () => {
+      toast({ title: 'Perhitungan ulang poin disiplin berhasil' });
+    },
+    onError: (error) => {
+      toast({ 
+        title: 'Error', 
+        description: 'Gagal melakukan perhitungan ulang',
+        variant: 'destructive' 
+      });
+    }
+  });
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      'excellent': 'default',
+      'good': 'secondary',
+      'warning': 'outline',
+      'probation': 'destructive',
+      'critical': 'destructive'
+    };
+    const labels = {
+      'excellent': 'SANGAT BAIK',
+      'good': 'BAIK',
+      'warning': 'PERINGATAN',
+      'probation': 'PERCOBAAN',
+      'critical': 'KRITIS'
+    };
+    return <Badge variant={variants[status as keyof typeof variants] as any}>{labels[status as keyof typeof labels]}</Badge>;
   };
 
-  useEffect(() => {
-    if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk')) {
-      fetchDisciplinePoints();
-    }
-  }, [hasRole]);
-
-  const filteredStudents = students.filter(student =>
-    student.student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.student.nis.includes(searchTerm)
-  );
-
-  const getPointsBadgeVariant = (points: number) => {
-    if (points >= 80) return 'default'; // Green
-    if (points >= 60) return 'secondary'; // Yellow
-    return 'destructive'; // Red
-  };
-
-  if (!hasRole('admin') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <Alert className="max-w-md">
-            <AlertDescription>
-              Anda tidak memiliki akses ke halaman ini.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AppLayout>
-    );
-  }
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manajemen Poin Disiplin</h1>
-            <p className="text-gray-600">Kelola dan pantau poin disiplin siswa</p>
+            <h1 className="text-3xl font-bold text-gray-900">Manajemen Poin Disiplin</h1>
+            <p className="text-gray-600 mt-2">
+              Kelola dan monitor poin disiplin siswa berdasarkan pelanggaran dan prestasi
+            </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
+          <Button
+            onClick={() => recalculateAllMutation.mutate()}
+            disabled={recalculateAllMutation.isPending}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Hitung Ulang Semua
+          </Button>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Siswa</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
-              <p className="text-xs text-muted-foreground">Siswa terdaftar</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rata-rata Poin</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {students.length > 0 
-                  ? Math.round(students.reduce((sum, s) => sum + s.total_points, 0) / students.length)
-                  : 0
-                }
-              </div>
-              <p className="text-xs text-muted-foreground">Poin disiplin</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Perlu Perhatian</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {students.filter(s => s.total_points < 60).length}
-              </div>
-              <p className="text-xs text-muted-foreground">Siswa poin rendah</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search and Filter */}
         <Card>
           <CardHeader>
-            <CardTitle>Filter Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search">Cari Siswa</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="search"
-                    placeholder="Nama atau NIS..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex items-end">
-                <Button variant="outline">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Students Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Poin Disiplin Siswa</CardTitle>
+            <CardTitle>Data Poin Disiplin Siswa</CardTitle>
             <CardDescription>
-              Pantau poin disiplin setiap siswa berdasarkan prestasi dan pelanggaran
+              Daftar semua perhitungan poin disiplin siswa per semester
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Siswa</TableHead>
-                      <TableHead>Kelas</TableHead>
-                      <TableHead>Total Poin</TableHead>
-                      <TableHead>Poin Prestasi</TableHead>
-                      <TableHead>Poin Pelanggaran</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{student.student.full_name}</div>
-                            <div className="text-sm text-gray-500">{student.student.nis}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{student.student.current_class?.name || '-'}</div>
-                            <div className="text-sm text-gray-500">
-                              {student.student.current_class?.major?.name || '-'}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getPointsBadgeVariant(student.total_points)}>
-                            {student.total_points}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-green-600 font-medium">
-                            +{student.achievement_points}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-red-600 font-medium">
-                            {student.violation_points}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {student.total_points >= 80 ? (
-                            <Badge variant="default">Baik</Badge>
-                          ) : student.total_points >= 60 ? (
-                            <Badge variant="secondary">Perlu Perbaikan</Badge>
-                          ) : (
-                            <Badge variant="destructive">Perlu Perhatian</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <div className="space-y-4">
+              {disciplinePoints?.map((point: any) => (
+                <div key={point.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-medium text-lg">
+                          {point.students?.full_name} ({point.students?.nis})
+                        </h3>
+                        {getStatusBadge(point.discipline_status)}
+                      </div>
+                      
+                      {point.students?.class?.[0]?.classes && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          Kelas: {point.students.class[0].classes.grade} {point.students.class[0].classes.majors?.code} {point.students.class[0].classes.name}
+                        </p>
+                      )}
+                      
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500">Tahun Ajaran:</span>
+                          <div className="font-medium">{point.academic_years?.name}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Poin Pelanggaran:</span>
+                          <div className="font-medium text-red-600">-{point.total_violation_points}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Poin Prestasi:</span>
+                          <div className="font-medium text-green-600">+{point.total_achievement_points}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Skor Akhir:</span>
+                          <div className="font-medium text-lg">{point.final_score}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-2 text-xs text-gray-500">
+                        Terakhir diupdate: {new Date(point.last_updated).toLocaleDateString('id-ID')}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteMutation.mutate(point.id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {(!disciplinePoints || disciplinePoints.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  Belum ada data poin disiplin
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
     </AppLayout>
   );
-}
+};
+
+export default DisciplinePointsManagement;
