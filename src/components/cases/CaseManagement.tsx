@@ -41,8 +41,8 @@ export const CaseManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
-  // Check if user has management access
-  const hasManagementAccess = user && (hasRole('admin') || hasRole('guru_bk') || hasRole('tppk') || hasRole('arps') || hasRole('p4gn'));
+  // Check if user has management access - ensure it's always a boolean
+  const hasManagementAccess = Boolean(user && (hasRole('admin') || hasRole('guru_bk') || hasRole('tppk') || hasRole('arps') || hasRole('p4gn')));
 
   const { data: cases, isLoading, refetch } = useQuery({
     queryKey: ['student-cases', searchTerm, statusFilter, categoryFilter, priorityFilter],
@@ -72,7 +72,6 @@ export const CaseManagement = () => {
       if (error) throw error;
       return data as StudentCase[];
     },
-    // Only fetch cases if user has management access
     enabled: hasManagementAccess
   });
 
