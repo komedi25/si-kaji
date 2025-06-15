@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,6 +80,8 @@ export const MajorManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Attempting to delete major:', id);
+      
       // Check if major is used in classes
       const { data: classes, error: checkError } = await supabase
         .from('classes')
@@ -88,23 +89,44 @@ export const MajorManager = () => {
         .eq('major_id', id)
         .limit(1);
       
-      if (checkError) throw checkError;
+      console.log('Check classes result:', { classes, checkError });
+      
+      if (checkError) {
+        console.error('Error checking classes:', checkError);
+        throw checkError;
+      }
       
       if (classes && classes.length > 0) {
         throw new Error('Jurusan tidak dapat dihapus karena sudah digunakan dalam data kelas');
       }
 
-      const { error } = await supabase
+      // Try to delete the major
+      const { data, error } = await supabase
         .from('majors')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+      
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada atau Anda tidak memiliki izin untuk menghapus.');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Delete successful:', data);
       queryClient.invalidateQueries({ queryKey: ['majors'] });
       toast({ title: 'Jurusan berhasil dihapus' });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -147,6 +169,16 @@ export const MajorManager = () => {
       updateMutation.mutate({ id: editingId, data });
     } else {
       createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    console.log('Delete button clicked for major ID:', id);
+    if (window.confirm('Apakah Anda yakin ingin menghapus jurusan ini?')) {
+      console.log('User confirmed major deletion');
+      deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled major deletion');
     }
   };
 
@@ -236,7 +268,7 @@ export const MajorManager = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => deleteMutation.mutate(major.id)}
+                onClick={() => handleDelete(major.id)}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />

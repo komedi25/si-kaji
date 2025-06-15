@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +18,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
     errors: string[];
   } | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
     const template = [
@@ -83,6 +83,8 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input changed:', event.target.files);
+    
     try {
       setImporting(true);
       setImportResults(null);
@@ -92,6 +94,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
       }
 
       const file = event.target.files[0];
+      console.log('Selected file:', file.name, file.type, file.size);
       
       // Validate file type
       if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -209,9 +212,16 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
     } finally {
       setImporting(false);
       // Reset file input
-      if (event.target) {
-        event.target.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleImportClick = () => {
+    console.log('Import button clicked');
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -224,20 +234,21 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
         </Button>
         
         <div>
-          <Input
+          <input
+            ref={fileInputRef}
             type="file"
             accept=".csv"
             onChange={handleFileSelect}
             disabled={importing}
-            className="hidden"
-            id="csv-import-input"
+            style={{ display: 'none' }}
           />
-          <Label htmlFor="csv-import-input" asChild>
-            <Button disabled={importing}>
-              <Upload className="h-4 w-4 mr-2" />
-              {importing ? 'Mengimport...' : 'Import CSV'}
-            </Button>
-          </Label>
+          <Button 
+            onClick={handleImportClick}
+            disabled={importing}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {importing ? 'Mengimport...' : 'Import CSV'}
+          </Button>
         </div>
       </div>
 

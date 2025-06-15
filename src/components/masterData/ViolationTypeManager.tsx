@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,6 +83,8 @@ export const ViolationTypeManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Attempting to delete violation type:', id);
+      
       // Check if violation type is used in student_violations
       const { data: violations, error: checkError } = await supabase
         .from('student_violations')
@@ -91,23 +92,44 @@ export const ViolationTypeManager = () => {
         .eq('violation_type_id', id)
         .limit(1);
       
-      if (checkError) throw checkError;
+      console.log('Check result:', { violations, checkError });
+      
+      if (checkError) {
+        console.error('Error checking violations:', checkError);
+        throw checkError;
+      }
       
       if (violations && violations.length > 0) {
         throw new Error('Jenis pelanggaran tidak dapat dihapus karena sudah digunakan dalam data pelanggaran siswa');
       }
 
-      const { error } = await supabase
+      // Try to delete the violation type
+      const { data, error } = await supabase
         .from('violation_types')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+      
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada atau Anda tidak memiliki izin untuk menghapus.');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Delete successful:', data);
       queryClient.invalidateQueries({ queryKey: ['violation-types'] });
       toast({ title: 'Jenis pelanggaran berhasil dihapus' });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -157,8 +179,12 @@ export const ViolationTypeManager = () => {
   };
 
   const handleDelete = (id: string) => {
+    console.log('Delete button clicked for ID:', id);
     if (window.confirm('Apakah Anda yakin ingin menghapus jenis pelanggaran ini?')) {
+      console.log('User confirmed deletion');
       deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled deletion');
     }
   };
 
