@@ -5,6 +5,7 @@ import { GraduationCap, Users, Award, Shield, BookOpen, AlertTriangle, Phone, Ma
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { CaseTracker } from '@/components/cases/CaseTracker';
 
 export default function LandingPage() {
   // Fetch real statistics from database
@@ -86,6 +87,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="flex gap-3">
+              <CaseTracker />
               <Link to="/cases">
                 <Button variant="outline" className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
