@@ -69,7 +69,7 @@ export const CaseReportForm = () => {
         incident_location: data.incident_location || null,
         witnesses: data.witnesses || null,
         reported_by: user?.id || null,
-        status: 'pending',
+        status: 'pending' as const,
         assigned_handler: null,
       };
 
@@ -77,7 +77,7 @@ export const CaseReportForm = () => {
 
       const { data: insertedCase, error } = await supabase
         .from('student_cases')
-        .insert([caseData])
+        .insert(caseData)
         .select('case_number')
         .single();
 
