@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,6 +86,8 @@ export const AchievementTypeManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Attempting to delete achievement type:', id);
+      
       // Check if achievement type is used in student_achievements
       const { data: achievements, error: checkError } = await supabase
         .from('student_achievements')
@@ -94,23 +95,44 @@ export const AchievementTypeManager = () => {
         .eq('achievement_type_id', id)
         .limit(1);
       
-      if (checkError) throw checkError;
+      console.log('Check achievements result:', { achievements, checkError });
+      
+      if (checkError) {
+        console.error('Error checking achievements:', checkError);
+        throw checkError;
+      }
       
       if (achievements && achievements.length > 0) {
         throw new Error('Jenis prestasi tidak dapat dihapus karena sudah digunakan dalam data prestasi siswa');
       }
 
-      const { error } = await supabase
+      // Try to delete the achievement type
+      const { data, error } = await supabase
         .from('achievement_types')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+      
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada atau Anda tidak memiliki izin untuk menghapus.');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Delete successful:', data);
       queryClient.invalidateQueries({ queryKey: ['achievement-types'] });
       toast({ title: 'Jenis prestasi berhasil dihapus' });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -172,6 +194,16 @@ export const AchievementTypeManager = () => {
       updateMutation.mutate({ id: editingId, data });
     } else {
       createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    console.log('Delete button clicked for achievement type ID:', id);
+    if (window.confirm('Apakah Anda yakin ingin menghapus jenis prestasi ini?')) {
+      console.log('User confirmed achievement type deletion');
+      deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled achievement type deletion');
     }
   };
 
@@ -357,7 +389,7 @@ export const AchievementTypeManager = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => deleteMutation.mutate(achievementType.id)}
+                onClick={() => handleDelete(achievementType.id)}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />

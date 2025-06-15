@@ -49,17 +49,35 @@ const DisciplinePointsManagement = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      console.log('Attempting to delete discipline point record:', id);
+      
+      // Try to delete the discipline point record
+      const { data, error } = await supabase
         .from('student_discipline_points')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+      
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada atau Anda tidak memiliki izin untuk menghapus.');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Delete successful:', data);
       queryClient.invalidateQueries({ queryKey: ['discipline-points'] });
       toast({ title: 'Data poin disiplin berhasil dihapus' });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -85,6 +103,16 @@ const DisciplinePointsManagement = () => {
       });
     }
   });
+
+  const handleDelete = (id: string) => {
+    console.log('Delete button clicked for discipline point ID:', id);
+    if (window.confirm('Apakah Anda yakin ingin menghapus data poin disiplin ini?')) {
+      console.log('User confirmed discipline point deletion');
+      deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled discipline point deletion');
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -179,7 +207,7 @@ const DisciplinePointsManagement = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(point.id)}
+                        onClick={() => handleDelete(point.id)}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />
