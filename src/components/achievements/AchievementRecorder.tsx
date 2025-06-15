@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search, Link } from 'lucide-react';
 import { AchievementType } from '@/types/masterData';
 import { StudentWithClass } from '@/types/student';
 
@@ -20,6 +19,7 @@ export const AchievementRecorder = () => {
   const [selectedAchievementType, setSelectedAchievementType] = useState<string>('');
   const [achievementDate, setAchievementDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [description, setDescription] = useState('');
+  const [certificateLink, setCertificateLink] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -102,6 +102,7 @@ export const AchievementRecorder = () => {
     setSelectedAchievementType('');
     setAchievementDate(format(new Date(), 'yyyy-MM-dd'));
     setDescription('');
+    setCertificateLink('');
     setSearchQuery('');
   };
 
@@ -134,6 +135,7 @@ export const AchievementRecorder = () => {
       achievement_type_id: selectedAchievementType,
       achievement_date: achievementDate,
       description: description || null,
+      certificate_url: certificateLink || null,
       point_reward: achievementType?.point_reward || 0,
       recorded_by: userData.user?.id || null
     };
@@ -264,18 +266,17 @@ export const AchievementRecorder = () => {
           </div>
           
           <div>
-            <Label htmlFor="certificate">Sertifikat/Piala (coming soon)</Label>
-            <div className="flex gap-2">
+            <Label htmlFor="certificate_link">Link Sertifikat/Piala</Label>
+            <div className="relative">
               <Input
-                id="certificate"
-                type="file"
-                disabled
-                className="opacity-50"
+                id="certificate_link"
+                type="url"
+                value={certificateLink}
+                onChange={(e) => setCertificateLink(e.target.value)}
+                placeholder="https://drive.google.com/..."
+                className="pl-10"
               />
-              <Button type="button" disabled className="opacity-50">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Button>
+              <Link className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
             </div>
           </div>
         </div>
