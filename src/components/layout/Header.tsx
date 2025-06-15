@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,8 +43,11 @@ const Header = () => {
               alt="Logo SMKN 1 Kendal" 
               className="h-8 w-8 object-contain"
             />
-            <span className="hidden font-bold sm:inline-block">
+            <span className="hidden lg:inline-block font-bold">
               Si-Kaji SMK N 1 Kendal
+            </span>
+            <span className="hidden sm:inline-block lg:hidden font-bold text-sm">
+              Si-Kaji
             </span>
           </Link>
         </div>
@@ -53,15 +57,19 @@ const Header = () => {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Cari siswa, kelas, atau kegiatan..."
-                className="pl-8 md:w-64 lg:w-80"
+                placeholder="Cari..."
+                className="pl-8 w-full sm:w-48 md:w-64 lg:w-80"
               />
             </div>
           </div>
           
-          <nav className="flex items-center space-x-2">
-            <NotificationBell />
-            <ThemeToggle />
+          <nav className="flex items-center space-x-1 lg:space-x-2">
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -85,6 +93,14 @@ const Header = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
+                    <DropdownMenuItem className="lg:hidden">
+                      <NotificationBell />
+                      <span className="ml-2">Notifications</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="lg:hidden">
+                      <ThemeToggle />
+                      <span className="ml-2">Theme</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       Profile
                       <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
@@ -103,7 +119,7 @@ const Header = () => {
               </DropdownMenu>
             ) : (
               <Link to="/auth">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="text-xs lg:text-sm">
                   Sign In
                 </Button>
               </Link>
