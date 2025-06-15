@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -15,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload, Download, Search, Filter } from 'lucide-react';
 import { Student, Class, Major, StudentWithClass } from '@/types/student';
+import { CSVImportDialog } from '@/components/student/CSVImportDialog';
 
 interface LocalStudentWithClass extends Student {
   current_class: {
@@ -52,6 +52,7 @@ export default function StudentManagement() {
   const [selectedStudent, setSelectedStudent] = useState<LocalStudentWithClass | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     class: 'all',
@@ -231,6 +232,10 @@ export default function StudentManagement() {
                   students={convertedStudents} 
                   filename="data-siswa-smkn1kendal" 
                 />
+                <Button onClick={() => setShowImportDialog(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import CSV
+                </Button>
                 <Button onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah Siswa
@@ -332,7 +337,10 @@ export default function StudentManagement() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ExcelImport onImportComplete={handleImportComplete} />
+                <Button onClick={() => setShowImportDialog(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Mulai Import
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -363,6 +371,15 @@ export default function StudentManagement() {
             }}
           />
         )}
+
+        <CSVImportDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImportComplete={() => {
+            setShowImportDialog(false);
+            refetch();
+          }}
+        />
       </div>
     </AppLayout>
   );
