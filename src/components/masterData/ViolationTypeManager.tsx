@@ -156,6 +156,12 @@ export const ViolationTypeManager = () => {
     }
   };
 
+  const handleDelete = (id: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus jenis pelanggaran ini?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   const getCategoryBadge = (category: string) => {
     const variants = {
       'ringan': 'secondary',
@@ -271,7 +277,7 @@ export const ViolationTypeManager = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => deleteMutation.mutate(violationType.id)}
+                onClick={() => handleDelete(violationType.id)}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />

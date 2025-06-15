@@ -337,10 +337,7 @@ export default function StudentManagement() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={() => setShowImportDialog(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Mulai Import
-                </Button>
+                <ExcelImport onImportComplete={handleImportComplete} />
               </CardContent>
             </Card>
           </TabsContent>

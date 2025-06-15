@@ -82,7 +82,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
     return data;
   };
 
-  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setImporting(true);
       setImportResults(null);
@@ -227,12 +227,12 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
           <Input
             type="file"
             accept=".csv"
-            onChange={importData}
+            onChange={handleFileSelect}
             disabled={importing}
             className="hidden"
-            id="csv-import"
+            id="csv-import-input"
           />
-          <Label htmlFor="csv-import" asChild>
+          <Label htmlFor="csv-import-input" asChild>
             <Button disabled={importing}>
               <Upload className="h-4 w-4 mr-2" />
               {importing ? 'Mengimport...' : 'Import CSV'}

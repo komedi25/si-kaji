@@ -55,7 +55,7 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      // Fetch profiles with their auth user data
+      // Fetch profiles only (no auth.users call)
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -70,21 +70,15 @@ export default function UserManagement() {
 
       if (rolesError) throw rolesError;
 
-      // Fetch auth users to get email
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) throw authError;
-
-      // Combine the data
+      // Combine the data (without auth user emails since we can't access admin API)
       const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
-        const authUser: User | undefined = authData.users?.find((u: User) => u.id === profile.id);
         const roles = userRoles
           .filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole);
 
         return {
           ...profile,
-          email: authUser?.email,
+          email: 'Email tidak tersedia', // Placeholder since we can't access auth admin
           roles
         };
       });
@@ -94,7 +88,7 @@ export default function UserManagement() {
       console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data pengguna",
+        description: "Gagal memuat data pengguna. Admin API tidak tersedia di environment ini.",
         variant: "destructive"
       });
     } finally {
@@ -204,7 +198,7 @@ export default function UserManagement() {
           <CardHeader>
             <CardTitle>Daftar Pengguna</CardTitle>
             <CardDescription>
-              Kelola role dan akses pengguna dalam sistem
+              Kelola role dan akses pengguna dalam sistem. Email tidak tersedia karena keterbatasan akses admin API.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -218,8 +212,8 @@ export default function UserManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama</TableHead>
-                      <TableHead>Email</TableHead>
                       <TableHead>NIP/NIS</TableHead>
+                      <TableHead>Telepon</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Aksi</TableHead>
                     </TableRow>
@@ -228,8 +222,8 @@ export default function UserManagement() {
                     {users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.full_name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
                         <TableCell>{user.nip || user.nis || '-'}</TableCell>
+                        <TableCell>{user.phone || '-'}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {user.roles.map((role, index) => (
