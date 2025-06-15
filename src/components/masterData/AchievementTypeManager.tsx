@@ -16,13 +16,13 @@ import { AchievementType } from '@/types/masterData';
 export const AchievementTypeManager = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
     competition_name: '',
     rank: '',
     description: '',
     point_reward: '',
     category: 'akademik' as 'akademik' | 'non_akademik' | 'prestasi',
     level: 'sekolah' as 'sekolah' | 'kecamatan' | 'kabupaten' | 'provinsi' | 'nasional' | 'internasional',
+    is_tiered: false,
     is_active: true
   });
   const { toast } = useToast();
@@ -38,7 +38,7 @@ export const AchievementTypeManager = () => {
         .order('point_reward', { ascending: false });
       
       if (error) throw error;
-      return data as AchievementType[];
+      return data as (AchievementType & { is_tiered: boolean })[];
     }
   });
 
@@ -87,6 +87,19 @@ export const AchievementTypeManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if achievement type is used in student_achievements
+      const { data: achievements, error: checkError } = await supabase
+        .from('student_achievements')
+        .select('id')
+        .eq('achievement_type_id', id)
+        .limit(1);
+      
+      if (checkError) throw checkError;
+      
+      if (achievements && achievements.length > 0) {
+        throw new Error('Jenis prestasi tidak dapat dihapus karena sudah digunakan dalam data prestasi siswa');
+      }
+
       const { error } = await supabase
         .from('achievement_types')
         .delete()
@@ -108,32 +121,32 @@ export const AchievementTypeManager = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '',
       competition_name: '',
       rank: '',
       description: '',
       point_reward: '',
       category: 'akademik',
       level: 'sekolah',
+      is_tiered: false,
       is_active: true
     });
     setEditingId(null);
   };
 
-  const handleEdit = (achievementType: AchievementType) => {
+  const handleEdit = (achievementType: AchievementType & { is_tiered: boolean }) => {
     // Parse existing name to extract components
     const nameParts = achievementType.name.split(' - ');
     const competitionName = nameParts[0] || '';
     const rank = nameParts[1] || '';
     
     setFormData({
-      name: achievementType.name,
       competition_name: competitionName,
       rank: rank,
       description: achievementType.description || '',
       point_reward: achievementType.point_reward.toString(),
       category: achievementType.category,
       level: achievementType.level,
+      is_tiered: achievementType.is_tiered || false,
       is_active: achievementType.is_active
     });
     setEditingId(achievementType.id);
@@ -151,6 +164,7 @@ export const AchievementTypeManager = () => {
       point_reward: parseInt(formData.point_reward),
       category: formData.category,
       level: formData.level,
+      is_tiered: formData.is_tiered,
       is_active: formData.is_active
     };
 
@@ -279,13 +293,23 @@ export const AchievementTypeManager = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center space-x-2 mt-6">
-            <Switch
-              id="is_active"
-              checked={formData.is_active}
-              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-            />
-            <Label htmlFor="is_active">Aktif</Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_tiered"
+                checked={formData.is_tiered}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_tiered: checked })}
+              />
+              <Label htmlFor="is_tiered">Berjenjang</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <Label htmlFor="is_active">Aktif</Label>
+            </div>
           </div>
         </div>
 
@@ -311,6 +335,9 @@ export const AchievementTypeManager = () => {
                 {getCategoryBadge(achievementType.category)}
                 {getLevelBadge(achievementType.level)}
                 <Badge variant="outline">+{achievementType.point_reward} poin</Badge>
+                {achievementType.is_tiered && (
+                  <Badge variant="secondary">Berjenjang</Badge>
+                )}
                 {achievementType.is_active && (
                   <Badge variant="default">Aktif</Badge>
                 )}
@@ -331,6 +358,7 @@ export const AchievementTypeManager = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => deleteMutation.mutate(achievementType.id)}
+                disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

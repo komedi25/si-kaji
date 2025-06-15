@@ -17,6 +17,7 @@ export interface AchievementType {
   point_reward: number;
   category: 'akademik' | 'non_akademik' | 'prestasi';
   level: 'sekolah' | 'kecamatan' | 'kabupaten' | 'provinsi' | 'nasional' | 'internasional';
+  is_tiered?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
