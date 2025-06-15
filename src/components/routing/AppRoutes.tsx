@@ -48,6 +48,9 @@ export function AppRoutes() {
       <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Index />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <AuthForm />} />
       
+      {/* Public case reporting - accessible without login */}
+      <Route path="/cases" element={<CaseManagement />} />
+      
       {/* Protected routes */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
@@ -88,13 +91,6 @@ export function AppRoutes() {
       <Route path="/attendance" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'arps']}>
           <AttendanceManagement />
-        </ProtectedRoute>
-      } />
-      
-      {/* Cases route - sekarang admin bisa akses */}
-      <Route path="/cases" element={
-        <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'tppk', 'arps', 'p4gn']}>
-          <CaseManagement />
         </ProtectedRoute>
       } />
       

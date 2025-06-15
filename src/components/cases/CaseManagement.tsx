@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,12 +34,15 @@ interface StudentCase {
 }
 
 export const CaseManagement = () => {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [selectedCase, setSelectedCase] = useState<StudentCase | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+
+  // Check if user has management access
+  const hasManagementAccess = user && (hasRole('admin') || hasRole('guru_bk') || hasRole('tppk') || hasRole('arps') || hasRole('p4gn'));
 
   const { data: cases, isLoading, refetch } = useQuery({
     queryKey: ['student-cases', searchTerm, statusFilter, categoryFilter, priorityFilter],
@@ -70,6 +72,8 @@ export const CaseManagement = () => {
       if (error) throw error;
       return data as StudentCase[];
     },
+    // Only fetch cases if user has management access
+    enabled: hasManagementAccess
   });
 
   const getStatusBadge = (status: string) => {
@@ -130,144 +134,151 @@ export const CaseManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Manajemen Kasus</h1>
+          <h1 className="text-3xl font-bold">
+            {hasManagementAccess ? 'Manajemen Kasus' : 'Pelaporan Kasus'}
+          </h1>
           <p className="text-muted-foreground">
-            Sistem pengaduan dan penanganan kasus siswa
+            {hasManagementAccess ? 
+              'Sistem pengaduan dan penanganan kasus siswa' : 
+              'Laporkan kasus atau masalah yang terjadi'
+            }
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="list" className="space-y-4">
+      <Tabs defaultValue={hasManagementAccess ? "list" : "report"} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="list">Daftar Kasus</TabsTrigger>
+          {hasManagementAccess && <TabsTrigger value="list">Daftar Kasus</TabsTrigger>}
           <TabsTrigger value="report">Lapor Kasus</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filter & Pencarian
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cari kasus..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+        {hasManagementAccess && (
+          <TabsContent value="list" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filter & Pencarian
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cari kasus..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Status</SelectItem>
+                      <SelectItem value="pending">Menunggu</SelectItem>
+                      <SelectItem value="under_review">Ditinjau</SelectItem>
+                      <SelectItem value="investigating">Investigasi</SelectItem>
+                      <SelectItem value="escalated">Eskalasi</SelectItem>
+                      <SelectItem value="resolved">Selesai</SelectItem>
+                      <SelectItem value="closed">Ditutup</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kategori</SelectItem>
+                      <SelectItem value="bullying">Bullying</SelectItem>
+                      <SelectItem value="kekerasan">Kekerasan</SelectItem>
+                      <SelectItem value="narkoba">Narkoba</SelectItem>
+                      <SelectItem value="pergaulan_bebas">Pergaulan Bebas</SelectItem>
+                      <SelectItem value="tawuran">Tawuran</SelectItem>
+                      <SelectItem value="pencurian">Pencurian</SelectItem>
+                      <SelectItem value="vandalisme">Vandalisme</SelectItem>
+                      <SelectItem value="lainnya">Lainnya</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Prioritas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Prioritas</SelectItem>
+                      <SelectItem value="low">Rendah</SelectItem>
+                      <SelectItem value="medium">Sedang</SelectItem>
+                      <SelectItem value="high">Tinggi</SelectItem>
+                      <SelectItem value="critical">Kritis</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </CardContent>
+            </Card>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Status</SelectItem>
-                    <SelectItem value="pending">Menunggu</SelectItem>
-                    <SelectItem value="under_review">Ditinjau</SelectItem>
-                    <SelectItem value="investigating">Investigasi</SelectItem>
-                    <SelectItem value="escalated">Eskalasi</SelectItem>
-                    <SelectItem value="resolved">Selesai</SelectItem>
-                    <SelectItem value="closed">Ditutup</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Kategori</SelectItem>
-                    <SelectItem value="bullying">Bullying</SelectItem>
-                    <SelectItem value="kekerasan">Kekerasan</SelectItem>
-                    <SelectItem value="narkoba">Narkoba</SelectItem>
-                    <SelectItem value="pergaulan_bebas">Pergaulan Bebas</SelectItem>
-                    <SelectItem value="tawuran">Tawuran</SelectItem>
-                    <SelectItem value="pencurian">Pencurian</SelectItem>
-                    <SelectItem value="vandalisme">Vandalisme</SelectItem>
-                    <SelectItem value="lainnya">Lainnya</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semua Prioritas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Prioritas</SelectItem>
-                    <SelectItem value="low">Rendah</SelectItem>
-                    <SelectItem value="medium">Sedang</SelectItem>
-                    <SelectItem value="high">Tinggi</SelectItem>
-                    <SelectItem value="critical">Kritis</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4">
-            {isLoading ? (
-              <Card>
-                <CardContent className="flex items-center justify-center h-32">
-                  <p>Memuat data...</p>
-                </CardContent>
-              </Card>
-            ) : cases?.length === 0 ? (
-              <Card>
-                <CardContent className="flex items-center justify-center h-32">
-                  <p className="text-muted-foreground">Tidak ada kasus ditemukan</p>
-                </CardContent>
-              </Card>
-            ) : (
-              cases?.map((case_item) => (
-                <Card key={case_item.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-6" onClick={() => setSelectedCase(case_item)}>
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{case_item.title}</h3>
-                          {case_item.is_anonymous && (
-                            <Badge variant="outline">Anonim</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {case_item.case_number} • {getCategoryLabel(case_item.category)}
-                        </p>
-                        <p className="text-sm line-clamp-2 mb-3">
-                          {case_item.description}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 ml-4">
-                        {getStatusBadge(case_item.status)}
-                        {getPriorityBadge(case_item.priority)}
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <div>
-                        {case_item.reported_student_name && (
-                          <span>Siswa: {case_item.reported_student_name}</span>
-                        )}
-                        {case_item.reported_student_class && (
-                          <span> ({case_item.reported_student_class})</span>
-                        )}
-                      </div>
-                      <div>
-                        {format(new Date(case_item.created_at), 'dd MMM yyyy', { locale: id })}
-                      </div>
-                    </div>
+            <div className="grid gap-4">
+              {isLoading ? (
+                <Card>
+                  <CardContent className="flex items-center justify-center h-32">
+                    <p>Memuat data...</p>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
+              ) : cases?.length === 0 ? (
+                <Card>
+                  <CardContent className="flex items-center justify-center h-32">
+                    <p className="text-muted-foreground">Tidak ada kasus ditemukan</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                cases?.map((case_item) => (
+                  <Card key={case_item.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-6" onClick={() => setSelectedCase(case_item)}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-lg">{case_item.title}</h3>
+                            {case_item.is_anonymous && (
+                              <Badge variant="outline">Anonim</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {case_item.case_number} • {getCategoryLabel(case_item.category)}
+                          </p>
+                          <p className="text-sm line-clamp-2 mb-3">
+                            {case_item.description}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 ml-4">
+                          {getStatusBadge(case_item.status)}
+                          {getPriorityBadge(case_item.priority)}
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <div>
+                          {case_item.reported_student_name && (
+                            <span>Siswa: {case_item.reported_student_name}</span>
+                          )}
+                          {case_item.reported_student_class && (
+                            <span> ({case_item.reported_student_class})</span>
+                          )}
+                        </div>
+                        <div>
+                          {format(new Date(case_item.created_at), 'dd MMM yyyy', { locale: id })}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="report">
           <CaseReportForm />
