@@ -71,34 +71,31 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Header */}
+      {/* Header - Improved mobile responsiveness */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4 lg:py-6">
-            <div className="flex items-center flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center py-3 sm:py-4 lg:py-6">
+            <div className="flex items-center flex-shrink-0 min-w-0">
               <img 
                 src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
                 alt="Logo SMKN 1 Kendal" 
-                className="h-10 w-10 lg:h-12 lg:w-12 mr-3"
+                className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 mr-2 sm:mr-3 flex-shrink-0"
               />
-              <div className="hidden sm:block">
-                <h1 className="text-lg lg:text-xl font-bold text-gray-900">SMK Negeri 1 Kendal</h1>
-                <p className="text-xs lg:text-sm text-gray-600">Sistem Informasi Kesiswaan Terpadu</p>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900 truncate">SMK Negeri 1 Kendal</h1>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Sistem Informasi Kesiswaan Terpadu</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 lg:gap-3">
-              <div className="hidden lg:block">
-                <CaseTracker />
-              </div>
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 flex-shrink-0">
               <Link to="/cases">
-                <Button variant="outline" size="sm" className="text-xs lg:text-sm px-2 lg:px-4">
-                  <AlertTriangle className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+                <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-8 sm:h-9 sm:px-3">
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span className="hidden sm:inline">Laporkan</span>
                   <span className="sm:hidden">Lapor</span>
                 </Button>
               </Link>
               <Link to="/auth">
-                <Button size="sm" className="text-xs lg:text-sm px-2 lg:px-4">
+                <Button size="sm" className="text-xs px-2 py-1 h-8 sm:h-9 sm:px-3">
                   <span className="hidden sm:inline">Login Sistem</span>
                   <span className="sm:hidden">Login</span>
                 </Button>
@@ -106,33 +103,37 @@ export default function LandingPage() {
             </div>
           </div>
           {/* Mobile Case Tracker */}
-          <div className="block lg:hidden pb-4">
+          <div className="pb-3 sm:pb-4 lg:hidden">
+            <CaseTracker />
+          </div>
+          {/* Desktop Case Tracker */}
+          <div className="hidden lg:block pb-4">
             <CaseTracker />
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-12 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
+      {/* Hero Section - Better mobile spacing */}
+      <section className="py-8 sm:py-12 lg:py-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6">
             Sistem Informasi
             <span className="text-blue-600 block">Kesiswaan Terpadu</span>
           </h1>
-          <p className="text-base lg:text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-sm sm:text-base lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-3xl mx-auto px-2">
             Platform digital terintegrasi untuk manajemen kesiswaan SMK Negeri 1 Kendal. 
             Mendukung pembelajaran, monitoring, dan pengembangan karakter siswa secara komprehensif.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <Link to="/auth" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto">
-                <Users className="h-5 w-5 mr-2" />
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Akses Sistem
               </Button>
             </Link>
-            <Link to="/cases">
+            <Link to="/cases" className="w-full sm:w-auto">
               <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <AlertTriangle className="h-5 w-5 mr-2" />
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Laporkan Kasus
               </Button>
             </Link>
