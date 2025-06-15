@@ -1,6 +1,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { CaseManagement as CaseManagementComponent } from '@/components/cases/CaseManagement';
+import { CaseTracker } from '@/components/cases/CaseTracker';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ export default function CaseManagement() {
                 </div>
               </div>
               <div className="flex gap-3">
+                <CaseTracker />
                 <Link to="/">
                   <Button variant="outline">Kembali ke Beranda</Button>
                 </Link>

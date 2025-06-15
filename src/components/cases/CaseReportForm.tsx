@@ -14,7 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CalendarIcon, CheckCircle, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -39,6 +40,7 @@ export const CaseReportForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedCaseNumber, setSubmittedCaseNumber] = useState<string | null>(null);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -68,11 +70,15 @@ export const CaseReportForm = () => {
         reported_by: data.is_anonymous ? null : user?.id,
       };
 
-      const { error } = await supabase
+      const { data: insertedCase, error } = await supabase
         .from('student_cases')
-        .insert(caseData);
+        .insert(caseData)
+        .select('case_number')
+        .single();
 
       if (error) throw error;
+
+      setSubmittedCaseNumber(insertedCase.case_number);
 
       toast({
         title: 'Berhasil',
@@ -92,6 +98,19 @@ export const CaseReportForm = () => {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Disalin',
+      description: 'Nomor tiket berhasil disalin ke clipboard',
+    });
+  };
+
+  const handleNewReport = () => {
+    setSubmittedCaseNumber(null);
+    form.reset();
+  };
+
   const categoryOptions = [
     { value: 'bullying', label: 'Bullying/Perundungan' },
     { value: 'kekerasan', label: 'Kekerasan' },
@@ -109,6 +128,69 @@ export const CaseReportForm = () => {
     { value: 'high', label: 'Tinggi' },
     { value: 'critical', label: 'Kritis' },
   ];
+
+  if (submittedCaseNumber) {
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <CheckCircle className="h-16 w-16 text-green-500" />
+          </div>
+          <CardTitle className="text-2xl text-green-600">Laporan Berhasil Dikirim!</CardTitle>
+          <CardDescription>
+            Laporan Anda telah berhasil dikirim dan sedang menunggu untuk ditinjau
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Alert>
+            <AlertDescription className="text-center">
+              <div className="space-y-2">
+                <p className="font-medium">Nomor Tiket Laporan Anda:</p>
+                <div className="flex items-center justify-center gap-2 bg-muted p-3 rounded-lg">
+                  <code className="text-lg font-mono font-bold">{submittedCaseNumber}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(submittedCaseNumber)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Simpan nomor tiket ini untuk melacak status laporan Anda
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 mb-2">Langkah Selanjutnya:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Laporan Anda akan ditinjau oleh tim yang berwenang</li>
+              <li>• Anda akan mendapat notifikasi untuk setiap update status</li>
+              <li>• Gunakan nomor tiket untuk melacak progress laporan</li>
+              <li>• Tim kami akan menghubungi Anda jika diperlukan informasi tambahan</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={handleNewReport}>
+              Buat Laporan Baru
+            </Button>
+            <Button 
+              onClick={() => {
+                // This will open the case tracker
+                // You can implement this by triggering the CaseTracker dialog
+              }}
+            >
+              Lacak Status Laporan
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="max-w-2xl mx-auto">

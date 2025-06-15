@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CaseReportForm } from './CaseReportForm';
 import { CaseDetails } from './CaseDetails';
+import { CaseTracker } from './CaseTracker';
 import { Search, Plus, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -142,6 +143,9 @@ export const CaseManagement = () => {
               'Laporkan kasus atau masalah yang terjadi'
             }
           </p>
+        </div>
+        <div className="flex gap-2">
+          <CaseTracker />
         </div>
       </div>
 
