@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +21,7 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
     errors: string[];
   } | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
     const template = [
@@ -85,7 +85,9 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
     return data;
   };
 
-  const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Dialog file input changed:', event.target.files);
+    
     try {
       setImporting(true);
       setImportResults(null);
@@ -95,6 +97,7 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
       }
 
       const file = event.target.files[0];
+      console.log('Dialog selected file:', file.name, file.type, file.size);
       
       // Validate file type
       if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -203,7 +206,7 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
       }
 
     } catch (error) {
-      console.error('Error importing data:', error);
+      console.error('Error importing data in dialog:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Gagal mengimport data",
@@ -212,9 +215,19 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
     } finally {
       setImporting(false);
       // Reset file input
-      if (event.target) {
-        event.target.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleImportClick = () => {
+    console.log('Dialog import button clicked');
+    if (fileInputRef.current) {
+      console.log('Triggering dialog file input click');
+      fileInputRef.current.click();
+    } else {
+      console.error('Dialog file input ref is null');
     }
   };
 
@@ -239,20 +252,22 @@ export const CSVImportDialog = ({ open, onOpenChange, onImportComplete }: CSVImp
             </Button>
             
             <div>
-              <Input
+              <input
+                ref={fileInputRef}
                 type="file"
                 accept=".csv"
-                onChange={importData}
+                onChange={handleFileSelect}
                 disabled={importing}
-                className="hidden"
-                id="csv-import"
+                style={{ display: 'none' }}
+                id="dialog-csv-file-input"
               />
-              <Label htmlFor="csv-import" asChild>
-                <Button disabled={importing}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  {importing ? 'Mengimport...' : 'Import CSV'}
-                </Button>
-              </Label>
+              <Button 
+                onClick={handleImportClick}
+                disabled={importing}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {importing ? 'Mengimport...' : 'Import CSV'}
+              </Button>
             </div>
           </div>
 

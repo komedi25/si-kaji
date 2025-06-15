@@ -221,7 +221,10 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
   const handleImportClick = () => {
     console.log('Import button clicked');
     if (fileInputRef.current) {
+      console.log('Triggering file input click');
       fileInputRef.current.click();
+    } else {
+      console.error('File input ref is null');
     }
   };
 
@@ -241,6 +244,7 @@ export const ExcelImport = ({ onImportComplete }: ExcelImportProps) => {
             onChange={handleFileSelect}
             disabled={importing}
             style={{ display: 'none' }}
+            id="csv-file-input"
           />
           <Button 
             onClick={handleImportClick}

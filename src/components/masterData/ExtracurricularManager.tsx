@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,6 +83,8 @@ export const ExtracurricularManager = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Attempting to delete extracurricular:', id);
+      
       // Check if extracurricular is used in extracurricular_enrollments
       const { data: enrollments, error: checkError } = await supabase
         .from('extracurricular_enrollments')
@@ -91,23 +92,44 @@ export const ExtracurricularManager = () => {
         .eq('extracurricular_id', id)
         .limit(1);
       
-      if (checkError) throw checkError;
+      console.log('Check enrollments result:', { enrollments, checkError });
+      
+      if (checkError) {
+        console.error('Error checking enrollments:', checkError);
+        throw checkError;
+      }
       
       if (enrollments && enrollments.length > 0) {
         throw new Error('Ekstrakurikuler tidak dapat dihapus karena sudah memiliki peserta terdaftar');
       }
 
-      const { error } = await supabase
+      // Try to delete the extracurricular
+      const { data, error } = await supabase
         .from('extracurriculars')
         .delete()
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id)
+        .select();
+      
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada atau Anda tidak memiliki izin untuk menghapus.');
+      }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Delete successful:', data);
       queryClient.invalidateQueries({ queryKey: ['extracurriculars'] });
       toast({ title: 'Ekstrakurikuler berhasil dihapus' });
     },
     onError: (error) => {
+      console.error('Delete mutation error:', error);
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -159,6 +181,16 @@ export const ExtracurricularManager = () => {
       updateMutation.mutate({ id: editingId, data });
     } else {
       createMutation.mutate(data);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    console.log('Delete button clicked for extracurricular ID:', id);
+    if (window.confirm('Apakah Anda yakin ingin menghapus ekstrakurikuler ini?')) {
+      console.log('User confirmed extracurricular deletion');
+      deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled extracurricular deletion');
     }
   };
 
@@ -301,7 +333,7 @@ export const ExtracurricularManager = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => deleteMutation.mutate(extracurricular.id)}
+                  onClick={() => handleDelete(extracurricular.id)}
                   disabled={deleteMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4" />
