@@ -332,92 +332,6 @@ export type Database = {
         }
         Relationships: []
       }
-      attendance_locations: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          latitude: number
-          longitude: number
-          name: string
-          radius_meters: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          latitude: number
-          longitude: number
-          name: string
-          radius_meters?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          latitude?: number
-          longitude?: number
-          name?: string
-          radius_meters?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      attendance_schedules: {
-        Row: {
-          check_in_end: string
-          check_in_start: string
-          check_out_end: string
-          check_out_start: string
-          class_id: string | null
-          created_at: string
-          day_of_week: number
-          id: string
-          is_active: boolean
-          late_threshold_minutes: number
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          check_in_end: string
-          check_in_start: string
-          check_out_end: string
-          check_out_start: string
-          class_id?: string | null
-          created_at?: string
-          day_of_week: number
-          id?: string
-          is_active?: boolean
-          late_threshold_minutes?: number
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          check_in_end?: string
-          check_in_start?: string
-          check_out_end?: string
-          check_out_start?: string
-          class_id?: string | null
-          created_at?: string
-          day_of_week?: number
-          id?: string
-          is_active?: boolean
-          late_threshold_minutes?: number
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attendance_schedules_class_id_fkey"
-            columns: ["class_id"]
-            isOneToOne: false
-            referencedRelation: "classes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       case_activities: {
         Row: {
           activity_type: string
@@ -2173,85 +2087,6 @@ export type Database = {
           },
         ]
       }
-      student_self_attendances: {
-        Row: {
-          attendance_date: string
-          check_in_latitude: number | null
-          check_in_location_id: string | null
-          check_in_longitude: number | null
-          check_in_time: string | null
-          check_out_latitude: number | null
-          check_out_location_id: string | null
-          check_out_longitude: number | null
-          check_out_time: string | null
-          created_at: string
-          id: string
-          notes: string | null
-          status: string
-          student_id: string
-          updated_at: string
-          violation_created: boolean | null
-        }
-        Insert: {
-          attendance_date?: string
-          check_in_latitude?: number | null
-          check_in_location_id?: string | null
-          check_in_longitude?: number | null
-          check_in_time?: string | null
-          check_out_latitude?: number | null
-          check_out_location_id?: string | null
-          check_out_longitude?: number | null
-          check_out_time?: string | null
-          created_at?: string
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id: string
-          updated_at?: string
-          violation_created?: boolean | null
-        }
-        Update: {
-          attendance_date?: string
-          check_in_latitude?: number | null
-          check_in_location_id?: string | null
-          check_in_longitude?: number | null
-          check_in_time?: string | null
-          check_out_latitude?: number | null
-          check_out_location_id?: string | null
-          check_out_longitude?: number | null
-          check_out_time?: string | null
-          created_at?: string
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id?: string
-          updated_at?: string
-          violation_created?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_self_attendances_check_in_location_id_fkey"
-            columns: ["check_in_location_id"]
-            isOneToOne: false
-            referencedRelation: "attendance_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_self_attendances_check_out_location_id_fkey"
-            columns: ["check_out_location_id"]
-            isOneToOne: false
-            referencedRelation: "attendance_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_self_attendances_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student_violations: {
         Row: {
           created_at: string
@@ -2624,10 +2459,6 @@ export type Database = {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
-        Returns: boolean
-      }
-      is_within_location_radius: {
-        Args: { student_lat: number; student_lng: number; location_id: string }
         Returns: boolean
       }
       log_activity: {

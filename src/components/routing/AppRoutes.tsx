@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -29,7 +30,6 @@ import ParentPortal from '@/pages/ParentPortal';
 import AIManagement from '@/pages/AIManagement';
 import PermitManagement from '@/pages/PermitManagement';
 import CounselingManagement from '@/pages/CounselingManagement';
-import SelfAttendanceManagement from '@/pages/SelfAttendanceManagement';
 
 export function AppRoutes() {
   const { user, loading } = useAuth();
@@ -177,9 +177,6 @@ export function AppRoutes() {
           <Settings />
         </ProtectedRoute>
       } />
-      
-      {/* Add new route for self attendance */}
-      <Route path="/self-attendance" element={<SelfAttendanceManagement />} />
       
       {/* Catch all route */}
       <Route path="*" element={<NotFound />} />
