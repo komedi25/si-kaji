@@ -52,13 +52,32 @@ export const ActivityAttendanceManager = () => {
 
   const fetchActivities = async () => {
     try {
+      // Gunakan tabel yang sudah ada yaitu activity_proposals untuk sementara
       const { data, error } = await supabase
-        .from('activity_schedules')
+        .from('activity_proposals')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Transform data dari activity_proposals ke format ActivitySchedule
+      const transformedData = (data || []).map((item: any) => ({
+        id: item.id,
+        name: item.title,
+        description: item.description,
+        activity_type: item.activity_type || 'ekstrakurikuler',
+        start_date: item.start_date,
+        end_date: item.end_date,
+        start_time: item.start_time || '08:00',
+        end_time: item.end_time || '10:00',
+        location: item.location,
+        max_participants: item.estimated_participants,
+        is_active: item.status === 'approved',
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+      
+      setActivities(transformedData);
     } catch (error) {
       console.error('Error fetching activities:', error);
       toast({
@@ -74,9 +93,22 @@ export const ActivityAttendanceManager = () => {
     
     try {
       if (editingActivity) {
+        // Update existing activity
+        const updateData = {
+          title: formData.name,
+          description: formData.description,
+          activity_type: formData.activity_type,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          location: formData.location,
+          estimated_participants: formData.max_participants
+        };
+
         const { error } = await supabase
-          .from('activity_schedules')
-          .update(formData)
+          .from('activity_proposals')
+          .update(updateData)
           .eq('id', editingActivity.id);
 
         if (error) throw error;
@@ -86,9 +118,23 @@ export const ActivityAttendanceManager = () => {
           description: "Kegiatan berhasil diperbarui"
         });
       } else {
+        // Create new activity
+        const insertData = {
+          title: formData.name,
+          description: formData.description,
+          activity_type: formData.activity_type,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          location: formData.location,
+          estimated_participants: formData.max_participants,
+          status: 'approved'
+        };
+
         const { error } = await supabase
-          .from('activity_schedules')
-          .insert([formData]);
+          .from('activity_proposals')
+          .insert([insertData]);
 
         if (error) throw error;
         
@@ -134,7 +180,7 @@ export const ActivityAttendanceManager = () => {
 
     try {
       const { error } = await supabase
-        .from('activity_schedules')
+        .from('activity_proposals')
         .delete()
         .eq('id', id);
 
@@ -342,7 +388,7 @@ export const ActivityAttendanceManager = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        {activity.start_time.slice(0, 5)} - {activity.end_time.slice(0, 5)}
+                        {activity.start_time?.slice(0, 5)} - {activity.end_time?.slice(0, 5)}
                       </span>
                       {activity.max_participants && (
                         <span className="flex items-center gap-1">

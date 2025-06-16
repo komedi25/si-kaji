@@ -47,7 +47,6 @@ const SelfAttendanceManagement = () => {
   };
 
   const isAdmin = userRoles.includes('admin');
-  const isStaff = userRoles.some(role => ['admin', 'guru_bk', 'tppk', 'arps', 'p4gn', 'waka_kesiswaan'].includes(role));
 
   const renderContent = () => {
     switch (activeTab) {

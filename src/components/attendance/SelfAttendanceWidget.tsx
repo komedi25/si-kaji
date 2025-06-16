@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,15 @@ export const SelfAttendanceWidget = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      setTodayAttendance(data);
+      
+      // Ensure status is properly typed
+      if (data) {
+        const typedData: StudentSelfAttendance = {
+          ...data,
+          status: data.status as 'present' | 'late' | 'absent' | 'early_leave'
+        };
+        setTodayAttendance(typedData);
+      }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
     }
@@ -179,7 +188,13 @@ export const SelfAttendanceWidget = () => {
 
       if (error) throw error;
 
-      setTodayAttendance(data as StudentSelfAttendance);
+      // Ensure the data is properly typed
+      const typedData: StudentSelfAttendance = {
+        ...data,
+        status: data.status as 'present' | 'late' | 'absent' | 'early_leave'
+      };
+      
+      setTodayAttendance(typedData);
       toast({
         title: "Check-in Berhasil",
         description: `Presensi masuk berhasil di ${validLocation.name}`,
@@ -244,7 +259,13 @@ export const SelfAttendanceWidget = () => {
 
       if (error) throw error;
 
-      setTodayAttendance(data as StudentSelfAttendance);
+      // Ensure the data is properly typed
+      const typedData: StudentSelfAttendance = {
+        ...data,
+        status: data.status as 'present' | 'late' | 'absent' | 'early_leave'
+      };
+      
+      setTodayAttendance(typedData);
       toast({
         title: "Check-out Berhasil",
         description: `Presensi pulang berhasil di ${validLocation.name}`,
