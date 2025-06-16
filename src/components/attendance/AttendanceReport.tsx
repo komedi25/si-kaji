@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, FileText, Download, TrendingUp, Users } from 'lucide-react';
+import { Calendar, FileText, TrendingUp, Users } from 'lucide-react';
+import { AttendanceReportExport } from './AttendanceReportExport';
 
 interface Class {
   id: string;
@@ -35,6 +36,14 @@ interface DailyAttendance {
   rate: number;
 }
 
+interface AttendanceExportData {
+  student_name: string;
+  class_name: string;
+  attendance_date: string;
+  status: string;
+  notes?: string;
+}
+
 export function AttendanceReport() {
   const { toast } = useToast();
   const [classes, setClasses] = useState<Class[]>([]);
@@ -43,7 +52,9 @@ export function AttendanceReport() {
   const [endDate, setEndDate] = useState<string>('');
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [dailyData, setDailyData] = useState<DailyAttendance[]>([]);
+  const [exportData, setExportData] = useState<AttendanceExportData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingExport, setLoadingExport] = useState(false);
 
   useEffect(() => {
     fetchClasses();
@@ -57,6 +68,7 @@ export function AttendanceReport() {
   useEffect(() => {
     if (selectedClass && startDate && endDate) {
       fetchAttendanceReport();
+      fetchExportData();
     }
   }, [selectedClass, startDate, endDate]);
 
@@ -77,6 +89,49 @@ export function AttendanceReport() {
         description: "Gagal memuat data kelas",
         variant: "destructive"
       });
+    }
+  };
+
+  const fetchExportData = async () => {
+    if (!selectedClass || !startDate || !endDate) return;
+
+    setLoadingExport(true);
+    try {
+      const { data: attendanceData, error } = await supabase
+        .from('student_attendances')
+        .select(`
+          attendance_date,
+          status,
+          notes,
+          student_id,
+          students!inner(full_name),
+          classes!inner(name)
+        `)
+        .eq('class_id', selectedClass)
+        .gte('attendance_date', startDate)
+        .lte('attendance_date', endDate)
+        .order('attendance_date', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedData: AttendanceExportData[] = attendanceData?.map(record => ({
+        student_name: record.students?.full_name || '',
+        class_name: record.classes?.name || '',
+        attendance_date: new Date(record.attendance_date).toLocaleDateString('id-ID'),
+        status: record.status,
+        notes: record.notes || ''
+      })) || [];
+
+      setExportData(formattedData);
+    } catch (error) {
+      console.error('Error fetching export data:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data untuk ekspor",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingExport(false);
     }
   };
 
@@ -180,17 +235,6 @@ export function AttendanceReport() {
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'present': return 'default';
-      case 'absent': return 'destructive';
-      case 'late': return 'secondary';
-      case 'sick': return 'outline';
-      case 'permission': return 'secondary';
-      default: return 'default';
-    }
-  };
-
   const pieData = stats ? [
     { name: 'Hadir', value: stats.present, color: '#22c55e' },
     { name: 'Tidak Hadir', value: stats.absent, color: '#ef4444' },
@@ -204,9 +248,16 @@ export function AttendanceReport() {
       {/* Header & Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Laporan Presensi
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Laporan Presensi
+            </div>
+            <AttendanceReportExport
+              data={exportData}
+              disabled={!selectedClass || loadingExport}
+              filename={`laporan_presensi_${selectedClass ? classes.find(c => c.id === selectedClass)?.name.replace(/\s+/g, '_') : 'semua'}`}
+            />
           </CardTitle>
           <CardDescription>
             Analisis kehadiran siswa berdasarkan periode waktu

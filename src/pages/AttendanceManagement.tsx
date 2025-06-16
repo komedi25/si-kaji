@@ -15,60 +15,60 @@ const AttendanceManagement = () => {
   const initialTab = searchParams.get('tab') || 'record';
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 px-4 max-w-7xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manajemen Presensi</h1>
       </div>
 
       <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList>
-          {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+          {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
             <TabsTrigger value="record">Input Presensi</TabsTrigger>
-          ) : null}
+          )}
           
-          {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+          {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
             <TabsTrigger value="report">Laporan Presensi</TabsTrigger>
-          ) : null}
+          )}
           
           <TabsTrigger value="self">Presensi Mandiri</TabsTrigger>
           
-          {hasRole('admin') ? (
+          {hasRole('admin') && (
             <>
               <TabsTrigger value="location">Pengaturan Lokasi</TabsTrigger>
               <TabsTrigger value="schedule">Pengaturan Jadwal</TabsTrigger>
             </>
-          ) : null}
+          )}
         </TabsList>
 
-        {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
-          <TabsContent value="record">
+        {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
+          <TabsContent value="record" className="space-y-6">
             <AttendanceRecorder />
           </TabsContent>
-        ) : null}
+        )}
 
-        {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
-          <TabsContent value="report">
+        {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
+          <TabsContent value="report" className="space-y-6">
             <AttendanceReport />
           </TabsContent>
-        ) : null}
+        )}
 
-        <TabsContent value="self">
-          <div className="max-w-md mx-auto">
+        <TabsContent value="self" className="space-y-6">
+          <div className="max-w-2xl mx-auto">
             <SelfAttendanceWidget />
           </div>
         </TabsContent>
 
-        {hasRole('admin') ? (
-          <TabsContent value="location">
+        {hasRole('admin') && (
+          <TabsContent value="location" className="space-y-6">
             <LocationManager />
           </TabsContent>
-        ) : null}
+        )}
 
-        {hasRole('admin') ? (
-          <TabsContent value="schedule">
+        {hasRole('admin') && (
+          <TabsContent value="schedule" className="space-y-6">
             <ScheduleManager />
           </TabsContent>
-        ) : null}
+        )}
       </Tabs>
     </div>
   );
