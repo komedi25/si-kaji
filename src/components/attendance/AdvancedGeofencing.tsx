@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, Wifi, Bluetooth, Signal, Shield, AlertTriangle } from 'lucide-react';
 
-interface GeofenceValidation {
+export interface GeofenceValidation {
   gps: {
     isValid: boolean;
     accuracy: number;

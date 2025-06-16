@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Brain, TrendingUp, Clock, MapPin, AlertTriangle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface AttendancePattern {
+export interface AttendancePattern {
   studentId: string;
   patterns: {
     timePattern: {
