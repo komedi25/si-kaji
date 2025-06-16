@@ -4,17 +4,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, Edit, Trash2, UserPlus } from 'lucide-react';
-import { AppRole, UserProfile, UserRole } from '@/types/auth';
+import { Loader2, Plus, UserPlus } from 'lucide-react';
+import { AppRole, UserProfile } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@supabase/supabase-js';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { AddUserDialog } from '@/components/user/AddUserDialog';
 
 interface UserWithRoles extends UserProfile {
   email?: string;
@@ -29,6 +27,7 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
   const [newRole, setNewRole] = useState<AppRole | ''>('');
   const [isAddingRole, setIsAddingRole] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
     { value: 'admin', label: 'Admin' },
@@ -55,7 +54,7 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      // Fetch profiles only (no auth.users call)
+      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -70,7 +69,7 @@ export default function UserManagement() {
 
       if (rolesError) throw rolesError;
 
-      // Combine the data (without auth user emails since we can't access admin API)
+      // Combine the data
       const usersWithRoles: UserWithRoles[] = profiles.map(profile => {
         const roles = userRoles
           .filter(ur => ur.user_id === profile.id)
@@ -78,7 +77,7 @@ export default function UserManagement() {
 
         return {
           ...profile,
-          email: 'Email tidak tersedia', // Placeholder since we can't access auth admin
+          email: 'Email tidak tersedia',
           roles
         };
       });
@@ -88,7 +87,7 @@ export default function UserManagement() {
       console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data pengguna. Admin API tidak tersedia di environment ini.",
+        description: "Gagal memuat data pengguna",
         variant: "destructive"
       });
     } finally {
@@ -102,12 +101,11 @@ export default function UserManagement() {
     try {
       setIsAddingRole(true);
       
-      // Type cast newRole to ensure it matches the database enum
       const { error } = await supabase
         .from('user_roles')
         .insert({
           user_id: selectedUser.id,
-          role: newRole as any, // Type cast to bypass strict typing
+          role: newRole as any,
           assigned_by: user?.id
         });
 
@@ -139,7 +137,7 @@ export default function UserManagement() {
         .from('user_roles')
         .update({ is_active: false })
         .eq('user_id', userId)
-        .eq('role', role as any); // Type cast to bypass strict typing
+        .eq('role', role as any);
 
       if (error) throw error;
 
@@ -187,7 +185,7 @@ export default function UserManagement() {
             <h1 className="text-2xl font-bold text-gray-900">Manajemen Pengguna</h1>
             <p className="text-gray-600">Kelola pengguna dan role dalam sistem</p>
           </div>
-          <Button>
+          <Button onClick={() => setIsAddUserDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Tambah Pengguna
           </Button>
@@ -198,7 +196,7 @@ export default function UserManagement() {
           <CardHeader>
             <CardTitle>Daftar Pengguna</CardTitle>
             <CardDescription>
-              Kelola role dan akses pengguna dalam sistem. Email tidak tersedia karena keterbatasan akses admin API.
+              Kelola role dan akses pengguna dalam sistem
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -268,7 +266,7 @@ export default function UserManagement() {
               
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="role">Pilih Role</Label>
+                  <label htmlFor="role" className="block text-sm font-medium mb-2">Pilih Role</label>
                   <Select value={newRole} onValueChange={(value) => setNewRole(value as AppRole)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih role" />
@@ -307,6 +305,13 @@ export default function UserManagement() {
             </div>
           </Card>
         )}
+
+        {/* Add User Dialog */}
+        <AddUserDialog
+          open={isAddUserDialogOpen}
+          onOpenChange={setIsAddUserDialogOpen}
+          onSuccess={fetchUsers}
+        />
       </div>
     </AppLayout>
   );

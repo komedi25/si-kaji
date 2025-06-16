@@ -1,14 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { attendanceSecurityManager } from './SecurityEnhancements';
 
 interface AttendanceLocation {
   id: string;
@@ -47,6 +47,7 @@ export const SelfAttendanceWidget = () => {
   const [todayAttendance, setTodayAttendance] = useState<SelfAttendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
 
   // Update current time every second
   useEffect(() => {
@@ -124,7 +125,7 @@ export const SelfAttendanceWidget = () => {
     fetchTodayAttendance();
   }, [studentId]);
 
-  // Get current location
+  // Enhanced location validation with security checks
   const getCurrentLocation = () => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -135,6 +136,21 @@ export const SelfAttendanceWidget = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setPosition(position);
+          
+          // Security validation
+          const validation = attendanceSecurityManager.validateLocation(
+            position.coords.latitude,
+            position.coords.longitude,
+            position.coords.accuracy
+          );
+
+          if (!validation.isValid) {
+            setSecurityWarnings(validation.reasons);
+            reject(new Error('Lokasi terdeteksi mencurigakan: ' + validation.reasons.join(', ')));
+            return;
+          }
+
+          setSecurityWarnings([]);
           resolve(position);
         },
         (error) => {
@@ -149,17 +165,6 @@ export const SelfAttendanceWidget = () => {
     });
   };
 
-  // Check if within any location
-  const isWithinLocation = (lat: number, lng: number): AttendanceLocation | null => {
-    for (const location of locations) {
-      const distance = calculateDistance(lat, lng, location.latitude, location.longitude);
-      if (distance <= location.radius_meters) {
-        return location;
-      }
-    }
-    return null;
-  };
-
   // Calculate distance between two coordinates
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371000; // Earth's radius in meters
@@ -172,9 +177,20 @@ export const SelfAttendanceWidget = () => {
     return R * c;
   };
 
-  // Handle check in
+  // Enhanced check in with security features
   const handleCheckIn = async () => {
     if (!studentId || !schedule) return;
+
+    // Check rate limiting
+    const rateLimitCheck = attendanceSecurityManager.checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      toast({
+        title: "Rate Limit",
+        description: rateLimitCheck.reason,
+        variant: "destructive"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -194,6 +210,7 @@ export const SelfAttendanceWidget = () => {
       const now = new Date();
       const today = format(now, 'yyyy-MM-dd');
       const currentTime = format(now, 'HH:mm:ss');
+      const deviceFingerprint = attendanceSecurityManager.generateDeviceFingerprint();
 
       const { error } = await supabase
         .from('student_self_attendances')
@@ -204,7 +221,8 @@ export const SelfAttendanceWidget = () => {
           check_in_latitude: latitude,
           check_in_longitude: longitude,
           check_in_location_id: location.id,
-          status: 'present'
+          status: 'present',
+          device_fingerprint: deviceFingerprint
         });
 
       if (error) throw error;
@@ -236,9 +254,20 @@ export const SelfAttendanceWidget = () => {
     }
   };
 
-  // Handle check out
+  // Enhanced check out with security features
   const handleCheckOut = async () => {
     if (!studentId || !todayAttendance) return;
+
+    // Check rate limiting
+    const rateLimitCheck = attendanceSecurityManager.checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      toast({
+        title: "Rate Limit",
+        description: rateLimitCheck.reason,
+        variant: "destructive"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -296,6 +325,17 @@ export const SelfAttendanceWidget = () => {
     }
   };
 
+  // Check if within any location
+  const isWithinLocation = (lat: number, lng: number): AttendanceLocation | null => {
+    for (const location of locations) {
+      const distance = calculateDistance(lat, lng, location.latitude, location.longitude);
+      if (distance <= location.radius_meters) {
+        return location;
+      }
+    }
+    return null;
+  };
+
   // Check if can check in
   const canCheckIn = () => {
     if (!schedule || todayAttendance?.check_in_time) return false;
@@ -344,9 +384,25 @@ export const SelfAttendanceWidget = () => {
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
           Presensi Mandiri
+          <Shield className="h-4 w-4 text-green-600" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Security warnings */}
+        {securityWarnings.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Peringatan Keamanan:</span>
+            </div>
+            <ul className="mt-1 text-sm text-red-600">
+              {securityWarnings.map((warning, index) => (
+                <li key={index}>• {warning}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="text-center">
           <div className="text-2xl font-bold">
             {format(currentTime, 'HH:mm:ss')}
@@ -421,6 +477,13 @@ export const SelfAttendanceWidget = () => {
             ))}
           </div>
         )}
+
+        <div className="text-xs text-gray-400 border-t pt-2">
+          <div className="flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            <span>Sistem keamanan aktif - Anti fake GPS & titip presensi</span>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
