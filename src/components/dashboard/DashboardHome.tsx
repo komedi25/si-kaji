@@ -14,11 +14,13 @@ export const DashboardHome = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Dashboard</h1>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Siswa"
           value="1,234"
@@ -45,23 +47,29 @@ export const DashboardHome = () => {
         />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Presensi Mandiri Widget untuk siswa */}
+      {/* Main Content Grid */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
+        {/* Self Attendance Widget - Only for students */}
         {hasRole('siswa') && (
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-4">
             <SelfAttendanceWidget />
           </div>
         )}
         
-        {/* Role-based statistics */}
-        <div className={hasRole('siswa') ? 'lg:col-span-2' : 'lg:col-span-3'}>
+        {/* Role-based Statistics */}
+        <div className={hasRole('siswa') ? 'lg:col-span-8' : 'lg:col-span-12'}>
           <RoleBasedStats />
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <DashboardCharts />
-        <RealtimeUpdates />
+      {/* Charts and Updates */}
+      <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
+        <div className="order-1">
+          <DashboardCharts />
+        </div>
+        <div className="order-2">
+          <RealtimeUpdates />
+        </div>
       </div>
     </div>
   );
