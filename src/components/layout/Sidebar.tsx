@@ -83,32 +83,32 @@ export const Sidebar = () => {
           requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
           children: [
             {
+              title: 'Presensi Mandiri',
+              href: '/attendance/self',
+              icon: MapPin,
+              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa'],
+            },
+            {
               title: 'Input Presensi',
-              href: '/attendance?tab=record',
+              href: '/attendance/record',
               icon: Calendar,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
             {
               title: 'Laporan Presensi',
-              href: '/attendance?tab=report',
+              href: '/attendance/report',
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
             {
-              title: 'Presensi Mandiri',
-              href: '/attendance?tab=self',
-              icon: MapPin,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa'],
-            },
-            {
-              title: 'Pengaturan Lokasi',
-              href: '/attendance?tab=location',
+              title: 'Kelola Lokasi',
+              href: '/attendance/location',
               icon: MapPin,
               requiredRoles: ['admin'],
             },
             {
-              title: 'Pengaturan Jadwal',
-              href: '/attendance?tab=schedule',
+              title: 'Kelola Jadwal',
+              href: '/attendance/schedule',
               icon: Clock,
               requiredRoles: ['admin'],
             },
@@ -479,6 +479,12 @@ export const Sidebar = () => {
     const currentPath = location.pathname;
     const currentSearch = location.search;
     
+    // Handle attendance routes specifically
+    if (href.startsWith('/attendance/')) {
+      const attendanceSection = href.split('/')[2];
+      return currentPath === '/attendance' && currentSearch.includes(`tab=${attendanceSection}`);
+    }
+    
     // Handle tab-based navigation
     if (href.includes('?tab=')) {
       const [path, tab] = href.split('?tab=');
@@ -496,7 +502,7 @@ export const Sidebar = () => {
     });
   };
 
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan']);
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan', 'Akademik']);
 
   const toggleExpand = (title: string) => {
     setExpandedItems(prev => 
