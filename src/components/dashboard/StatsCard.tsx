@@ -31,6 +31,9 @@ export const StatsCard = ({
     }
   };
 
+  // Handle both string and number values properly
+  const displayValue = typeof value === 'string' ? value : value.toLocaleString();
+
   return (
     <Card className={cn("hover:shadow-md transition-shadow", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -38,7 +41,7 @@ export const StatsCard = ({
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+        <div className="text-2xl font-bold">{displayValue}</div>
         <p className={cn("text-xs", getTrendColor())}>
           {description}
         </p>
