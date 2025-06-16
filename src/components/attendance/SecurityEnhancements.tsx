@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface LocationValidation {
@@ -94,7 +95,8 @@ export class AttendanceSecurityManager {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       canvas: canvas.toDataURL(),
       memory: (navigator as any).deviceMemory || 'unknown',
-      cores: navigator.hardwareConcurrency || 'unknown'
+      cores: navigator.hardwareConcurrency || 'unknown',
+      timestamp: Date.now()
     };
 
     return btoa(JSON.stringify(fingerprint));
