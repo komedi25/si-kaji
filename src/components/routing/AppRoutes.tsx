@@ -88,8 +88,34 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* Attendance routes - updated to handle all attendance sub-routes */}
       <Route path="/attendance" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'arps']}>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/self" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/record" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/report" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/location" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/schedule" element={
+        <ProtectedRoute requiredRoles={['admin']}>
           <AttendanceManagement />
         </ProtectedRoute>
       } />

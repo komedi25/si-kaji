@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
 import { AttendanceReport } from '@/components/attendance/AttendanceReport';
 import { SelfAttendanceWidget } from '@/components/attendance/SelfAttendanceWidget';
@@ -10,9 +10,21 @@ import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
 
 const AttendanceManagement = () => {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { hasRole } = useAuth();
-  const tab = searchParams.get('tab') || 'self';
+  
+  // Determine the current tab from the path
+  const getCurrentTab = () => {
+    const path = location.pathname;
+    if (path === '/attendance/self') return 'self';
+    if (path === '/attendance/record') return 'record';
+    if (path === '/attendance/report') return 'report';
+    if (path === '/attendance/location') return 'location';
+    if (path === '/attendance/schedule') return 'schedule';
+    return 'self'; // default
+  };
+
+  const tab = getCurrentTab();
 
   const renderContent = () => {
     switch (tab) {
