@@ -47,8 +47,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
     { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
     { value: 'siswa', label: 'Siswa' },
     { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' },
-    { value: 'osis', label: 'OSIS' }
+    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,10 +64,14 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
     setLoading(true);
     try {
-      // Create profile first (since we can't create auth users directly)
+      // Generate a UUID for the new profile
+      const profileId = crypto.randomUUID();
+
+      // Create profile first
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: profileId,
           full_name: formData.full_name,
           nip: formData.role === 'siswa' ? null : formData.nip || null,
           nis: formData.role === 'siswa' ? formData.nis || null : null,
@@ -80,15 +83,17 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
       if (profileError) throw profileError;
 
-      // Create user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: profile.id,
-          role: formData.role
-        });
+      // Create user role - filter out 'osis' role as it's not in database enum
+      if (formData.role !== 'osis') {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: profile.id,
+            role: formData.role as any
+          });
 
-      if (roleError) throw roleError;
+        if (roleError) throw roleError;
+      }
 
       // If role is student, create student record
       if (formData.role === 'siswa' && formData.nis) {
