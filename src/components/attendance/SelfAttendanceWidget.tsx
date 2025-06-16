@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -167,7 +166,7 @@ export const SelfAttendanceWidget = () => {
         check_in_location_id: validLocation.id,
         check_in_latitude: locationResult.coords.latitude,
         check_in_longitude: locationResult.coords.longitude,
-        status: 'present'
+        status: 'present' as const
       };
 
       const { data, error } = await supabase
@@ -180,7 +179,7 @@ export const SelfAttendanceWidget = () => {
 
       if (error) throw error;
 
-      setTodayAttendance(data);
+      setTodayAttendance(data as StudentSelfAttendance);
       toast({
         title: "Check-in Berhasil",
         description: `Presensi masuk berhasil di ${validLocation.name}`,
@@ -245,7 +244,7 @@ export const SelfAttendanceWidget = () => {
 
       if (error) throw error;
 
-      setTodayAttendance(data);
+      setTodayAttendance(data as StudentSelfAttendance);
       toast({
         title: "Check-out Berhasil",
         description: `Presensi pulang berhasil di ${validLocation.name}`,

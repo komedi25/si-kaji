@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SelfAttendanceWidget } from '@/components/attendance/SelfAttendanceWidget';
 import { AttendanceLocationManager } from '@/components/attendance/AttendanceLocationManager';
 import { AttendanceScheduleManager } from '@/components/attendance/AttendanceScheduleManager';
+import { ActivityAttendanceManager } from '@/components/attendance/ActivityAttendanceManager';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -90,6 +91,19 @@ const SelfAttendanceManagement = () => {
           );
         }
         return <AttendanceScheduleManager />;
+      case 'activities':
+        if (!isAdmin) {
+          return (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center text-muted-foreground">
+                  Akses ditolak. Hanya administrator yang dapat mengelola kegiatan presensi.
+                </div>
+              </CardContent>
+            </Card>
+          );
+        }
+        return <ActivityAttendanceManager />;
       default:
         return (
           <Card>
@@ -118,10 +132,11 @@ const SelfAttendanceManagement = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="attendance">Presensi</TabsTrigger>
             {isAdmin && <TabsTrigger value="locations">Lokasi</TabsTrigger>}
             {isAdmin && <TabsTrigger value="schedules">Jadwal</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="activities">Kegiatan</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="attendance" className="space-y-4 md:space-y-6">
@@ -136,6 +151,12 @@ const SelfAttendanceManagement = () => {
           
           {isAdmin && (
             <TabsContent value="schedules" className="space-y-4 md:space-y-6">
+              {renderContent()}
+            </TabsContent>
+          )}
+          
+          {isAdmin && (
+            <TabsContent value="activities" className="space-y-4 md:space-y-6">
               {renderContent()}
             </TabsContent>
           )}

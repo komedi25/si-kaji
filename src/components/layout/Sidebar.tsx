@@ -1,3 +1,4 @@
+
 import {
   LayoutDashboard,
   Calendar,
@@ -69,52 +70,52 @@ export const Sidebar = () => {
             <AccordionContent>
               <ul className="mt-2 px-2">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/dashboard" className="flex items-center gap-2">
+                  <Link to="/dashboard" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <LayoutDashboard className="h-4 w-4" />
                       <span>Dashboard</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/attendance" className="flex items-center gap-2">
+                  <Link to="/attendance" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Calendar className="h-4 w-4" />
                       <span>Presensi</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/violations" className="flex items-center gap-2">
+                  <Link to="/violations" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <AlertTriangle className="h-4 w-4" />
                       <span>Pelanggaran</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/achievements" className="flex items-center gap-2">
+                  <Link to="/achievements" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Award className="h-4 w-4" />
                       <span>Prestasi</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/permits" className="flex items-center gap-2">
+                  <Link to="/permits" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <FileText className="h-4 w-4" />
                       <span>Perizinan</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/student-cases" className="flex items-center gap-2">
+                  <Link to="/student-cases" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Book className="h-4 w-4" />
                       <span>Kasus Siswa</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               </ul>
             </AccordionContent>
@@ -127,44 +128,44 @@ export const Sidebar = () => {
             <AccordionContent>
               <ul className="mt-2 px-2">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/students" className="flex items-center gap-2">
+                  <Link to="/students" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Users className="h-4 w-4" />
                       <span>Siswa</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/classes" className="flex items-center gap-2">
+                  <Link to="/classes" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Book className="h-4 w-4" />
                       <span>Kelas</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/academic-years" className="flex items-center gap-2">
+                  <Link to="/academic-years" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Calendar className="h-4 w-4" />
                       <span>Tahun Ajaran</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/majors" className="flex items-center gap-2">
+                  <Link to="/majors" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Book className="h-4 w-4" />
                       <span>Jurusan</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/semesters" className="flex items-center gap-2">
+                  <Link to="/semesters" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Calendar className="h-4 w-4" />
                       <span>Semester</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               </ul>
             </AccordionContent>
@@ -177,20 +178,20 @@ export const Sidebar = () => {
             <AccordionContent>
               <ul className="mt-2 px-2">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/users" className="flex items-center gap-2">
+                  <Link to="/users" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <User className="h-4 w-4" />
                       <span>Pengguna</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/roles" className="flex items-center gap-2">
+                  <Link to="/roles" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <Settings className="h-4 w-4" />
                       <span>Roles</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               </ul>
             </AccordionContent>
@@ -203,12 +204,12 @@ export const Sidebar = () => {
             <AccordionContent>
               <ul className="mt-2 px-2">
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link to="/messages" className="flex items-center gap-2">
+                  <Link to="/messages" className="flex items-center gap-2">
+                    <SidebarMenuButton>
                       <MessageSquare className="h-4 w-4" />
                       <span>Pesan</span>
-                    </Link>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               </ul>
             </AccordionContent>
@@ -217,12 +218,12 @@ export const Sidebar = () => {
 
         {/* Add Self Attendance menu item */}
         <SidebarMenuItem>
-          <SidebarMenuButton asChild>
-            <Link to="/self-attendance" className="flex items-center gap-2">
+          <Link to="/self-attendance" className="flex items-center gap-2">
+            <SidebarMenuButton>
               <Clock className="h-4 w-4" />
               <span>Presensi Mandiri</span>
-            </Link>
-          </SidebarMenuButton>
+            </SidebarMenuButton>
+          </Link>
         </SidebarMenuItem>
       </div>
     </div>
