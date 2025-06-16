@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSearchParams } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
@@ -12,63 +12,76 @@ import { useAuth } from '@/hooks/useAuth';
 const AttendanceManagement = () => {
   const [searchParams] = useSearchParams();
   const { hasRole } = useAuth();
-  const initialTab = searchParams.get('tab') || 'record';
+  const initialTab = searchParams.get('tab') || 'self';
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Manajemen Presensi</h1>
       </div>
 
-      <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+      <Tabs defaultValue={initialTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 h-auto">
+          <TabsTrigger value="self" className="text-xs md:text-sm">
+            Presensi Mandiri
+          </TabsTrigger>
+          
           {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
-            <TabsTrigger value="record">Input Presensi</TabsTrigger>
+            <TabsTrigger value="record" className="text-xs md:text-sm">
+              Input Presensi
+            </TabsTrigger>
           )}
           
           {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
-            <TabsTrigger value="report">Laporan Presensi</TabsTrigger>
+            <TabsTrigger value="report" className="text-xs md:text-sm">
+              Laporan Presensi
+            </TabsTrigger>
           )}
-          
-          <TabsTrigger value="self">Presensi Mandiri</TabsTrigger>
           
           {hasRole('admin') && (
-            <>
-              <TabsTrigger value="location">Pengaturan Lokasi</TabsTrigger>
-              <TabsTrigger value="schedule">Pengaturan Jadwal</TabsTrigger>
-            </>
+            <TabsTrigger value="location" className="text-xs md:text-sm">
+              Kelola Lokasi
+            </TabsTrigger>
+          )}
+          
+          {hasRole('admin') && (
+            <TabsTrigger value="schedule" className="text-xs md:text-sm">
+              Kelola Jadwal
+            </TabsTrigger>
           )}
         </TabsList>
 
-        {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
-          <TabsContent value="record" className="space-y-6">
-            <AttendanceRecorder />
+        <div className="mt-6">
+          <TabsContent value="self" className="mt-0">
+            <div className="max-w-md mx-auto">
+              <SelfAttendanceWidget />
+            </div>
           </TabsContent>
-        )}
 
-        {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
-          <TabsContent value="report" className="space-y-6">
-            <AttendanceReport />
-          </TabsContent>
-        )}
+          {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
+            <TabsContent value="record" className="mt-0">
+              <AttendanceRecorder />
+            </TabsContent>
+          )}
 
-        <TabsContent value="self" className="space-y-6">
-          <div className="max-w-2xl mx-auto">
-            <SelfAttendanceWidget />
-          </div>
-        </TabsContent>
+          {(hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) && (
+            <TabsContent value="report" className="mt-0">
+              <AttendanceReport />
+            </TabsContent>
+          )}
 
-        {hasRole('admin') && (
-          <TabsContent value="location" className="space-y-6">
-            <LocationManager />
-          </TabsContent>
-        )}
+          {hasRole('admin') && (
+            <TabsContent value="location" className="mt-0">
+              <LocationManager />
+            </TabsContent>
+          )}
 
-        {hasRole('admin') && (
-          <TabsContent value="schedule" className="space-y-6">
-            <ScheduleManager />
-          </TabsContent>
-        )}
+          {hasRole('admin') && (
+            <TabsContent value="schedule" className="mt-0">
+              <ScheduleManager />
+            </TabsContent>
+          )}
+        </div>
       </Tabs>
     </div>
   );

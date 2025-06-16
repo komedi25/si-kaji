@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +52,6 @@ export function AttendanceReport() {
   const [dailyData, setDailyData] = useState<DailyAttendance[]>([]);
   const [exportData, setExportData] = useState<AttendanceExportData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingExport, setLoadingExport] = useState(false);
 
   useEffect(() => {
     fetchClasses();
@@ -95,7 +92,6 @@ export function AttendanceReport() {
   const fetchExportData = async () => {
     if (!selectedClass || !startDate || !endDate) return;
 
-    setLoadingExport(true);
     try {
       const { data: attendanceData, error } = await supabase
         .from('student_attendances')
@@ -130,8 +126,6 @@ export function AttendanceReport() {
         description: "Gagal memuat data untuk ekspor",
         variant: "destructive"
       });
-    } finally {
-      setLoadingExport(false);
     }
   };
 
@@ -248,20 +242,22 @@ export function AttendanceReport() {
       {/* Header & Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Laporan Presensi
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Laporan Presensi
+              </CardTitle>
+              <CardDescription>
+                Analisis kehadiran siswa berdasarkan periode waktu
+              </CardDescription>
             </div>
             <AttendanceReportExport
               data={exportData}
-              disabled={!selectedClass || loadingExport}
+              disabled={!selectedClass || loading}
               filename={`laporan_presensi_${selectedClass ? classes.find(c => c.id === selectedClass)?.name.replace(/\s+/g, '_') : 'semua'}`}
             />
-          </CardTitle>
-          <CardDescription>
-            Analisis kehadiran siswa berdasarkan periode waktu
-          </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -306,8 +302,8 @@ export function AttendanceReport() {
 
       {loading && (
         <Card>
-          <CardContent className="text-center py-8">
-            <div>Memuat laporan...</div>
+          <CardContent className="text-center py-12">
+            <div className="text-muted-foreground">Memuat laporan...</div>
           </CardContent>
         </Card>
       )}
@@ -315,10 +311,10 @@ export function AttendanceReport() {
       {!loading && stats && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                   <Users className="h-4 w-4 text-blue-600" />
                   <div className="text-sm font-medium text-muted-foreground">Total Siswa</div>
                 </div>
@@ -328,7 +324,7 @@ export function AttendanceReport() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-4 w-4 text-green-600" />
                   <div className="text-sm font-medium text-muted-foreground">Tingkat Kehadiran</div>
                 </div>
@@ -340,8 +336,8 @@ export function AttendanceReport() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4 text-green-600" />
                   <div className="text-sm font-medium text-muted-foreground">Total Hadir</div>
                 </div>
                 <div className="text-2xl font-bold text-green-600">{stats.present}</div>
@@ -350,7 +346,7 @@ export function AttendanceReport() {
 
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-2">
                   <Calendar className="h-4 w-4 text-red-600" />
                   <div className="text-sm font-medium text-muted-foreground">Tidak Hadir</div>
                 </div>
@@ -360,7 +356,7 @@ export function AttendanceReport() {
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* Pie Chart */}
             <Card>
               <CardHeader>
@@ -465,7 +461,7 @@ export function AttendanceReport() {
 
       {!loading && selectedClass && startDate && endDate && !stats && (
         <Card>
-          <CardContent className="text-center py-8">
+          <CardContent className="text-center py-12">
             <div className="text-muted-foreground">
               Tidak ada data presensi untuk periode yang dipilih
             </div>
