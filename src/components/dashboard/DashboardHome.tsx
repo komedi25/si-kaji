@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatisticsCard } from '@/components/dashboard/StatisticsCard';
+import { StatsCard } from '@/components/dashboard/StatsCard';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { RealtimeUpdates } from '@/components/dashboard/RealtimeUpdates';
 import { RoleBasedStats } from '@/components/dashboard/RoleBasedStats';
@@ -19,25 +19,25 @@ export const DashboardHome = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatisticsCard
+        <StatsCard
           title="Total Siswa"
           value="1,234"
           description="+5% dari bulan lalu"
           icon={Users}
         />
-        <StatisticsCard
+        <StatsCard
           title="Presensi Hari Ini"
           value="98.5%"
           description="1,215 dari 1,234 siswa"
           icon={UserCheck}
         />
-        <StatisticsCard
+        <StatsCard
           title="Pelanggaran Aktif"
           value="23"
           description="-12% dari minggu lalu"
           icon={AlertTriangle}
         />
-        <StatisticsCard
+        <StatsCard
           title="Prestasi Bulan Ini"
           value="45"
           description="+23% dari bulan lalu"
