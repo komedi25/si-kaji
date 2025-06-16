@@ -1,85 +1,76 @@
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSearchParams } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
 import { AttendanceReport } from '@/components/attendance/AttendanceReport';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { SelfAttendanceWidget } from '@/components/attendance/SelfAttendanceWidget';
+import { LocationManager } from '@/components/attendance/LocationManager';
+import { ScheduleManager } from '@/components/attendance/ScheduleManager';
+import { useAuth } from '@/hooks/useAuth';
 
 const AttendanceManagement = () => {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState('record');
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, [location.search]);
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'record':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl md:text-2xl">Input Presensi Harian</CardTitle>
-              <CardDescription className="text-sm md:text-base">
-                Catat kehadiran siswa per kelas dan tanggal
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceRecorder />
-            </CardContent>
-          </Card>
-        );
-      case 'report':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl md:text-2xl">Laporan Presensi</CardTitle>
-              <CardDescription className="text-sm md:text-base">
-                Lihat dan analisis data kehadiran siswa
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceReport />
-            </CardContent>
-          </Card>
-        );
-      default:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl md:text-2xl">Input Presensi Harian</CardTitle>
-              <CardDescription className="text-sm md:text-base">
-                Catat kehadiran siswa per kelas dan tanggal
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceRecorder />
-            </CardContent>
-          </Card>
-        );
-    }
-  };
+  const [searchParams] = useSearchParams();
+  const { hasRole } = useAuth();
+  const initialTab = searchParams.get('tab') || 'record';
 
   return (
-    <AppLayout>
-      <div className="space-y-4 md:space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Manajemen Presensi</h1>
-          <p className="text-gray-600 mt-2 text-sm md:text-base">
-            Kelola presensi harian siswa dan laporan kehadiran
-          </p>
-        </div>
-
-        <div className="space-y-4 md:space-y-6">
-          {renderContent()}
-        </div>
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Manajemen Presensi</h1>
       </div>
-    </AppLayout>
+
+      <Tabs defaultValue={initialTab} className="space-y-6">
+        <TabsList>
+          {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+            <TabsTrigger value="record">Input Presensi</TabsTrigger>
+          ) : null}
+          
+          {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+            <TabsTrigger value="report">Laporan Presensi</TabsTrigger>
+          ) : null}
+          
+          <TabsTrigger value="self">Presensi Mandiri</TabsTrigger>
+          
+          {hasRole('admin') ? (
+            <>
+              <TabsTrigger value="location">Pengaturan Lokasi</TabsTrigger>
+              <TabsTrigger value="schedule">Pengaturan Jadwal</TabsTrigger>
+            </>
+          ) : null}
+        </TabsList>
+
+        {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+          <TabsContent value="record">
+            <AttendanceRecorder />
+          </TabsContent>
+        ) : null}
+
+        {hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk') ? (
+          <TabsContent value="report">
+            <AttendanceReport />
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="self">
+          <div className="max-w-md mx-auto">
+            <SelfAttendanceWidget />
+          </div>
+        </TabsContent>
+
+        {hasRole('admin') ? (
+          <TabsContent value="location">
+            <LocationManager />
+          </TabsContent>
+        ) : null}
+
+        {hasRole('admin') ? (
+          <TabsContent value="schedule">
+            <ScheduleManager />
+          </TabsContent>
+        ) : null}
+      </Tabs>
+    </div>
   );
 };
 

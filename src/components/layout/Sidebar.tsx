@@ -94,6 +94,24 @@ export const Sidebar = () => {
               icon: FileText,
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
+            {
+              title: 'Presensi Mandiri',
+              href: '/attendance?tab=self',
+              icon: MapPin,
+              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa'],
+            },
+            {
+              title: 'Pengaturan Lokasi',
+              href: '/attendance?tab=location',
+              icon: MapPin,
+              requiredRoles: ['admin'],
+            },
+            {
+              title: 'Pengaturan Jadwal',
+              href: '/attendance?tab=schedule',
+              icon: Clock,
+              requiredRoles: ['admin'],
+            },
           ],
         },
         {
