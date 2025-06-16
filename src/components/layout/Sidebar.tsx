@@ -9,8 +9,7 @@ import {
   Award,
   FileText,
   Users,
-  MessageSquare,
-  Clock
+  MessageSquare
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -215,16 +214,6 @@ export const Sidebar = () => {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-
-        {/* Add Self Attendance menu item */}
-        <SidebarMenuItem>
-          <Link to="/self-attendance" className="flex items-center gap-2">
-            <SidebarMenuButton>
-              <Clock className="h-4 w-4" />
-              <span>Presensi Mandiri</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
       </div>
     </div>
   );
