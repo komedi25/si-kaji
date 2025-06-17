@@ -120,7 +120,7 @@ export const RoleTestingPanel = () => {
               .insert({
                 user_id: authData.user!.id,
                 role: role,
-                assigned_by: user?.id
+                assigned_by: user?.id || null
               });
 
             if (roleError) throw roleError;
