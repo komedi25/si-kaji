@@ -54,9 +54,9 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('Fetching users for admin:', user?.id);
+      console.log('Fetching users and roles for admin:', user?.id);
       
-      // Fetch profiles - admin should be able to see all profiles now
+      // Fetch all profiles 
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -68,36 +68,22 @@ export default function UserManagement() {
 
       console.log('Profiles fetched:', profiles?.length || 0, 'profiles');
 
-      // For admin users, we need to fetch all user roles using service role access
-      // Since the new RLS policy allows service role to see all data
-      let userRoles = [];
-      
-      try {
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('is_active', true);
+      // Fetch all user roles - with new RLS policy, admin should see all roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('is_active', true);
 
-        if (rolesError) {
-          console.error('Error fetching user roles:', rolesError);
-          // Try alternative approach for admin users
-          if (user?.id === '5f52a676-a947-42f8-a20e-40b766c11e72') {
-            console.log('Admin user detected, attempting to fetch all roles...');
-            // The RLS policy should now allow this, but if not, we'll handle gracefully
-          }
-        } else {
-          userRoles = rolesData || [];
-        }
-      } catch (error) {
-        console.error('Failed to fetch user roles:', error);
-        // Continue with empty roles rather than failing completely
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
+        throw rolesError;
       }
 
-      console.log('User roles fetched:', userRoles.length, 'role assignments');
+      console.log('User roles fetched:', userRoles?.length || 0, 'role assignments');
 
       // Combine the data
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => {
-        const roles = userRoles
+        const roles = (userRoles || [])
           .filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole);
 
