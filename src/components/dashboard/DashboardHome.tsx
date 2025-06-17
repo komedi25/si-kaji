@@ -1,10 +1,12 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { RoleBasedStats } from './RoleBasedStats';
+import { DashboardCharts } from './DashboardCharts';
 import { RealtimeUpdates } from './RealtimeUpdates';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const DashboardHome = () => {
   const { user, loading, refreshUserData } = useAuth();
@@ -54,6 +56,24 @@ export const DashboardHome = () => {
 
       {/* Stats Section */}
       <RoleBasedStats />
+
+      {/* Charts Section */}
+      {user?.roles && user.roles.length > 0 && (
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-purple-600" />
+              Analisis Data & Visualisasi
+            </CardTitle>
+            <CardDescription>
+              Grafik dan analisis data berdasarkan role dan kewenangan Anda
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DashboardCharts />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Realtime Updates */}
       <RealtimeUpdates />
