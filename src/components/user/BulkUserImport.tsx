@@ -25,6 +25,11 @@ interface CSVRow {
   Alamat: string;
 }
 
+interface AuthUser {
+  id: string;
+  email?: string;
+}
+
 export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUserImportProps) => {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState<{
@@ -152,12 +157,12 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
           }
 
           // Check if user already exists
-          const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
+          const { data: existingUsers, error: checkError } = await supabase.auth.admin.listUsers();
           if (checkError) {
             console.warn('Could not check existing users:', checkError);
           }
 
-          const userExists = existingUser?.users?.some(u => u.email === row.Email);
+          const userExists = existingUsers?.users?.some((u: AuthUser) => u.email === row.Email);
           if (userExists) {
             results.errors.push(`Baris ${index + 2}: Email ${row.Email} sudah terdaftar`);
             continue;
