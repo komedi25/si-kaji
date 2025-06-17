@@ -125,14 +125,12 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
       console.log('Profile created successfully');
 
-      // Create user role - this is the fix for automatic role assignment
+      // Create user role
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: formData.role,
-          assigned_by: currentSession.session?.user.id || null,
-          is_active: true
+          role: formData.role as any
         });
 
       if (roleError) {
@@ -152,7 +150,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
             full_name: formData.full_name,
             phone: formData.phone || null,
             address: formData.address || null,
-            gender: 'L', // Default, can be updated later
+            gender: 'male', // Default, can be updated later
             status: 'active'
           });
 
