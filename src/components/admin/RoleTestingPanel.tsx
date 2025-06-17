@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -114,13 +113,14 @@ export const RoleTestingPanel = () => {
         // Wait a bit for the profile to be created by trigger
         setTimeout(async () => {
           try {
-            // Add the role
+            // Add the role - Fix the TypeScript error by being explicit about the user ID
+            const currentUserId = user?.id;
             const { error: roleError } = await supabase
               .from('user_roles')
               .insert({
                 user_id: authData.user!.id,
                 role: role,
-                assigned_by: user?.id || null
+                assigned_by: currentUserId || null
               });
 
             if (roleError) throw roleError;
