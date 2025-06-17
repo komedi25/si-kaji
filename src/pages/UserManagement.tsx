@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,7 +55,7 @@ export default function UserManagement() {
       setLoading(true);
       console.log('🔍 Mengambil data pengguna...');
       
-      // Fetch profiles
+      // Fetch profiles with detailed logging
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
@@ -66,22 +65,34 @@ export default function UserManagement() {
         throw profilesError;
       }
 
-      // Fetch all user roles
+      console.log('📋 Data profiles ditemukan:', profiles?.length || 0);
+      console.log('📋 Detail profiles:', profiles);
+
+      // Fetch all user roles with detailed logging
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('*')
-        .eq('is_active', true);
+        .select('*');
 
       if (rolesError) {
         console.error('❌ Error roles:', rolesError);
         throw rolesError;
       }
 
+      console.log('🎭 Data user_roles ditemukan:', userRoles?.length || 0);
+      console.log('🎭 Detail user_roles:', userRoles);
+
+      // Filter only active roles
+      const activeRoles = userRoles?.filter(ur => ur.is_active === true) || [];
+      console.log('✅ Role aktif setelah filter:', activeRoles.length);
+      console.log('✅ Detail role aktif:', activeRoles);
+
       // Combine the data
       const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
-        const roles = userRoles
+        const roles = activeRoles
           ?.filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole) || [];
+
+        console.log(`👤 User ${profile.full_name} (${profile.id}) memiliki roles:`, roles);
 
         return {
           ...profile,
@@ -89,10 +100,12 @@ export default function UserManagement() {
         };
       }) || [];
 
-      console.log('✅ Total pengguna ditemukan:', usersWithRoles.length);
+      console.log('✅ Total pengguna dengan roles:', usersWithRoles.length);
+      console.log('✅ Detail pengguna final:', usersWithRoles);
+      
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('❌ Error fetchUsers:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data pengguna",
@@ -235,7 +248,7 @@ export default function UserManagement() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
                           <div className="text-gray-500">
-                            Tidak ada pengguna ditemukan.
+                            Tidak ada pengguna ditemukan. Silakan cek console untuk detail debug.
                           </div>
                         </TableCell>
                       </TableRow>
