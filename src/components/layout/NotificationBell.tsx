@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +25,7 @@ export function NotificationBell() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
+  const channelRef = useRef<any>(null);
 
   // Get notifications
   const { data: notifications = [], isLoading } = useQuery({
@@ -106,8 +106,14 @@ export function NotificationBell() {
   useEffect(() => {
     if (!user?.id) return;
 
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     const channel = supabase
-      .channel('notifications')
+      .channel(`notifications-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -134,8 +140,13 @@ export function NotificationBell() {
       )
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [user?.id, queryClient, toast]);
 

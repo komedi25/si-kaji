@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -9,8 +9,15 @@ export const RealtimeUpdates = () => {
   const [isConnected, setIsConnected] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
+    // Clean up any existing channel first
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     // Set up realtime subscriptions for critical tables
     const channel = supabase
       .channel('schema-db-changes')
@@ -81,8 +88,13 @@ export const RealtimeUpdates = () => {
         }
       });
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       setIsConnected(false);
     };
   }, [queryClient, toast]);
