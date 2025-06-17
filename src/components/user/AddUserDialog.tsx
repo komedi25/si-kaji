@@ -75,6 +75,9 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
     try {
       console.log('Creating user with signup method...');
       
+      // Store current session to restore later
+      const { data: currentSession } = await supabase.auth.getSession();
+      
       // Create user with regular signup
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -97,6 +100,11 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
       }
 
       console.log('User created successfully:', authData.user.id);
+
+      // Restore the original session to prevent auto-login
+      if (currentSession.session) {
+        await supabase.auth.setSession(currentSession.session);
+      }
 
       // Create profile with the actual user ID
       const { error: profileError } = await supabase
