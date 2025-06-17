@@ -1,5 +1,5 @@
 
-import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -42,7 +42,6 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   const { user } = useAuth();
   const { sendNotificationFromTemplate } = useNotificationSystem();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const channelRef = useRef<any>(null);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -81,15 +80,9 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     if (user) {
       fetchNotifications();
 
-      // Clean up any existing channel first
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-
       // Subscribe to real-time notifications
       const channel = supabase
-        .channel(`user-notifications-${user.id}`)
+        .channel('notifications')
         .on(
           'postgres_changes',
           {
@@ -115,13 +108,8 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
         )
         .subscribe();
 
-      channelRef.current = channel;
-
       return () => {
-        if (channelRef.current) {
-          supabase.removeChannel(channelRef.current);
-          channelRef.current = null;
-        }
+        supabase.removeChannel(channel);
       };
     }
   }, [user]);

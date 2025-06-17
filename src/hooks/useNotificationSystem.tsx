@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,7 +47,6 @@ export function useNotificationSystem() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const channelRef = useRef<any>(null);
 
   // Get notification templates
   const { data: templates = [] } = useQuery({
@@ -99,15 +98,9 @@ export function useNotificationSystem() {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Clean up any existing channel first
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-
     // Set up real-time subscription for notifications
     const channel = supabase
-      .channel(`notification-system:user_id=eq.${user.id}`)
+      .channel(`notifications:user_id=eq.${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -134,13 +127,8 @@ export function useNotificationSystem() {
       )
       .subscribe();
 
-    channelRef.current = channel;
-
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      supabase.removeChannel(channel);
     };
   }, [user?.id, toast, queryClient]);
 
@@ -172,6 +160,7 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to send notifications to multiple users by role
   const notifyByRole = async (
     role: string,
     title: string,
@@ -184,7 +173,7 @@ export function useNotificationSystem() {
       const { data: userRoles, error } = await supabase
         .from('user_roles')
         .select('user_id')
-        .eq('role', role as any)
+        .eq('role', role as any) // Cast to any to handle the enum type
         .eq('is_active', true);
 
       if (error) throw error;
@@ -214,6 +203,7 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to create template
   const createTemplate = async (template: Omit<NotificationTemplate, 'id'>) => {
     try {
       const { error } = await supabase
@@ -233,6 +223,7 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to update template
   const updateTemplate = async (id: string, template: Partial<NotificationTemplate>) => {
     try {
       const { error } = await supabase
@@ -250,8 +241,10 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to create or update channel
   const createOrUpdateChannel = async (channelData: Partial<NotificationChannel> & { id?: string }) => {
     try {
+      // Ensure required fields are present
       if (!channelData.name || !channelData.type) {
         throw new Error('Channel name and type are required');
       }
@@ -286,6 +279,7 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to update user preference
   const updatePreference = async (
     notificationType: string,
     channels: string[],
@@ -321,6 +315,7 @@ export function useNotificationSystem() {
     }
   };
 
+  // Function to send notification from template
   const sendNotificationFromTemplate = async (
     templateName: string,
     userId: string,
