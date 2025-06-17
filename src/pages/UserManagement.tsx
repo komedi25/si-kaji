@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,93 +31,59 @@ export default function UserManagement() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
-    { value: 'admin', label: 'Admin Sistem' },
-    { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
-    { value: 'tppk', label: 'TPPK' },
-    { value: 'arps', label: 'ARPS' },
-    { value: 'p4gn', label: 'P4GN' },
-    { value: 'koordinator_ekstrakurikuler', label: 'Koordinator Ekstrakurikuler' },
-    { value: 'wali_kelas', label: 'Wali Kelas' },
-    { value: 'guru_bk', label: 'Guru BK' },
-    { value: 'waka_kesiswaan', label: 'Waka Kesiswaan' },
-    { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
-    { value: 'siswa', label: 'Siswa' },
-    { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' },
-    { value: 'osis', label: 'OSIS' }
+    { value: 'admin', label: 'admin' },
+    { value: 'kepala_sekolah', label: 'kepala_sekolah' },
+    { value: 'tppk', label: 'tppk' },
+    { value: 'arps', label: 'arps' },
+    { value: 'p4gn', label: 'p4gn' },
+    { value: 'koordinator_ekstrakurikuler', label: 'koordinator_ekstrakurikuler' },
+    { value: 'wali_kelas', label: 'wali_kelas' },
+    { value: 'guru_bk', label: 'guru_bk' },
+    { value: 'waka_kesiswaan', label: 'waka_kesiswaan' },
+    { value: 'pelatih_ekstrakurikuler', label: 'pelatih_ekstrakurikuler' },
+    { value: 'siswa', label: 'siswa' },
+    { value: 'orang_tua', label: 'orang_tua' },
+    { value: 'penanggung_jawab_sarpras', label: 'penanggung_jawab_sarpras' },
+    { value: 'osis', label: 'osis' }
   ];
 
   const getRoleLabel = (role: AppRole) => {
-    return roleOptions.find(r => r.value === role)?.label || role;
+    return role;
   };
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('=== STARTING FETCH USERS ===');
       
-      // Fetch profiles with detailed logging
-      console.log('Fetching profiles...');
+      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
 
-      console.log('Profiles result:', { profiles, error: profilesError });
-
       if (profilesError) {
-        console.error('Profiles error:', profilesError);
         throw profilesError;
       }
 
-      // Fetch user roles with detailed logging
-      console.log('Fetching user roles...');
+      // Fetch user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*');
 
-      console.log('User roles result:', { userRoles, error: rolesError });
-
       if (rolesError) {
-        console.error('Roles error:', rolesError);
         throw rolesError;
       }
 
-      // Check specific users
-      const targetUserIds = ['414adbfd-7807-4ccd-b11d-03d5056a508f', '5f52a676-a947-42f8-a20e-40b766c11e72'];
-      
-      console.log('=== CHECKING TARGET USERS ===');
-      targetUserIds.forEach(userId => {
-        const profile = profiles?.find(p => p.id === userId);
-        const roles = userRoles?.filter(ur => ur.user_id === userId);
-        console.log(`User ${userId}:`, {
-          profileFound: !!profile,
-          profile: profile,
-          rolesFound: roles?.length || 0,
-          roles: roles
-        });
-      });
-
       // Combine the data
-      console.log('Combining data...');
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => {
         const roles = (userRoles || [])
           .filter(ur => ur.user_id === profile.id && ur.is_active === true)
           .map(ur => ur.role as AppRole);
-
-        console.log(`Processing user ${profile.id} (${profile.full_name}):`, {
-          totalRoles: userRoles?.filter(ur => ur.user_id === profile.id)?.length || 0,
-          activeRoles: roles.length,
-          roles: roles
-        });
 
         return {
           ...profile,
           roles
         };
       });
-      
-      console.log('Final users with roles:', usersWithRoles);
-      console.log('Total users to display:', usersWithRoles.length);
       
       setUsers(usersWithRoles);
     } catch (error) {
@@ -254,7 +221,7 @@ export default function UserManagement() {
               <div className="text-center py-8">
                 <Alert className="mb-4">
                   <AlertDescription>
-                    Tidak ada pengguna ditemukan. Periksa console browser untuk detail debugging.
+                    Tidak ada pengguna ditemukan.
                   </AlertDescription>
                 </Alert>
                 <Button onClick={fetchUsers} variant="outline">
@@ -267,7 +234,6 @@ export default function UserManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
                       <TableHead>Nama</TableHead>
                       <TableHead>NIP/NIS</TableHead>
                       <TableHead>Telepon</TableHead>
@@ -278,7 +244,6 @@ export default function UserManagement() {
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-mono text-xs">{user.id}</TableCell>
                         <TableCell className="font-medium">{user.full_name}</TableCell>
                         <TableCell>{user.nip || user.nis || '-'}</TableCell>
                         <TableCell>{user.phone || '-'}</TableCell>
