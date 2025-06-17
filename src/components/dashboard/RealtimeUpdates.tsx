@@ -14,13 +14,15 @@ export const RealtimeUpdates = () => {
   useEffect(() => {
     // Clean up any existing channel first
     if (channelRef.current) {
+      console.log('Cleaning up existing RealtimeUpdates channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+      setIsConnected(false);
     }
 
     // Set up realtime subscriptions for critical tables
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('realtime-updates-dashboard')
       .on(
         'postgres_changes',
         {
@@ -77,20 +79,25 @@ export const RealtimeUpdates = () => {
         }
       )
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
+        console.log('RealtimeUpdates subscription status:', status);
         setIsConnected(status === 'SUBSCRIBED');
         
         if (status === 'SUBSCRIBED') {
+          console.log('RealtimeUpdates successfully connected');
           toast({
             title: "Koneksi Realtime Aktif",
             description: "Sistem akan otomatis memperbarui data terbaru",
           });
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('RealtimeUpdates connection error');
+          setIsConnected(false);
         }
       });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('RealtimeUpdates cleanup triggered');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

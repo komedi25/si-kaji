@@ -83,13 +83,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
 
       // Clean up any existing channel first
       if (channelRef.current) {
+        console.log('Cleaning up existing useNotifications channel');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
 
       // Subscribe to real-time notifications
       const channel = supabase
-        .channel(`user-notifications-${user.id}`)
+        .channel(`use-notifications-${user.id}`)
         .on(
           'postgres_changes',
           {
@@ -99,6 +100,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
+            console.log('useNotifications received new notification:', payload);
             const newNotification = payload.new as any;
             const typedNotification: Notification = {
               ...newNotification,
@@ -113,11 +115,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
             });
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('useNotifications subscription status:', status);
+        });
 
       channelRef.current = channel;
 
       return () => {
+        console.log('useNotifications cleanup triggered');
         if (channelRef.current) {
           supabase.removeChannel(channelRef.current);
           channelRef.current = null;

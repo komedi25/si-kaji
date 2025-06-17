@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -108,12 +109,13 @@ export function NotificationBell() {
 
     // Clean up any existing channel first
     if (channelRef.current) {
+      console.log('Cleaning up existing NotificationBell channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
 
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(`notification-bell-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -123,6 +125,7 @@ export function NotificationBell() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('NotificationBell received new notification:', payload);
           // Add new notification to cache
           queryClient.setQueryData(['notifications', user?.id], (old: Notification[] = []) => [
             payload.new as Notification,
@@ -138,11 +141,14 @@ export function NotificationBell() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('NotificationBell subscription status:', status);
+      });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('NotificationBell cleanup triggered');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

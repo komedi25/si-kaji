@@ -101,13 +101,14 @@ export function useNotificationSystem() {
 
     // Clean up any existing channel first
     if (channelRef.current) {
+      console.log('Cleaning up existing useNotificationSystem channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
 
     // Set up real-time subscription for notifications
     const channel = supabase
-      .channel(`notification-system:user_id=eq.${user.id}`)
+      .channel(`notification-system-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -117,6 +118,7 @@ export function useNotificationSystem() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('useNotificationSystem received new notification:', payload);
           const newNotification = payload.new as NotificationData;
           
           // Show toast notification
@@ -132,11 +134,14 @@ export function useNotificationSystem() {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('useNotificationSystem subscription status:', status);
+      });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('useNotificationSystem cleanup triggered');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
