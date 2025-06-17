@@ -59,7 +59,7 @@ export function AppRoutes() {
       } />
       
       <Route path="/students" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk']}>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
           <StudentManagement />
         </ProtectedRoute>
       } />
@@ -121,19 +121,19 @@ export function AppRoutes() {
       } />
       
       <Route path="/permits" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa']}>
           <PermitManagement />
         </ProtectedRoute>
       } />
       
       <Route path="/counseling" element={
-        <ProtectedRoute requiredRoles={['admin', 'guru_bk']}>
+        <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'siswa']}>
           <CounselingManagement />
         </ProtectedRoute>
       } />
       
       <Route path="/extracurricular" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'pelatih_ekstrakurikuler']}>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'pelatih_ekstrakurikuler', 'koordinator_ekstrakurikuler', 'siswa']}>
           <ExtracurricularManagement />
         </ProtectedRoute>
       } />
@@ -157,13 +157,13 @@ export function AppRoutes() {
       } />
       
       <Route path="/documents" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk']}>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
           <DocumentManagement />
         </ProtectedRoute>
       } />
       
       <Route path="/document-repository" element={
-        <ProtectedRoute>
+        <ProtectedRoute requiredRoles={['admin', 'siswa']}>
           <DocumentRepositoryManagement />
         </ProtectedRoute>
       } />
@@ -187,7 +187,7 @@ export function AppRoutes() {
       } />
       
       <Route path="/activity-proposal" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa']}>
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa', 'koordinator_ekstrakurikuler']}>
           <ActivityProposal />
         </ProtectedRoute>
       } />
