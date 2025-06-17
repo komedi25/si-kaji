@@ -62,24 +62,41 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
       return;
     }
 
+    if (!formData.email || !formData.password) {
+      toast({
+        title: "Error",
+        description: "Email dan password harus diisi",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Generate a UUID for the new profile
-      const profileId = crypto.randomUUID();
+      // Create user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        user_metadata: {
+          full_name: formData.full_name
+        },
+        email_confirm: true
+      });
 
-      // Create profile first
-      const { data: profile, error: profileError } = await supabase
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user');
+
+      // Create profile with the actual user ID
+      const { error: profileError } = await supabase
         .from('profiles')
         .insert({
-          id: profileId,
+          id: authData.user.id,
           full_name: formData.full_name,
           nip: formData.role === 'siswa' ? null : formData.nip || null,
           nis: formData.role === 'siswa' ? formData.nis || null : null,
           phone: formData.phone || null,
           address: formData.address || null
-        })
-        .select()
-        .single();
+        });
 
       if (profileError) throw profileError;
 
@@ -88,7 +105,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: profile.id,
+            user_id: authData.user.id,
             role: formData.role as any
           });
 
@@ -100,7 +117,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
         const { error: studentError } = await supabase
           .from('students')
           .insert({
-            user_id: profile.id,
+            user_id: authData.user.id,
             nis: formData.nis,
             full_name: formData.full_name,
             phone: formData.phone || null,
@@ -114,7 +131,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
       toast({
         title: "Berhasil",
-        description: "Pengguna berhasil ditambahkan. Data dapat diperbarui setelah pengguna login."
+        description: "Pengguna berhasil ditambahkan dan dapat login dengan email dan password yang diberikan."
       });
 
       // Reset form
@@ -150,6 +167,31 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
           <DialogTitle>Tambah Pengguna Baru</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              required
+              placeholder="email@example.com"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              required
+              placeholder="Minimal 8 karakter"
+              minLength={8}
+            />
+          </div>
+
           <div>
             <Label htmlFor="full_name">Nama Lengkap *</Label>
             <Input
