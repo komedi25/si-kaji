@@ -73,18 +73,30 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
     setLoading(true);
     try {
-      // Create user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      console.log('Creating user with signup method...');
+      
+      // Create user with regular signup
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        user_metadata: {
-          full_name: formData.full_name
-        },
-        email_confirm: true
+        options: {
+          data: {
+            full_name: formData.full_name
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error('Failed to create user');
+      }
+
+      console.log('User created successfully:', authData.user.id);
 
       // Create profile with the actual user ID
       const { error: profileError } = await supabase
@@ -98,19 +110,27 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
           address: formData.address || null
         });
 
-      if (profileError) throw profileError;
-
-      // Create user role - filter out 'osis' role as it's not in database enum
-      if (formData.role !== 'osis') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: formData.role as any
-          });
-
-        if (roleError) throw roleError;
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        throw profileError;
       }
+
+      console.log('Profile created successfully');
+
+      // Create user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: formData.role as any
+        });
+
+      if (roleError) {
+        console.error('Role error:', roleError);
+        throw roleError;
+      }
+
+      console.log('Role assigned successfully');
 
       // If role is student, create student record
       if (formData.role === 'siswa' && formData.nis) {
@@ -126,12 +146,17 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
             status: 'active'
           });
 
-        if (studentError) throw studentError;
+        if (studentError) {
+          console.error('Student error:', studentError);
+          throw studentError;
+        }
+
+        console.log('Student record created successfully');
       }
 
       toast({
         title: "Berhasil",
-        description: "Pengguna berhasil ditambahkan dan dapat login dengan email dan password yang diberikan."
+        description: "Pengguna berhasil ditambahkan. Mereka akan menerima email konfirmasi untuk mengaktifkan akun."
       });
 
       // Reset form
