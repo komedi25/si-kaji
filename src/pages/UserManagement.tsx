@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, UserPlus } from 'lucide-react';
+import { Loader2, Plus, UserPlus, Upload } from 'lucide-react';
 import { AppRole, UserProfile } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AddUserDialog } from '@/components/user/AddUserDialog';
+import { BulkUserImport } from '@/components/user/BulkUserImport';
 
 interface UserWithRoles extends UserProfile {
   email?: string;
@@ -28,6 +28,7 @@ export default function UserManagement() {
   const [newRole, setNewRole] = useState<AppRole | ''>('');
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
     { value: 'admin', label: 'Admin' },
@@ -185,10 +186,16 @@ export default function UserManagement() {
             <h1 className="text-2xl font-bold text-gray-900">Manajemen Pengguna</h1>
             <p className="text-gray-600">Kelola pengguna dan role dalam sistem</p>
           </div>
-          <Button onClick={() => setIsAddUserDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tambah Pengguna
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import Excel
+            </Button>
+            <Button onClick={() => setIsAddUserDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tambah Pengguna
+            </Button>
+          </div>
         </div>
 
         {/* Users Table */}
@@ -311,6 +318,13 @@ export default function UserManagement() {
           open={isAddUserDialogOpen}
           onOpenChange={setIsAddUserDialogOpen}
           onSuccess={fetchUsers}
+        />
+
+        {/* Bulk Import Dialog */}
+        <BulkUserImport
+          open={isBulkImportOpen}
+          onOpenChange={setIsBulkImportOpen}
+          onImportComplete={fetchUsers}
         />
       </div>
     </AppLayout>

@@ -47,7 +47,8 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
     { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
     { value: 'siswa', label: 'Siswa' },
     { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' }
+    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' },
+    { value: 'osis', label: 'OSIS' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,12 +126,14 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
       console.log('Profile created successfully');
 
-      // Create user role
+      // Create user role - with explicit type casting
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: formData.role as any
+          role: formData.role as any, // Type cast to bypass strict type checking
+          assigned_by: currentSession.session?.user.id || null,
+          is_active: true
         });
 
       if (roleError) {
@@ -150,7 +153,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
             full_name: formData.full_name,
             phone: formData.phone || null,
             address: formData.address || null,
-            gender: 'male', // Default, can be updated later
+            gender: 'L', // Default, can be updated later
             status: 'active'
           });
 
