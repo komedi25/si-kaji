@@ -1596,17 +1596,14 @@ export type Database = {
         Row: {
           id: string
           permission_id: string | null
-          role: Database["public"]["Enums"]["app_role"]
         }
         Insert: {
           id?: string
           permission_id?: string | null
-          role: Database["public"]["Enums"]["app_role"]
         }
         Update: {
           id?: string
           permission_id?: string | null
-          role?: Database["public"]["Enums"]["app_role"]
         }
         Relationships: [
           {
@@ -2476,7 +2473,7 @@ export type Database = {
           assigned_at: string | null
           assigned_by: string | null
           id: string
-          is_active: boolean | null
+          is_active: boolean
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -2484,7 +2481,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_by?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -2492,7 +2489,7 @@ export type Database = {
           assigned_at?: string | null
           assigned_by?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -2611,19 +2608,8 @@ export type Database = {
           tokens_used: number
         }[]
       }
-      get_user_roles: {
-        Args: { _user_id: string }
-        Returns: Database["public"]["Enums"]["app_role"][]
-      }
       has_permission: {
         Args: { _user_id: string; _permission_name: string }
-        Returns: boolean
-      }
-      has_role: {
-        Args: {
-          _user_id: string
-          _role: Database["public"]["Enums"]["app_role"]
-        }
         Returns: boolean
       }
       is_within_location_radius: {
@@ -2703,8 +2689,7 @@ export type Database = {
     }
     Enums: {
       app_role:
-        | "admin_sistem"
-        | "admin_kesiswaan"
+        | "admin"
         | "kepala_sekolah"
         | "tppk"
         | "arps"
@@ -2717,7 +2702,7 @@ export type Database = {
         | "siswa"
         | "orang_tua"
         | "penanggung_jawab_sarpras"
-        | "admin"
+        | "osis"
       case_category:
         | "bullying"
         | "kekerasan"
@@ -2852,8 +2837,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: [
-        "admin_sistem",
-        "admin_kesiswaan",
+        "admin",
         "kepala_sekolah",
         "tppk",
         "arps",
@@ -2866,7 +2850,7 @@ export const Constants = {
         "siswa",
         "orang_tua",
         "penanggung_jawab_sarpras",
-        "admin",
+        "osis",
       ],
       case_category: [
         "bullying",

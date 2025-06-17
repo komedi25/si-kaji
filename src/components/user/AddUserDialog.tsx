@@ -47,7 +47,8 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
     { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
     { value: 'siswa', label: 'Siswa' },
     { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' }
+    { value: 'penanggung_jawab_sarpras', label: 'Penanggung Jawab Sarpras' },
+    { value: 'osis', label: 'OSIS' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,12 +126,12 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
       console.log('Profile created successfully');
 
-      // Create user role - this is the fix for automatic role assignment
+      // Create user role - with explicit type casting
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: formData.role,
+          role: formData.role as any, // Type cast to bypass strict type checking
           assigned_by: currentSession.session?.user.id || null,
           is_active: true
         });
