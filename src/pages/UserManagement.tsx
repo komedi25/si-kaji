@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +31,7 @@ export default function UserManagement() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
-    { value: 'admin', label: 'Admin' },
+    { value: 'admin', label: 'Admin Sistem' },
     { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
     { value: 'tppk', label: 'TPPK' },
     { value: 'arps', label: 'ARPS' },
@@ -53,59 +54,42 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Mengambil data pengguna...');
       
-      // Fetch profiles with detailed logging
+      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
 
       if (profilesError) {
-        console.error('❌ Error profiles:', profilesError);
         throw profilesError;
       }
 
-      console.log('📋 Data profiles ditemukan:', profiles?.length || 0);
-      console.log('📋 Detail profiles:', profiles);
-
-      // Fetch all user roles with detailed logging
+      // Fetch user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('*');
+        .select('*')
+        .eq('is_active', true);
 
       if (rolesError) {
-        console.error('❌ Error roles:', rolesError);
         throw rolesError;
       }
 
-      console.log('🎭 Data user_roles ditemukan:', userRoles?.length || 0);
-      console.log('🎭 Detail user_roles:', userRoles);
-
-      // Filter only active roles
-      const activeRoles = userRoles?.filter(ur => ur.is_active === true) || [];
-      console.log('✅ Role aktif setelah filter:', activeRoles.length);
-      console.log('✅ Detail role aktif:', activeRoles);
-
       // Combine the data
-      const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
-        const roles = activeRoles
-          ?.filter(ur => ur.user_id === profile.id)
-          .map(ur => ur.role as AppRole) || [];
-
-        console.log(`👤 User ${profile.full_name} (${profile.id}) memiliki roles:`, roles);
+      const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => {
+        const roles = (userRoles || [])
+          .filter(ur => ur.user_id === profile.id)
+          .map(ur => ur.role as AppRole);
 
         return {
           ...profile,
           roles
         };
-      }) || [];
-
-      console.log('✅ Total pengguna dengan roles:', usersWithRoles.length);
-      console.log('✅ Detail pengguna final:', usersWithRoles);
+      });
       
       setUsers(usersWithRoles);
+      console.log('Users loaded:', usersWithRoles);
     } catch (error) {
-      console.error('❌ Error fetchUsers:', error);
+      console.error('Error fetchUsers:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data pengguna",
@@ -223,13 +207,21 @@ export default function UserManagement() {
           <CardHeader>
             <CardTitle>Daftar Pengguna</CardTitle>
             <CardDescription>
-              Kelola role dan akses pengguna dalam sistem ({users.length} pengguna ditemukan)
+              Kelola role dan akses pengguna dalam sistem ({users.length} pengguna)
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Memuat data pengguna...</span>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">Tidak ada pengguna ditemukan</p>
+                <Button onClick={fetchUsers} variant="outline">
+                  Refresh Data
+                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -244,54 +236,44 @@ export default function UserManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
-                          <div className="text-gray-500">
-                            Tidak ada pengguna ditemukan. Silakan cek console untuk detail debug.
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.full_name}</TableCell>
+                        <TableCell>{user.nip || user.nis || '-'}</TableCell>
+                        <TableCell>{user.phone || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.length === 0 ? (
+                              <Badge variant="outline" className="text-xs">
+                                Belum ada role
+                              </Badge>
+                            ) : (
+                              user.roles.map((role, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {getRoleLabel(role)}
+                                  <button
+                                    onClick={() => removeRoleFromUser(user.id, role)}
+                                    className="ml-1 hover:text-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </Badge>
+                              ))
+                            )}
                           </div>
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedUser(user)}
+                          >
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Tambah Role
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    ) : (
-                      users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.full_name}</TableCell>
-                          <TableCell>{user.nip || user.nis || '-'}</TableCell>
-                          <TableCell>{user.phone || '-'}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {user.roles.length === 0 ? (
-                                <Badge variant="outline" className="text-xs">
-                                  Belum ada role
-                                </Badge>
-                              ) : (
-                                user.roles.map((role, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {getRoleLabel(role)}
-                                    <button
-                                      onClick={() => removeRoleFromUser(user.id, role)}
-                                      className="ml-1 hover:text-red-600"
-                                    >
-                                      ×
-                                    </button>
-                                  </Badge>
-                                ))
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedUser(user)}
-                            >
-                              <UserPlus className="h-4 w-4 mr-1" />
-                              Tambah Role
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               </div>
@@ -301,13 +283,12 @@ export default function UserManagement() {
 
         {/* Add Role Modal */}
         {selectedUser && (
-          <Card className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded-lg w-96 max-w-md">
-              <h3 className="text-lg font-semibold mb-4">
-                Tambah Role untuk {selectedUser.full_name}
-              </h3>
-              
-              <div className="space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <Card className="w-96 max-w-md">
+              <CardHeader>
+                <CardTitle>Tambah Role untuk {selectedUser.full_name}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
                   <label htmlFor="role" className="block text-sm font-medium mb-2">Pilih Role</label>
                   <Select value={newRole} onValueChange={(value) => setNewRole(value as AppRole)}>
@@ -344,9 +325,9 @@ export default function UserManagement() {
                     Tambah Role
                   </Button>
                 </div>
-              </div>
-            </div>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Add User Dialog */}
