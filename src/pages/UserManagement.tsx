@@ -19,6 +19,11 @@ interface UserWithRoles extends UserProfile {
   roles: AppRole[];
 }
 
+interface AuthUser {
+  id: string;
+  email?: string;
+}
+
 export default function UserManagement() {
   const { user, hasRole } = useAuth();
   const { toast } = useToast();
@@ -97,8 +102,8 @@ export default function UserManagement() {
           ?.filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole) || [];
 
-        // Cari email dari auth users
-        const authUser = authUsers?.users?.find(au => au.id === profile.id);
+        // Cari email dari auth users dengan type assertion yang aman
+        const authUser = authUsers?.users?.find((au: AuthUser) => au.id === profile.id);
         const email = authUser?.email || 'Email tidak tersedia';
 
         return {
