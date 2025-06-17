@@ -14,22 +14,6 @@ interface BulkUserImportProps {
   onImportComplete: () => void;
 }
 
-interface CSVRow {
-  Email: string;
-  Password: string;
-  'Nama Lengkap': string;
-  Role: string;
-  NIP: string;
-  NIS: string;
-  Telepon: string;
-  Alamat: string;
-}
-
-interface AuthUser {
-  id: string;
-  email?: string;
-}
-
 export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUserImportProps) => {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState<{
@@ -58,12 +42,12 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
     document.body.removeChild(link);
   };
 
-  const parseCSV = (text: string): CSVRow[] => {
+  const parseCSV = (text: string): any[] => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"(.*)"$/, '$1'));
-    const data: CSVRow[] = [];
+    const data = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -97,7 +81,7 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
         row[header] = values[index] || '';
       });
       
-      data.push(row as CSVRow);
+      data.push(row);
     }
 
     return data;
@@ -108,7 +92,7 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
       'admin', 'kepala_sekolah', 'tppk', 'arps', 'p4gn',
       'koordinator_ekstrakurikuler', 'wali_kelas', 'guru_bk',
       'waka_kesiswaan', 'pelatih_ekstrakurikuler', 'siswa',
-      'orang_tua', 'penanggung_jawab_sarpras', 'osis'
+      'orang_tua', 'penanggung_jawab_sarpras'
     ];
     
     return validRoles.includes(role as AppRole) ? role as AppRole : null;
@@ -144,34 +128,34 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
       for (const [index, row] of data.entries()) {
         try {
           // Validate required fields
-          if (!row.Email || !row.Password || !row['Nama Lengkap'] || !row.Role) {
+          if (!row['Email'] || !row['Password'] || !row['Nama Lengkap'] || !row['Role']) {
             results.errors.push(`Baris ${index + 2}: Email, Password, Nama Lengkap, dan Role wajib diisi`);
             continue;
           }
 
           // Validate role
-          const role = validateRole(row.Role);
+          const role = validateRole(row['Role']);
           if (!role) {
-            results.errors.push(`Baris ${index + 2}: Role "${row.Role}" tidak valid`);
+            results.errors.push(`Baris ${index + 2}: Role "${row['Role']}" tidak valid`);
             continue;
           }
 
           // Check if user already exists
-          const { data: existingUsers, error: checkError } = await supabase.auth.admin.listUsers();
+          const { data: existingUser, error: checkError } = await supabase.auth.admin.listUsers();
           if (checkError) {
             console.warn('Could not check existing users:', checkError);
           }
 
-          const userExists = existingUsers?.users?.some((u: AuthUser) => u.email === row.Email);
+          const userExists = existingUser?.users?.some(u => u.email === row['Email']);
           if (userExists) {
-            results.errors.push(`Baris ${index + 2}: Email ${row.Email} sudah terdaftar`);
+            results.errors.push(`Baris ${index + 2}: Email ${row['Email']} sudah terdaftar`);
             continue;
           }
 
           // Create user
           const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: row.Email,
-            password: row.Password,
+            email: row['Email'],
+            password: row['Password'],
             options: {
               data: {
                 full_name: row['Nama Lengkap']
@@ -201,10 +185,10 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
             .insert({
               id: authData.user.id,
               full_name: row['Nama Lengkap'],
-              nip: role === 'siswa' ? null : row.NIP || null,
-              nis: role === 'siswa' ? row.NIS || null : null,
-              phone: row.Telepon || null,
-              address: row.Alamat || null
+              nip: role === 'siswa' ? null : row['NIP'] || null,
+              nis: role === 'siswa' ? row['NIS'] || null : null,
+              phone: row['Telepon'] || null,
+              address: row['Alamat'] || null
             });
 
           if (profileError) {
@@ -212,12 +196,12 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
             continue;
           }
 
-          // Assign role with type casting
+          // Assign role
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert({
               user_id: authData.user.id,
-              role: role as any, // Type cast to bypass strict type checking
+              role: role,
               assigned_by: currentSession.session?.user.id || null,
               is_active: true
             });
@@ -228,15 +212,15 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
           }
 
           // If role is student, create student record
-          if (role === 'siswa' && row.NIS) {
+          if (role === 'siswa' && row['NIS']) {
             const { error: studentError } = await supabase
               .from('students')
               .insert({
                 user_id: authData.user.id,
-                nis: row.NIS,
+                nis: row['NIS'],
                 full_name: row['Nama Lengkap'],
-                phone: row.Telepon || null,
-                address: row.Alamat || null,
+                phone: row['Telepon'] || null,
+                address: row['Alamat'] || null,
                 gender: 'L',
                 status: 'active'
               });
@@ -363,7 +347,7 @@ export const BulkUserImport = ({ open, onOpenChange, onImportComplete }: BulkUse
               <li>Download template terlebih dahulu</li>
               <li>Isi data sesuai format template</li>
               <li>Email, Password, Nama Lengkap, dan Role wajib diisi</li>
-              <li>Role yang valid: admin, guru_bk, siswa, osis, dll.</li>
+              <li>Role yang valid: admin, guru_bk, siswa, dll.</li>
               <li>Untuk siswa, isi kolom NIS. Untuk staff, isi kolom NIP</li>
               <li>Upload file CSV yang sudah diisi</li>
             </ul>
