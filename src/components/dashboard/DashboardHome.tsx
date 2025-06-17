@@ -1,178 +1,95 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
-import { RealtimeUpdates } from '@/components/dashboard/RealtimeUpdates';
-import { RoleBasedStats } from '@/components/dashboard/RoleBasedStats';
-import { SelfAttendanceWidget } from '@/components/attendance/SelfAttendanceWidget';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Users, UserCheck, AlertTriangle, Trophy } from 'lucide-react';
-
-interface DashboardStats {
-  totalStudents: number;
-  attendanceToday: {
-    total: number;
-    present: number;
-    percentage: number;
-  };
-  activeViolations: number;
-  monthlyAchievements: number;
-}
+import { RoleBasedStats } from './RoleBasedStats';
+import { RealtimeUpdates } from './RealtimeUpdates';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, User, Shield } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export const DashboardHome = () => {
-  const { hasRole } = useAuth();
+  const { user, loading, refreshUserData } = useAuth();
 
-  const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async (): Promise<DashboardStats> => {
-      const today = new Date().toISOString().split('T')[0];
-      const thisMonth = new Date().toISOString().slice(0, 7);
-
-      // Get total students
-      const { data: students } = await supabase
-        .from('students')
-        .select('id, status')
-        .eq('status', 'active');
-
-      const totalStudents = students?.length || 0;
-
-      // Get today's attendance
-      const { data: todayAttendance } = await supabase
-        .from('student_attendances')
-        .select('status')
-        .eq('attendance_date', today);
-
-      const attendanceTotal = todayAttendance?.length || 0;
-      const attendancePresent = todayAttendance?.filter(a => a.status === 'present').length || 0;
-      const attendancePercentage = attendanceTotal > 0 ? (attendancePresent / attendanceTotal) * 100 : 0;
-
-      // Get active violations
-      const { data: violations } = await supabase
-        .from('student_violations')
-        .select('id')
-        .eq('status', 'active');
-
-      const activeViolations = violations?.length || 0;
-
-      // Get this month's achievements
-      const { data: achievements } = await supabase
-        .from('student_achievements')
-        .select('id')
-        .eq('status', 'verified')
-        .gte('achievement_date', `${thisMonth}-01`)
-        .lt('achievement_date', `${thisMonth}-32`);
-
-      const monthlyAchievements = achievements?.length || 0;
-
-      return {
-        totalStudents,
-        attendanceToday: {
-          total: attendanceTotal,
-          present: attendancePresent,
-          percentage: attendancePercentage
-        },
-        activeViolations,
-        monthlyAchievements
-      };
-    },
-    refetchInterval: 30000 // Refresh every 30 seconds
-  });
-
-  const StatsCard = ({ title, value, description, icon: Icon, trend = 'neutral' }: {
-    title: string;
-    value: string | number;
-    description: string;
-    icon: any;
-    trend?: 'up' | 'down' | 'neutral';
-  }) => {
-    const getTrendColor = () => {
-      switch (trend) {
-        case 'up':
-          return 'text-green-600';
-        case 'down':
-          return 'text-red-600';
-        default:
-          return 'text-gray-600';
-      }
-    };
-
-    return (
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{isLoading ? "..." : value.toLocaleString()}</div>
-          <p className={`text-xs ${getTrendColor()}`}>
-            {description}
-          </p>
-        </CardContent>
-      </Card>
-    );
+  const handleRefreshData = async () => {
+    await refreshUserData();
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+      {/* Welcome Section */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Selamat Datang di SIAKAD SMKN 1 Kendal
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Sistem Informasi Akademik dan Kesiswaan
+          </p>
+        </div>
+        <Button 
+          onClick={handleRefreshData}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh Data
+        </Button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Siswa"
-          value={dashboardStats?.totalStudents || 0}
-          description="Siswa aktif terdaftar"
-          icon={Users}
-        />
-        <StatsCard
-          title="Presensi Hari Ini"
-          value={`${dashboardStats?.attendanceToday.percentage.toFixed(1) || 0}%`}
-          description={`${dashboardStats?.attendanceToday.present || 0} dari ${dashboardStats?.attendanceToday.total || 0} siswa`}
-          icon={UserCheck}
-        />
-        <StatsCard
-          title="Pelanggaran Aktif"
-          value={dashboardStats?.activeViolations || 0}
-          description="Perlu tindak lanjut"
-          icon={AlertTriangle}
-        />
-        <StatsCard
-          title="Prestasi Bulan Ini"
-          value={dashboardStats?.monthlyAchievements || 0}
-          description="Prestasi terverifikasi"
-          icon={Trophy}
-        />
-      </div>
+      {/* User Info Debug Card - Remove this in production */}
+      {user && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Informasi User (Debug)
+            </CardTitle>
+            <CardDescription>
+              Informasi untuk debugging - akan dihapus di production
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2">
+              <strong>Email:</strong> {user.email}
+            </div>
+            <div className="flex items-center gap-2">
+              <strong>Nama:</strong> {user.profile?.full_name || 'Tidak tersedia'}
+            </div>
+            <div className="flex items-center gap-2">
+              <strong>Roles:</strong> 
+              {user.roles && user.roles.length > 0 ? (
+                <div className="flex gap-1">
+                  {user.roles.map((role, index) => (
+                    <Badge key={index} variant="secondary">
+                      <Shield className="h-3 w-3 mr-1" />
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <Badge variant="destructive">Tidak ada role</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-12">
-        {/* Self Attendance Widget - Only for students */}
-        {hasRole('siswa') && (
-          <div className="lg:col-span-4">
-            <SelfAttendanceWidget />
-          </div>
-        )}
-        
-        {/* Role-based Statistics */}
-        <div className={hasRole('siswa') ? 'lg:col-span-8' : 'lg:col-span-12'}>
-          <RoleBasedStats />
-        </div>
-      </div>
+      {/* Stats Section */}
+      <RoleBasedStats />
 
-      {/* Charts and Updates */}
-      <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
-        <div className="order-1">
-          <DashboardCharts />
-        </div>
-        <div className="order-2">
-          <RealtimeUpdates />
-        </div>
-      </div>
+      {/* Realtime Updates */}
+      <RealtimeUpdates />
     </div>
   );
 };

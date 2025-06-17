@@ -13,6 +13,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   hasPermission: (permission: string) => Promise<boolean>;
+  refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,6 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
     try {
+      console.log('Fetching roles for user:', userId);
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -67,7 +69,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return [];
       }
       
-      return data.map(item => item.role as AppRole);
+      console.log('Fetched roles:', data);
+      const roles = data.map(item => item.role as AppRole);
+      
+      // Auto-assign admin role if user email is admin@smkn1kendal.sch.id and no roles exist
+      if (roles.length === 0) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user?.email === 'admin@smkn1kendal.sch.id') {
+          console.log('Auto-assigning admin role');
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role: 'admin' as any,
+              assigned_by: userId,
+              is_active: true
+            });
+          
+          if (!roleError) {
+            console.log('Admin role assigned successfully');
+            return ['admin'];
+          } else {
+            console.error('Error assigning admin role:', roleError);
+          }
+        }
+      }
+      
+      return roles;
     } catch (error) {
       console.error('Error in fetchUserRoles:', error);
       return [];
@@ -80,8 +108,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return;
     }
 
+    console.log('Updating auth user:', authUser.email);
     const profile = await fetchUserProfile(authUser.id);
     const roles = await fetchUserRoles(authUser.id);
+    
+    console.log('User roles loaded:', roles);
 
     setUser({
       id: authUser.id,
@@ -89,6 +120,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       profile: profile || undefined,
       roles
     });
+  };
+
+  const refreshUserData = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+      await updateAuthUser(currentUser);
+    }
   };
 
   useEffect(() => {
@@ -102,7 +140,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Defer Supabase calls to prevent deadlock
           setTimeout(() => {
             updateAuthUser(session.user);
-          }, 0);
+          }, 100); // Increased timeout slightly
         } else {
           setUser(null);
         }
@@ -113,23 +151,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       if (session?.user) {
         setTimeout(() => {
           updateAuthUser(session.user);
-        }, 0);
+        }, 100);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    console.log('Attempting sign in for:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // If sign in successful, wait a bit then refresh user data
+    if (!error) {
+      setTimeout(async () => {
+        await refreshUserData();
+      }, 500);
+    }
+    
     return { error };
   };
 
@@ -154,7 +203,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const hasRole = (role: AppRole): boolean => {
-    return user?.roles.includes(role) || false;
+    const result = user?.roles.includes(role) || false;
+    console.log(`Checking role ${role}:`, result, 'User roles:', user?.roles);
+    return result;
   };
 
   const hasPermission = async (permission: string): Promise<boolean> => {
@@ -186,7 +237,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signUp,
     signOut,
     hasRole,
-    hasPermission
+    hasPermission,
+    refreshUserData
   };
 
   return (
