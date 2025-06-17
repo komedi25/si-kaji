@@ -59,37 +59,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
     try {
-      console.log('Fetching roles for user:', userId);
-      const { data, error } = await supabase
+      console.log('=== FETCHING ROLES FOR USER ===', userId);
+      
+      // Try direct query first
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('is_active', true);
       
-      if (error) {
-        console.error('Error fetching roles:', error);
+      console.log('Roles query result:', { rolesData, rolesError });
+      
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+        
+        // If there's an error, try to check if it's a permission issue
+        // Let's try to query without filters first
+        const { data: allRoles, error: allRolesError } = await supabase
+          .from('user_roles')
+          .select('*');
+        
+        console.log('All roles query (debugging):', { allRoles, allRolesError });
+        
         return [];
       }
       
-      console.log('Raw roles data from database:', data);
-      const roles = data.map(item => item.role as AppRole);
-      console.log('Mapped roles:', roles);
+      const roles = rolesData?.map(item => item.role as AppRole) || [];
+      console.log('Extracted roles:', roles);
       
-      // Auto-assign admin role if user email is admin@smkn1kendal.sch.id and no roles exist
+      // If no roles found and user is admin email, try to assign admin role
       if (roles.length === 0) {
         const { data: userData } = await supabase.auth.getUser();
-        console.log('No roles found, checking if admin email:', userData.user?.email);
+        console.log('No roles found, checking user email:', userData.user?.email);
         
         if (userData.user?.email === 'admin@smkn1kendal.sch.id') {
           console.log('Admin email detected, attempting to assign admin role');
-          
-          // First check if user_roles table exists and is accessible
-          const { data: testData, error: testError } = await supabase
-            .from('user_roles')
-            .select('id')
-            .limit(1);
-          
-          console.log('User roles table test:', { testData, testError });
           
           const { data: insertData, error: roleError } = await supabase
             .from('user_roles')
@@ -104,23 +108,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log('Role insertion result:', { insertData, roleError });
           
           if (!roleError && insertData && insertData.length > 0) {
-            console.log('Admin role assigned successfully:', insertData);
+            console.log('Admin role assigned successfully');
             return ['admin'];
           } else {
-            console.error('Error assigning admin role:', roleError);
-            
-            // Try to check if role was actually inserted despite error
-            const { data: checkData, error: checkError } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', userId)
-              .eq('is_active', true);
-            
-            console.log('Role check after insertion:', { checkData, checkError });
-            
-            if (checkData && checkData.length > 0) {
-              return checkData.map(item => item.role as AppRole);
-            }
+            console.error('Failed to assign admin role:', roleError);
           }
         }
       }
@@ -139,27 +130,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return;
     }
 
-    console.log('Updating auth user:', authUser.email, 'ID:', authUser.id);
+    console.log('=== UPDATING AUTH USER ===');
+    console.log('User ID:', authUser.id);
+    console.log('User Email:', authUser.email);
+    
     const profile = await fetchUserProfile(authUser.id);
     const roles = await fetchUserRoles(authUser.id);
     
-    console.log('Final user data:', {
-      id: authUser.id,
-      email: authUser.email,
-      profile: profile,
-      roles: roles
-    });
+    console.log('=== FINAL USER DATA ===');
+    console.log('Profile:', profile);
+    console.log('Roles:', roles);
 
-    setUser({
+    const userData: AuthUser = {
       id: authUser.id,
       email: authUser.email || '',
       profile: profile || undefined,
       roles
-    });
+    };
+    
+    console.log('Setting user state:', userData);
+    setUser(userData);
   };
 
   const refreshUserData = async () => {
-    console.log('Refreshing user data...');
+    console.log('=== REFRESHING USER DATA ===');
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (currentUser) {
       await updateAuthUser(currentUser);
@@ -167,19 +161,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    console.log('Setting up auth state listener...');
+    console.log('=== SETTING UP AUTH STATE LISTENER ===');
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, 'User email:', session?.user?.email);
+        console.log('=== AUTH STATE CHANGED ===');
+        console.log('Event:', event);
+        console.log('Session user email:', session?.user?.email);
+        
         setSession(session);
         
         if (session?.user) {
-          // Defer Supabase calls to prevent deadlock
+          // Use a longer timeout to ensure the database is ready
           setTimeout(() => {
             updateAuthUser(session.user);
-          }, 200); // Increased timeout slightly more
+          }, 500);
         } else {
           setUser(null);
         }
@@ -190,12 +187,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
+      console.log('=== INITIAL SESSION CHECK ===');
+      console.log('Session user email:', session?.user?.email);
+      
       setSession(session);
       if (session?.user) {
         setTimeout(() => {
           updateAuthUser(session.user);
-        }, 200);
+        }, 500);
       } else {
         setLoading(false);
       }
@@ -205,18 +204,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting sign in for:', email);
+    console.log('=== ATTEMPTING SIGN IN ===', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
-    // If sign in successful, wait a bit then refresh user data
     if (!error) {
+      // Wait a bit then refresh user data
       setTimeout(async () => {
         console.log('Sign in successful, refreshing user data...');
         await refreshUserData();
-      }, 1000); // Increased timeout for better reliability
+      }, 1000);
     } else {
       console.error('Sign in error:', error);
     }
