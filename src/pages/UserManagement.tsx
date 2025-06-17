@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,11 +18,6 @@ import { BulkUserImport } from '@/components/user/BulkUserImport';
 interface UserWithRoles extends UserProfile {
   email?: string;
   roles: AppRole[];
-}
-
-interface AuthUser {
-  id: string;
-  email?: string;
 }
 
 export default function UserManagement() {
@@ -62,39 +58,34 @@ export default function UserManagement() {
       setLoading(true);
       console.log('🔍 Fetching users data...');
       
-      // Fetch profiles dengan debugging
+      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
 
       console.log('📋 Profiles data:', profiles);
-      console.log('❌ Profiles error:', profilesError);
-
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        console.error('❌ Profiles error:', profilesError);
         setDebugInfo(`Error fetching profiles: ${profilesError.message}`);
         throw profilesError;
       }
 
-      // Fetch auth users untuk mendapatkan email
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      console.log('👥 Auth users:', authUsers);
-      console.log('❌ Auth error:', authError);
-
-      // Fetch all user roles dengan debugging
+      // Fetch all user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*')
         .eq('is_active', true);
 
       console.log('🎭 User roles data:', userRoles);
-      console.log('❌ Roles error:', rolesError);
-
       if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
+        console.error('❌ Roles error:', rolesError);
         setDebugInfo(prev => prev + `\nError fetching roles: ${rolesError.message}`);
         throw rolesError;
       }
+
+      // Fetch emails dari auth.users untuk semua users
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      console.log('👤 Current auth user:', authData);
 
       // Combine the data
       const usersWithRoles: UserWithRoles[] = profiles?.map(profile => {
@@ -102,22 +93,18 @@ export default function UserManagement() {
           ?.filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole) || [];
 
-        // Cari email dari auth users dengan type assertion yang aman
-        const authUser = authUsers?.users?.find((au: AuthUser) => au.id === profile.id);
-        const email = authUser?.email || 'Email tidak tersedia';
-
         return {
           ...profile,
-          email,
+          email: 'Email tersembunyi (perlu service role)',
           roles
         };
       }) || [];
 
       console.log('✅ Final users with roles:', usersWithRoles);
-      setDebugInfo(`Successfully loaded ${usersWithRoles.length} users. Profiles: ${profiles?.length || 0}, Roles: ${userRoles?.length || 0}`);
+      setDebugInfo(`Successfully loaded ${usersWithRoles.length} users. Profiles: ${profiles?.length || 0}, User roles: ${userRoles?.length || 0}`);
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Critical error:', error);
       setDebugInfo(`Critical error: ${error}`);
       toast({
         title: "Error",
@@ -260,7 +247,6 @@ export default function UserManagement() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nama</TableHead>
-                      <TableHead>Email</TableHead>
                       <TableHead>NIP/NIS</TableHead>
                       <TableHead>Telepon</TableHead>
                       <TableHead>Role</TableHead>
@@ -270,15 +256,14 @@ export default function UserManagement() {
                   <TableBody>
                     {users.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                          Tidak ada pengguna ditemukan. Periksa koneksi database dan RLS policies.
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                          Tidak ada pengguna ditemukan. Pastikan sudah ada data di tabel profiles.
                         </TableCell>
                       </TableRow>
                     ) : (
                       users.map((user) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.full_name}</TableCell>
-                          <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
                           <TableCell>{user.nip || user.nis || '-'}</TableCell>
                           <TableCell>{user.phone || '-'}</TableCell>
                           <TableCell>
