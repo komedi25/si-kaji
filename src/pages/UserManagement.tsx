@@ -31,24 +31,26 @@ export default function UserManagement() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const roleOptions: { value: AppRole; label: string }[] = [
-    { value: 'admin', label: 'admin' },
-    { value: 'kepala_sekolah', label: 'kepala_sekolah' },
-    { value: 'tppk', label: 'tppk' },
-    { value: 'arps', label: 'arps' },
-    { value: 'p4gn', label: 'p4gn' },
-    { value: 'koordinator_ekstrakurikuler', label: 'koordinator_ekstrakurikuler' },
-    { value: 'wali_kelas', label: 'wali_kelas' },
-    { value: 'guru_bk', label: 'guru_bk' },
-    { value: 'waka_kesiswaan', label: 'waka_kesiswaan' },
-    { value: 'pelatih_ekstrakurikuler', label: 'pelatih_ekstrakurikuler' },
-    { value: 'siswa', label: 'siswa' },
-    { value: 'orang_tua', label: 'orang_tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'penanggung_jawab_sarpras' },
-    { value: 'osis', label: 'osis' }
+    { value: 'admin', label: 'Admin Sistem' },
+    { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
+    { value: 'waka_kesiswaan', label: 'Waka Kesiswaan' },
+    { value: 'admin_kesiswaan', label: 'Admin Kesiswaan/TU' },
+    { value: 'tppk', label: 'TPPK' },
+    { value: 'arps', label: 'ARPS' },
+    { value: 'p4gn', label: 'P4GN' },
+    { value: 'koordinator_ekstrakurikuler', label: 'Koordinator Ekstrakurikuler' },
+    { value: 'wali_kelas', label: 'Wali Kelas' },
+    { value: 'guru_bk', label: 'Guru BK' },
+    { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
+    { value: 'siswa', label: 'Siswa' },
+    { value: 'orang_tua', label: 'Orang Tua' },
+    { value: 'penanggung_jawab_sarpras', label: 'PJ Sarpras' },
+    { value: 'osis', label: 'OSIS' }
   ];
 
   const getRoleLabel = (role: AppRole) => {
-    return role;
+    const found = roleOptions.find(option => option.value === role);
+    return found ? found.label : role;
   };
 
   const fetchUsers = async () => {
@@ -68,7 +70,7 @@ export default function UserManagement() {
 
       console.log('Profiles fetched:', profiles?.length || 0, 'profiles');
 
-      // Fetch all user roles - with new RLS policy, admin should see all roles
+      // Fetch all user roles - with new RLS policy and security definer function, admin should see all roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*')
@@ -76,7 +78,8 @@ export default function UserManagement() {
 
       if (rolesError) {
         console.error('Error fetching user roles:', rolesError);
-        throw rolesError;
+        // Don't throw here, continue with empty roles for graceful degradation
+        console.warn('Continuing with empty roles due to RLS policy issue');
       }
 
       console.log('User roles fetched:', userRoles?.length || 0, 'role assignments');
@@ -135,7 +138,7 @@ export default function UserManagement() {
       console.error('Error adding role:', error);
       toast({
         title: "Error",
-        description: "Gagal menambahkan role",
+        description: "Gagal menambahkan role: " + (error as Error).message,
         variant: "destructive"
       });
     } finally {
@@ -163,7 +166,7 @@ export default function UserManagement() {
       console.error('Error removing role:', error);
       toast({
         title: "Error",
-        description: "Gagal menghapus role",
+        description: "Gagal menghapus role: " + (error as Error).message,
         variant: "destructive"
       });
     }

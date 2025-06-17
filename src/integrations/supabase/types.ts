@@ -2612,6 +2612,10 @@ export type Database = {
         Args: { _user_id: string; _permission_name: string }
         Returns: boolean
       }
+      is_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       is_within_location_radius: {
         Args: { student_lat: number; student_lng: number; location_id: string }
         Returns: boolean
