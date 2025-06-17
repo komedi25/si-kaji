@@ -2,10 +2,8 @@
 import { useAuth } from '@/hooks/useAuth';
 import { RoleBasedStats } from './RoleBasedStats';
 import { RealtimeUpdates } from './RealtimeUpdates';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, User, Shield } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 export const DashboardHome = () => {
@@ -53,52 +51,6 @@ export const DashboardHome = () => {
           </Button>
         </div>
       </div>
-
-      {/* User Info Card */}
-      {user && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Informasi User
-            </CardTitle>
-            <CardDescription>
-              Status login dan role pengguna saat ini
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <strong>Email:</strong> 
-                  <span className="text-sm">{user.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <strong>Nama:</strong> 
-                  <span className="text-sm">{user.profile?.full_name || 'Belum diset'}</span>
-                </div>
-                <div className="space-y-1">
-                  <strong>Roles:</strong>
-                  <div className="flex flex-wrap gap-1">
-                    {user.roles && user.roles.length > 0 ? (
-                      user.roles.map((role, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          <Shield className="h-3 w-3 mr-1" />
-                          {role}
-                        </Badge>
-                      ))
-                    ) : (
-                      <Badge variant="destructive" className="text-xs">
-                        Tidak ada role
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Stats Section */}
       <RoleBasedStats />
