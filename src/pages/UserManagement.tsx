@@ -54,24 +54,32 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching users for admin:', user?.id);
       
-      // Fetch profiles
+      // Fetch profiles - admin should be able to see all profiles now
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
 
       if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
         throw profilesError;
       }
 
-      // Fetch user roles
+      console.log('Profiles fetched:', profiles?.length || 0, 'profiles');
+
+      // Fetch user roles - admin should be able to see all roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('*');
 
       if (rolesError) {
-        throw rolesError;
+        console.error('Error fetching user roles:', rolesError);
+        // Don't throw error here, just log it and continue with empty roles
+        console.warn('Could not fetch user roles, continuing with empty roles');
       }
+
+      console.log('User roles fetched:', userRoles?.length || 0, 'role assignments');
 
       // Combine the data
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => {
@@ -85,6 +93,7 @@ export default function UserManagement() {
         };
       });
       
+      console.log('Combined users with roles:', usersWithRoles.length, 'users');
       setUsers(usersWithRoles);
     } catch (error) {
       console.error('Error in fetchUsers:', error);
@@ -162,7 +171,10 @@ export default function UserManagement() {
 
   useEffect(() => {
     if (hasRole('admin')) {
+      console.log('User has admin role, fetching users...');
       fetchUsers();
+    } else {
+      console.log('User does not have admin role');
     }
   }, [hasRole]);
 
@@ -221,7 +233,7 @@ export default function UserManagement() {
               <div className="text-center py-8">
                 <Alert className="mb-4">
                   <AlertDescription>
-                    Tidak ada pengguna ditemukan.
+                    Tidak ada pengguna ditemukan. Silakan tambah pengguna baru atau periksa koneksi database.
                   </AlertDescription>
                 </Alert>
                 <Button onClick={fetchUsers} variant="outline">
