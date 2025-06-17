@@ -39,7 +39,10 @@ import {
   MessageSquare,
   TrendingUp,
   ChevronDown,
-  Bot
+  Bot,
+  User,
+  CheckSquare,
+  FileCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -64,6 +67,90 @@ export const Sidebar = () => {
       title: 'Dashboard',
       href: '/dashboard',
       icon: Home,
+    },
+    {
+      title: 'Presensi Saya',
+      href: '/attendance/self',
+      icon: Calendar,
+      requiredRoles: ['siswa'],
+    },
+    {
+      title: 'Perizinan',
+      href: '#',
+      icon: FileX,
+      requiredRoles: ['siswa'],
+      children: [
+        {
+          title: 'Ajukan Izin',
+          href: '/permits?tab=form',
+          icon: FileX,
+          requiredRoles: ['siswa'],
+        },
+        {
+          title: 'Status Izin',
+          href: '/permits?tab=status',
+          icon: CheckSquare,
+          requiredRoles: ['siswa'],
+        },
+      ],
+    },
+    {
+      title: 'Permohonan Surat',
+      href: '/documents?tab=student-letters',
+      icon: FileCheck,
+      requiredRoles: ['siswa'],
+    },
+    {
+      title: 'Konseling',
+      href: '#',
+      icon: Heart,
+      requiredRoles: ['siswa'],
+      children: [
+        {
+          title: 'Ajukan Konseling',
+          href: '/counseling?tab=request',
+          icon: Heart,
+          requiredRoles: ['siswa'],
+        },
+        {
+          title: 'Riwayat Konseling',
+          href: '/counseling?tab=history',
+          icon: Clock,
+          requiredRoles: ['siswa'],
+        },
+      ],
+    },
+    {
+      title: 'Ekstrakurikuler',
+      href: '#',
+      icon: Activity,
+      requiredRoles: ['siswa'],
+      children: [
+        {
+          title: 'Daftar Eskul',
+          href: '/extracurricular?tab=enrollment',
+          icon: Users,
+          requiredRoles: ['siswa'],
+        },
+        {
+          title: 'Kegiatan Saya',
+          href: '/extracurricular?tab=my-activities',
+          icon: Activity,
+          requiredRoles: ['siswa'],
+        },
+      ],
+    },
+    {
+      title: 'Proposal Kegiatan',
+      href: '/activity-proposal?tab=student-proposal',
+      icon: ClipboardList,
+      requiredRoles: ['siswa'],
+    },
+    {
+      title: 'Data Pribadi',
+      href: '/students?tab=profile',
+      icon: User,
+      requiredRoles: ['siswa'],
     },
     {
       title: 'Data Siswa',
