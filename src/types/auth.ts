@@ -1,9 +1,7 @@
-
 export type AppRole = 
   | 'admin'
   | 'kepala_sekolah'
   | 'waka_kesiswaan'
-  | 'admin_kesiswaan'
   | 'tppk'
   | 'arps'
   | 'p4gn'

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,7 +33,6 @@ export default function UserManagement() {
     { value: 'admin', label: 'Admin Sistem' },
     { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
     { value: 'waka_kesiswaan', label: 'Waka Kesiswaan' },
-    { value: 'admin_kesiswaan', label: 'Admin Kesiswaan/TU' },
     { value: 'tppk', label: 'TPPK' },
     { value: 'arps', label: 'ARPS' },
     { value: 'p4gn', label: 'P4GN' },
