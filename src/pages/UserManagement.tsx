@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, UserPlus, Upload, AlertCircle, Database } from 'lucide-react';
+import { Loader2, Plus, UserPlus, Upload } from 'lucide-react';
 import { AppRole, UserProfile } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -15,14 +16,7 @@ import { AddUserDialog } from '@/components/user/AddUserDialog';
 import { BulkUserImport } from '@/components/user/BulkUserImport';
 
 interface UserWithRoles extends UserProfile {
-  email?: string;
   roles: AppRole[];
-}
-
-interface DatabaseStats {
-  profilesCount: number;
-  userRolesCount: number;
-  studentsCount: number;
 }
 
 export default function UserManagement() {
@@ -35,8 +29,6 @@ export default function UserManagement() {
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-  const [dbStats, setDbStats] = useState<DatabaseStats | null>(null);
 
   const roleOptions: { value: AppRole; label: string }[] = [
     { value: 'admin', label: 'Admin' },
@@ -59,70 +51,18 @@ export default function UserManagement() {
     return roleOptions.find(r => r.value === role)?.label || role;
   };
 
-  const fetchDatabaseStats = async () => {
-    try {
-      console.log('📊 Fetching database statistics...');
-      
-      // Count profiles
-      const { count: profilesCount, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      if (profilesError) {
-        console.error('Error counting profiles:', profilesError);
-      }
-
-      // Count user roles
-      const { count: userRolesCount, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*', { count: 'exact', head: true });
-      
-      if (rolesError) {
-        console.error('Error counting user roles:', rolesError);
-      }
-
-      // Count students (alternative source of users)
-      const { count: studentsCount, error: studentsError } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true });
-      
-      if (studentsError) {
-        console.error('Error counting students:', studentsError);
-      }
-
-      const stats = {
-        profilesCount: profilesCount || 0,
-        userRolesCount: userRolesCount || 0,
-        studentsCount: studentsCount || 0
-      };
-
-      console.log('📊 Database Stats:', stats);
-      setDbStats(stats);
-      
-      return stats;
-    } catch (error) {
-      console.error('Error fetching database stats:', error);
-      return null;
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      console.log('🔍 Fetching users data...');
-      
-      // Get database stats first
-      const stats = await fetchDatabaseStats();
+      console.log('🔍 Mengambil data pengguna...');
       
       // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
 
-      console.log('📋 Profiles data:', profiles);
       if (profilesError) {
-        console.error('❌ Profiles error:', profilesError);
-        setDebugInfo(`Error fetching profiles: ${profilesError.message}`);
+        console.error('❌ Error profiles:', profilesError);
         throw profilesError;
       }
 
@@ -132,22 +72,9 @@ export default function UserManagement() {
         .select('*')
         .eq('is_active', true);
 
-      console.log('🎭 User roles data:', userRoles);
       if (rolesError) {
-        console.error('❌ Roles error:', rolesError);
-        setDebugInfo(prev => prev + `\nError fetching roles: ${rolesError.message}`);
+        console.error('❌ Error roles:', rolesError);
         throw rolesError;
-      }
-
-      // Fetch students to see if there are users there
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id, full_name, nis, phone, user_id')
-        .limit(5);
-
-      console.log('👨‍🎓 Sample students data:', students);
-      if (studentsError) {
-        console.error('❌ Students error:', studentsError);
       }
 
       // Combine the data
@@ -158,33 +85,14 @@ export default function UserManagement() {
 
         return {
           ...profile,
-          email: 'Email tersembunyi (perlu service role)',
           roles
         };
       }) || [];
 
-      console.log('✅ Final users with roles:', usersWithRoles);
-      
-      // Update debug info with comprehensive information
-      setDebugInfo(`
-Database Statistics:
-- Profiles table: ${stats?.profilesCount || 0} records
-- User roles table: ${stats?.userRolesCount || 0} records
-- Students table: ${stats?.studentsCount || 0} records
-
-Fetching Results:
-- Profiles fetched: ${profiles?.length || 0}
-- User roles fetched: ${userRoles?.length || 0}
-- Final users with roles: ${usersWithRoles.length}
-
-Note: Users appear in this list only if they have a record in the 'profiles' table.
-If you have users in other tables (like 'students'), they need profiles to appear here.
-      `.trim());
-      
+      console.log('✅ Total pengguna ditemukan:', usersWithRoles.length);
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('❌ Critical error:', error);
-      setDebugInfo(`Critical error: ${error}`);
+      console.error('❌ Error:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data pengguna",
@@ -297,47 +205,6 @@ If you have users in other tables (like 'students'), they need profiles to appea
           </div>
         </div>
 
-        {/* Database Statistics Card */}
-        {dbStats && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Statistik Database
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{dbStats.profilesCount}</div>
-                  <div className="text-gray-600">Profiles</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{dbStats.userRolesCount}</div>
-                  <div className="text-gray-600">User Roles</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{dbStats.studentsCount}</div>
-                  <div className="text-gray-600">Students</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Debug Information */}
-        {debugInfo && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Debug Info:</strong>
-              <pre className="mt-2 text-xs bg-gray-50 p-2 rounded overflow-auto max-h-40">
-                {debugInfo}
-              </pre>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Users Table */}
         <Card>
           <CardHeader>
@@ -367,15 +234,8 @@ If you have users in other tables (like 'students'), they need profiles to appea
                     {users.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8">
-                          <div className="space-y-2">
-                            <div className="text-gray-500">
-                              Tidak ada pengguna ditemukan di tabel profiles.
-                            </div>
-                            {dbStats && dbStats.studentsCount > 0 && (
-                              <div className="text-sm text-amber-600">
-                                💡 Ada {dbStats.studentsCount} siswa di database. Mereka perlu profil untuk muncul di sini.
-                              </div>
-                            )}
+                          <div className="text-gray-500">
+                            Tidak ada pengguna ditemukan.
                           </div>
                         </TableCell>
                       </TableRow>
