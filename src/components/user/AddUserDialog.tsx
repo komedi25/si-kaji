@@ -162,105 +162,114 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Tambah Pengguna Baru</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              required
-              placeholder="email@example.com"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="password">Password *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              required
-              placeholder="Minimal 8 karakter"
-              minLength={8}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="full_name">Nama Lengkap *</Label>
-            <Input
-              id="full_name"
-              value={formData.full_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="role">Role *</Label>
-            <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as AppRole }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih role" />
-              </SelectTrigger>
-              <SelectContent>
-                {roleOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {formData.role === 'siswa' ? (
-            <div>
-              <Label htmlFor="nis">NIS</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <Label htmlFor="email">Email *</Label>
               <Input
-                id="nis"
-                value={formData.nis}
-                onChange={(e) => setFormData(prev => ({ ...prev, nis: e.target.value }))}
-                placeholder="Nomor Induk Siswa"
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                required
+                placeholder="email@example.com"
+                className="w-full"
               />
             </div>
-          ) : (
-            <div>
-              <Label htmlFor="nip">NIP</Label>
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="password">Password *</Label>
               <Input
-                id="nip"
-                value={formData.nip}
-                onChange={(e) => setFormData(prev => ({ ...prev, nip: e.target.value }))}
-                placeholder="Nomor Induk Pegawai"
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                required
+                placeholder="Minimal 8 karakter"
+                minLength={8}
+                className="w-full"
               />
             </div>
-          )}
 
-          <div>
-            <Label htmlFor="phone">Nomor Telepon</Label>
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="08xxxxxxxxxx"
-            />
+            <div className="sm:col-span-2">
+              <Label htmlFor="full_name">Nama Lengkap *</Label>
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="role">Role *</Label>
+              <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value as AppRole }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.role === 'siswa' ? (
+              <div className="sm:col-span-2">
+                <Label htmlFor="nis">NIS</Label>
+                <Input
+                  id="nis"
+                  value={formData.nis}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nis: e.target.value }))}
+                  placeholder="Nomor Induk Siswa"
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <div className="sm:col-span-2">
+                <Label htmlFor="nip">NIP</Label>
+                <Input
+                  id="nip"
+                  value={formData.nip}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nip: e.target.value }))}
+                  placeholder="Nomor Induk Pegawai"
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="phone">Nomor Telepon</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="08xxxxxxxxxx"
+                className="w-full"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="address">Alamat</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="Alamat lengkap"
+                className="w-full"
+              />
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="address">Alamat</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-              placeholder="Alamat lengkap"
-            />
-          </div>
-
-          <div className="flex gap-2 pt-4">
+          <div className="flex flex-col sm:flex-row gap-2 pt-4">
             <Button type="submit" disabled={loading} className="flex-1">
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Tambah Pengguna
@@ -270,6 +279,7 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="sm:w-auto"
             >
               Batal
             </Button>
