@@ -120,14 +120,14 @@ export const Sidebar = () => {
     },
     {
       title: 'Data Pribadi',
-      href: '/students?tab=profile',
+      href: '/user-management?tab=students&filter=my-profile',
       icon: User,
       requiredRoles: ['siswa'],
     },
     {
-      title: 'Data Siswa',
-      href: '/students',
-      icon: UserCheck,
+      title: 'Manajemen Pengguna',
+      href: '/user-management',
+      icon: Users,
       requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
     },
     {
@@ -457,12 +457,6 @@ export const Sidebar = () => {
       href: '#',
       icon: Settings,
       children: [
-        {
-          title: 'Manajemen User',
-          href: '/users',
-          icon: Users,
-          requiredRoles: ['admin'],
-        },
         {
           title: 'Master Data',
           href: '#',

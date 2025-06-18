@@ -8,19 +8,19 @@ const StudentManagement = () => {
   const { hasRole } = useAuth();
 
   useEffect(() => {
-    // Redirect to user management since student management is now integrated there
-    if (hasRole('admin')) {
+    // Redirect semua akses data siswa ke manajemen pengguna terpadu
+    if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk')) {
       navigate('/user-management?tab=students');
     } else if (hasRole('siswa')) {
-      navigate('/student-profile');
+      navigate('/user-management?tab=students&filter=my-profile');
     } else {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [navigate, hasRole]);
 
   return (
     <div className="flex items-center justify-center h-64">
-      <p>Mengalihkan ke halaman manajemen pengguna...</p>
+      <p>Mengalihkan ke halaman manajemen pengguna terpadu...</p>
     </div>
   );
 };
