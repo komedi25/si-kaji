@@ -13,6 +13,9 @@ export interface AllUserData {
   current_class?: string;
   has_user_account: boolean;
   created_at: string;
+  // Student-specific fields
+  student_id?: string;
+  student_status?: string;
 }
 
 export interface ProfileData {
@@ -29,6 +32,7 @@ export interface StudentData {
   full_name: string;
   nis: string;
   phone?: string | null;
+  status: string;
   created_at: string;
   student_enrollments?: Array<{
     classes?: {

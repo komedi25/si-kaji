@@ -27,7 +27,7 @@ export const useUserManagement = () => {
         console.error('Error fetching profiles:', profilesError);
       }
 
-      // Fetch all students with proper typing
+      // Fetch all students with enhanced query for better integration
       const { data: students, error: studentsError } = await supabase
         .from('students')
         .select(`
@@ -93,7 +93,7 @@ export const useUserManagement = () => {
         });
       }
 
-      // Add students
+      // Add students with proper integration
       if (students && Array.isArray(students)) {
         students.forEach((student: StudentData) => {
           const enrollment = student.student_enrollments?.[0];
@@ -101,10 +101,15 @@ export const useUserManagement = () => {
             .filter(ur => ur.user_id === student.user_id)
             .map(ur => ur.role as AppRole);
 
+          // If student doesn't have roles but has user_id, add default 'siswa' role
+          if (student.user_id && roles.length === 0) {
+            roles.push('siswa');
+          }
+
           const authUser = typedAuthUsers.find(au => au.id === student.user_id);
 
           combinedUsers.push({
-            id: student.id,
+            id: student.user_id || student.id, // Use user_id if available, fallback to student id
             full_name: student.full_name,
             email: authUser?.email || null,
             nip: null,
@@ -115,15 +120,35 @@ export const useUserManagement = () => {
             current_class: enrollment?.classes ? 
               `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
             has_user_account: !!student.user_id,
-            created_at: student.created_at
+            created_at: student.created_at,
+            // Add student-specific data
+            student_id: student.id,
+            student_status: student.status
           });
         });
       }
 
+      // Filter based on user role
+      let filteredUsers = combinedUsers;
+      if (hasRole('siswa')) {
+        // Students can only see their own data
+        filteredUsers = combinedUsers.filter(userData => 
+          userData.user_type === 'student' && userData.id === user?.id
+        );
+      } else if (hasRole('wali_kelas') || hasRole('guru_bk')) {
+        // Wali kelas and guru BK can see students and some staff
+        filteredUsers = combinedUsers.filter(userData => 
+          userData.user_type === 'student' || 
+          (userData.user_type === 'staff' && 
+           (userData.roles.includes('wali_kelas') || userData.roles.includes('guru_bk')))
+        );
+      }
+      // Admin can see all users (no filter)
+
       // Sort by name
-      combinedUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+      filteredUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
       
-      setAllUsers(combinedUsers);
+      setAllUsers(filteredUsers);
     } catch (error) {
       console.error('Error in fetchAllUsers:', error);
       toast({
@@ -167,7 +192,7 @@ export const useUserManagement = () => {
       const { error: updateError } = await supabase
         .from('students')
         .update({ user_id: profile.id })
-        .eq('id', studentData.id);
+        .eq('id', studentData.student_id || studentData.id);
 
       if (updateError) throw updateError;
 
@@ -225,10 +250,12 @@ export const useUserManagement = () => {
     try {
       if (userToDelete.user_type === 'student') {
         // For students, delete from students table
+        const studentId = userToDelete.student_id || userToDelete.id;
+        
         const { data: studentData } = await supabase
           .from('students')
           .select('user_id')
-          .eq('id', userToDelete.id)
+          .eq('id', studentId)
           .single();
 
         if (studentData?.user_id) {
@@ -249,13 +276,13 @@ export const useUserManagement = () => {
         await supabase
           .from('student_enrollments')
           .delete()
-          .eq('student_id', userToDelete.id);
+          .eq('student_id', studentId);
 
         // Delete student record
         const { error } = await supabase
           .from('students')
           .delete()
-          .eq('id', userToDelete.id);
+          .eq('id', studentId);
 
         if (error) throw error;
       } else {
@@ -290,7 +317,7 @@ export const useUserManagement = () => {
   };
 
   useEffect(() => {
-    if (hasRole('admin')) {
+    if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('siswa')) {
       fetchAllUsers();
     }
   }, [hasRole]);

@@ -58,6 +58,14 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* User Management - unified for all user types */}
+      <Route path="/user-management" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
+          <UserManagement />
+        </ProtectedRoute>
+      } />
+      
+      {/* Legacy student route - redirect to user management */}
       <Route path="/students" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
           <StudentManagement />
@@ -171,12 +179,6 @@ export function AppRoutes() {
       <Route path="/notifications" element={
         <ProtectedRoute requiredRoles={['admin']}>
           <NotificationManagement />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/users" element={
-        <ProtectedRoute requiredRoles={['admin']}>
-          <UserManagement />
         </ProtectedRoute>
       } />
       

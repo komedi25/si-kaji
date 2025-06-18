@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Users } from 'lucide-react';
@@ -21,8 +22,9 @@ import { AllUserData } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
 export default function UserManagement() {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -59,6 +61,23 @@ export default function UserManagement() {
     setRoleFilter,
     filteredUsers
   } = useUserFilters(allUsers);
+
+  // Handle URL parameters for role-based access
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const filter = searchParams.get('filter');
+    
+    if (hasRole('siswa')) {
+      // Student can only see their own profile
+      setActiveTab('students');
+      if (filter === 'my-profile' && user?.id) {
+        // Filter to show only current student's data
+        setSearchTerm(user.id);
+      }
+    } else if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams, hasRole, user?.id, setActiveTab, setSearchTerm]);
 
   const handleDeleteUserConfirm = async () => {
     if (!userToDelete) return;
@@ -106,13 +125,74 @@ export default function UserManagement() {
     });
   };
 
-  if (!hasRole('admin')) {
+  // Role-based access control
+  if (hasRole('siswa')) {
+    // Students can only see their own data
+    const studentData = allUsers.filter(userData => 
+      userData.user_type === 'student' && 
+      (userData.id === user?.id || userData.roles.some(role => role === 'siswa'))
+    );
+
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Data Pribadi Saya</h1>
+              <p className="text-gray-600">Lihat dan kelola data pribadi Anda</p>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Informasi Pribadi
+              </CardTitle>
+              <CardDescription>
+                Data pribadi dan informasi akademik Anda
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <span className="ml-3 text-gray-600">Memuat data...</span>
+                </div>
+              ) : studentData.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <Users className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Data tidak ditemukan</h3>
+                  <p className="text-gray-500">Data pribadi Anda belum tersedia dalam sistem.</p>
+                </div>
+              ) : (
+                <UserTable
+                  users={studentData}
+                  getRoleLabel={getRoleLabel}
+                  onAddRole={() => {}} // Disabled for students
+                  onRemoveRole={() => {}} // Disabled for students
+                  onCreateAccount={() => {}} // Disabled for students
+                  onResetPassword={() => {}} // Disabled for students
+                  onDeleteUser={() => {}} // Disabled for students
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // For admin, wali_kelas, and guru_bk - full user management
+  if (!hasRole('admin') && !hasRole('wali_kelas') && !hasRole('guru_bk')) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
           <Alert className="max-w-md">
             <AlertDescription>
-              Anda tidak memiliki akses ke halaman ini. Hanya Admin yang dapat mengakses manajemen pengguna.
+              Anda tidak memiliki akses ke halaman ini.
             </AlertDescription>
           </Alert>
         </div>
@@ -129,13 +209,15 @@ export default function UserManagement() {
             <h1 className="text-2xl font-bold text-gray-900">Manajemen Pengguna Terpadu</h1>
             <p className="text-gray-600">Kelola semua pengguna sistem, data siswa, dan pengaturan akun dalam satu tempat</p>
           </div>
-          <UserActions
-            onAddUser={() => setIsAddUserDialogOpen(true)}
-            onBulkImport={() => setIsBulkImportOpen(true)}
-            onRefresh={fetchAllUsers}
-            onExportData={handleExportData}
-            onGenerateReport={handleGenerateReport}
-          />
+          {hasRole('admin') && (
+            <UserActions
+              onAddUser={() => setIsAddUserDialogOpen(true)}
+              onBulkImport={() => setIsBulkImportOpen(true)}
+              onRefresh={fetchAllUsers}
+              onExportData={handleExportData}
+              onGenerateReport={handleGenerateReport}
+            />
+          )}
         </div>
 
         {/* Statistics */}
@@ -292,19 +374,22 @@ export default function UserManagement() {
           </DialogContent>
         </Dialog>
 
-        {/* Add User Dialog */}
-        <AddUserDialog
-          open={isAddUserDialogOpen}
-          onOpenChange={setIsAddUserDialogOpen}
-          onSuccess={fetchAllUsers}
-        />
+        {/* Add User Dialog - Only for Admin */}
+        {hasRole('admin') && (
+          <>
+            <AddUserDialog
+              open={isAddUserDialogOpen}
+              onOpenChange={setIsAddUserDialogOpen}
+              onSuccess={fetchAllUsers}
+            />
 
-        {/* Bulk Import Dialog */}
-        <BulkUserImport
-          open={isBulkImportOpen}
-          onOpenChange={setIsBulkImportOpen}
-          onImportComplete={fetchAllUsers}
-        />
+            <BulkUserImport
+              open={isBulkImportOpen}
+              onOpenChange={setIsBulkImportOpen}
+              onImportComplete={fetchAllUsers}
+            />
+          </>
+        )}
       </div>
     </AppLayout>
   );
