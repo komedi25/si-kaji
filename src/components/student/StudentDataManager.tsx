@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Major, Class } from '@/types/student';
+import type { User } from '@supabase/supabase-js';
 
 interface StudentEnrollment {
   classes: {
@@ -35,6 +37,9 @@ interface StudentData {
   parent_name?: string | null;
   parent_phone?: string | null;
   status: string;
+  admission_date: string;
+  created_at: string;
+  updated_at: string;
   student_enrollments?: StudentEnrollment[];
 }
 
@@ -121,15 +126,15 @@ export const StudentDataManager = () => {
       if (error) throw error;
 
       // Get user accounts for students
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: authData } = await supabase.auth.admin.listUsers();
+      const authUsers: User[] = authData?.users || [];
       
       const studentsWithUserInfo = (data as StudentData[] || []).map((student: StudentData): Student => {
         const enrollments = student.student_enrollments as StudentEnrollment[];
         const enrollment = enrollments && enrollments.length > 0 ? enrollments[0] : null;
         
-        // Safely handle the users array and find operation
-        const users = authUsers?.users || [];
-        const userAccount = users.find(u => u.id === student.user_id) || null;
+        // Find user account safely
+        const userAccount = authUsers.find(u => u.id === student.user_id);
         
         return {
           ...student,
@@ -196,8 +201,9 @@ export const StudentDataManager = () => {
       if (authError) {
         if (authError.message.includes('User already registered')) {
           // User exists, try to link by finding the user
-          const { data: existingUsers } = await supabase.auth.admin.listUsers();
-          const existingUser = existingUsers.users.find(u => u.email === email);
+          const { data: existingUsersData } = await supabase.auth.admin.listUsers();
+          const existingUsers: User[] = existingUsersData?.users || [];
+          const existingUser = existingUsers.find(u => u.email === email);
           
           if (existingUser) {
             // Link existing user to student
@@ -277,18 +283,19 @@ export const StudentDataManager = () => {
         `${student.full_name.replace(/\s+/g, '.').toLowerCase()}@smkn1kendal.sch.id`
       ];
 
-      const { data: allUsers } = await supabase.auth.admin.listUsers();
-      let foundUser = null;
+      const { data: allUsersData } = await supabase.auth.admin.listUsers();
+      const allUsers: User[] = allUsersData?.users || [];
+      let foundUser: User | undefined = undefined;
 
       // Search by email patterns
       for (const email of possibleEmails) {
-        foundUser = allUsers.users.find(u => u.email === email);
+        foundUser = allUsers.find(u => u.email === email);
         if (foundUser) break;
       }
 
       // Search by NIS in user metadata
       if (!foundUser) {
-        foundUser = allUsers.users.find(u => 
+        foundUser = allUsers.find(u => 
           u.user_metadata?.nis === student.nis || 
           u.user_metadata?.full_name === student.full_name
         );
