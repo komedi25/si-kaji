@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppRole } from '@/types/auth';
-import { AllUserData, ProfileData, StudentData, UserRoleData, AuthUserData } from '@/types/user';
+import { AllUserData, ProfileData, StudentData, UserRoleData } from '@/types/user';
 
 export const useUserManagement = () => {
   const { user, hasRole } = useAuth();
@@ -70,23 +70,21 @@ export const useUserManagement = () => {
             .filter(ur => ur.user_id === profile.id)
             .map(ur => ur.role as AppRole);
 
-          // Skip profiles that don't have roles and are not linked to students
-          if (roles.length === 0 && !profile.nip) {
-            return; // Skip this profile
+          // Only include profiles that have roles or NIP (staff)
+          if (roles.length > 0 || profile.nip) {
+            combinedUsers.push({
+              id: profile.id,
+              full_name: profile.full_name,
+              email: null,
+              nip: profile.nip,
+              nis: profile.nis,
+              phone: profile.phone,
+              user_type: profile.nip ? 'staff' : 'student',
+              roles,
+              has_user_account: true,
+              created_at: profile.created_at || new Date().toISOString()
+            });
           }
-
-          combinedUsers.push({
-            id: profile.id,
-            full_name: profile.full_name,
-            email: null, // We'll try to get from auth users if needed
-            nip: profile.nip,
-            nis: profile.nis,
-            phone: profile.phone,
-            user_type: profile.nip ? 'staff' : 'student',
-            roles,
-            has_user_account: true,
-            created_at: profile.created_at || new Date().toISOString()
-          });
         });
       }
 

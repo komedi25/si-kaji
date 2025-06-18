@@ -22,6 +22,7 @@ export interface ProfileData {
   id: string;
   full_name: string;
   nip?: string | null;
+  nis?: string | null;
   phone?: string | null;
   created_at?: string | null;
 }
