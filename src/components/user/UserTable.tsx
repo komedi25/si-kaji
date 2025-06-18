@@ -2,7 +2,8 @@
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Key, Plus, Trash2 } from 'lucide-react';
+import { UserPlus, Key, Plus, Trash2, Eye, Edit, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppRole } from '@/types/auth';
 import { AllUserData } from '@/types/user';
 
@@ -25,104 +26,140 @@ export const UserTable = ({
   onResetPassword, 
   onDeleteUser 
 }: UserTableProps) => {
+  const getStatusBadge = (userData: AllUserData) => {
+    if (userData.has_user_account) {
+      return <Badge variant="default" className="text-xs bg-green-100 text-green-800">Aktif</Badge>;
+    }
+    return <Badge variant="outline" className="text-xs text-gray-600">Belum ada akun</Badge>;
+  };
+
+  const getUserTypeBadge = (userType: string) => {
+    if (userType === 'staff') {
+      return <Badge className="text-xs bg-blue-100 text-blue-800">Staff/Guru</Badge>;
+    }
+    return <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">Siswa</Badge>;
+  };
+
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Nama</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>NIP/NIS</TableHead>
-            <TableHead>Tipe</TableHead>
-            <TableHead>Kelas</TableHead>
-            <TableHead>Status Akun</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Aksi</TableHead>
+          <TableRow className="bg-gray-50">
+            <TableHead className="font-semibold">Identitas</TableHead>
+            <TableHead className="font-semibold">Kontak</TableHead>
+            <TableHead className="font-semibold">Tipe & Status</TableHead>
+            <TableHead className="font-semibold">Role & Akses</TableHead>
+            <TableHead className="font-semibold text-center">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.map((userData) => (
-            <TableRow key={`${userData.user_type}-${userData.id}`}>
-              <TableCell className="font-medium">{userData.full_name}</TableCell>
-              <TableCell>{userData.email || '-'}</TableCell>
-              <TableCell>{userData.nip || userData.nis || '-'}</TableCell>
+            <TableRow key={`${userData.user_type}-${userData.id}`} className="hover:bg-gray-50">
+              {/* Identitas */}
               <TableCell>
-                <Badge variant={userData.user_type === 'staff' ? 'default' : 'secondary'}>
-                  {userData.user_type === 'staff' ? 'Staff/Guru' : 'Siswa'}
-                </Badge>
-              </TableCell>
-              <TableCell>{userData.current_class || '-'}</TableCell>
-              <TableCell>
-                {userData.has_user_account ? (
-                  <Badge variant="default" className="text-xs">
-                    Aktif
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs">
-                    Belum ada akun
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {userData.roles.length === 0 ? (
-                    <Badge variant="outline" className="text-xs">
-                      Belum ada role
-                    </Badge>
-                  ) : (
-                    userData.roles.map((role, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {getRoleLabel(role)}
-                        {userData.has_user_account && (
-                          <button
-                            onClick={() => onRemoveRole(userData, role)}
-                            className="ml-1 hover:text-red-600"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </Badge>
-                    ))
+                <div className="space-y-1">
+                  <div className="font-medium text-gray-900">{userData.full_name}</div>
+                  <div className="text-sm text-gray-500">
+                    {userData.nip && `NIP: ${userData.nip}`}
+                    {userData.nis && `NIS: ${userData.nis}`}
+                  </div>
+                  {userData.current_class && (
+                    <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block">
+                      Kelas: {userData.current_class}
+                    </div>
                   )}
                 </div>
               </TableCell>
+
+              {/* Kontak */}
               <TableCell>
-                <div className="flex gap-1">
-                  {userData.has_user_account ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onAddRole(userData)}
-                      >
-                        <UserPlus className="h-4 w-4 mr-1" />
-                        Role
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-900">
+                    {userData.email || <span className="text-gray-400 italic">Tidak ada email</span>}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {userData.phone || <span className="text-gray-400 italic">Tidak ada telepon</span>}
+                  </div>
+                </div>
+              </TableCell>
+
+              {/* Tipe & Status */}
+              <TableCell>
+                <div className="space-y-2">
+                  {getUserTypeBadge(userData.user_type)}
+                  {getStatusBadge(userData)}
+                </div>
+              </TableCell>
+
+              {/* Role & Akses */}
+              <TableCell>
+                <div className="space-y-1">
+                  {userData.roles.length === 0 ? (
+                    <Badge variant="outline" className="text-xs text-gray-500">
+                      Belum ada role
+                    </Badge>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {userData.roles.map((role, index) => (
+                        <div key={index} className="flex items-center">
+                          <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                            {getRoleLabel(role)}
+                            {userData.has_user_account && (
+                              <button
+                                onClick={() => onRemoveRole(userData, role)}
+                                className="ml-1 hover:text-red-600 text-gray-500"
+                                title="Hapus role"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TableCell>
+
+              {/* Aksi */}
+              <TableCell>
+                <div className="flex justify-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onResetPassword(userData)}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {userData.has_user_account ? (
+                        <>
+                          <DropdownMenuItem onClick={() => onAddRole(userData)}>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Kelola Role
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onResetPassword(userData)}>
+                            <Key className="h-4 w-4 mr-2" />
+                            Reset Password
+                          </DropdownMenuItem>
+                        </>
+                      ) : userData.user_type === 'student' ? (
+                        <DropdownMenuItem onClick={() => onCreateAccount(userData)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Buat Akun User
+                        </DropdownMenuItem>
+                      ) : null}
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem 
+                        onClick={() => onDeleteUser(userData)}
+                        className="text-red-600 focus:text-red-600"
                       >
-                        <Key className="h-4 w-4" />
-                      </Button>
-                    </>
-                  ) : userData.user_type === 'student' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onCreateAccount(userData)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Buat Akun
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDeleteUser(userData)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Hapus {userData.user_type === 'student' ? 'Siswa' : 'Staff'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </TableCell>
             </TableRow>
