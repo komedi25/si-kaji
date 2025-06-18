@@ -1,498 +1,69 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Plus, UserPlus, Upload, RefreshCw, Edit, Trash2, Key, Users, GraduationCap, Shield } from 'lucide-react';
-import { AppRole, UserProfile } from '@/types/auth';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, Plus, Upload, RefreshCw, Shield, Users, GraduationCap } from 'lucide-react';
+import { AppRole } from '@/types/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AddUserDialog } from '@/components/user/AddUserDialog';
 import { BulkUserImport } from '@/components/user/BulkUserImport';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-interface AllUserData {
-  id: string;
-  full_name: string;
-  email?: string | null;
-  nip?: string | null;
-  nis?: string | null;
-  phone?: string | null;
-  user_type: 'staff' | 'student';
-  roles: AppRole[];
-  current_class?: string;
-  has_user_account: boolean;
-  created_at: string;
-}
-
-interface ProfileData {
-  id: string;
-  full_name: string;
-  nip?: string | null;
-  phone?: string | null;
-  created_at?: string | null;
-}
-
-interface StudentData {
-  id: string;
-  user_id?: string | null;
-  full_name: string;
-  nis: string;
-  phone?: string | null;
-  created_at: string;
-  student_enrollments?: Array<{
-    classes?: {
-      name: string;
-      grade: number;
-    } | null;
-  }> | null;
-}
+import { useUserManagement } from '@/hooks/useUserManagement';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { useUserFilters } from '@/hooks/useUserFilters';
+import { UserTable } from '@/components/user/UserTable';
+import { AllUserData } from '@/types/user';
 
 export default function UserManagement() {
-  const { user, hasRole } = useAuth();
-  const { toast } = useToast();
-  const [allUsers, setAllUsers] = useState<AllUserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<AllUserData | null>(null);
-  const [newRole, setNewRole] = useState<AppRole | ''>('');
-  const [isAddingRole, setIsAddingRole] = useState(false);
+  const { hasRole } = useAuth();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AllUserData | null>(null);
-  const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
 
-  const roleOptions: { value: AppRole; label: string }[] = [
-    { value: 'admin', label: 'Admin Sistem' },
-    { value: 'kepala_sekolah', label: 'Kepala Sekolah' },
-    { value: 'waka_kesiswaan', label: 'Waka Kesiswaan' },
-    { value: 'tppk', label: 'TPPK' },
-    { value: 'arps', label: 'ARPS' },
-    { value: 'p4gn', label: 'P4GN' },
-    { value: 'koordinator_ekstrakurikuler', label: 'Koordinator Ekstrakurikuler' },
-    { value: 'wali_kelas', label: 'Wali Kelas' },
-    { value: 'guru_bk', label: 'Guru BK' },
-    { value: 'pelatih_ekstrakurikuler', label: 'Pelatih Ekstrakurikuler' },
-    { value: 'siswa', label: 'Siswa' },
-    { value: 'orang_tua', label: 'Orang Tua' },
-    { value: 'penanggung_jawab_sarpras', label: 'PJ Sarpras' },
-    { value: 'osis', label: 'OSIS' }
-  ];
+  // Use custom hooks
+  const {
+    allUsers,
+    loading,
+    fetchAllUsers,
+    createStudentUserAccount,
+    resetPassword,
+    handleDeleteUser
+  } = useUserManagement();
 
-  const getRoleLabel = (role: AppRole) => {
-    const found = roleOptions.find(option => option.value === role);
-    return found ? found.label : role;
-  };
+  const {
+    selectedUser,
+    setSelectedUser,
+    newRole,
+    setNewRole,
+    isAddingRole,
+    roleOptions,
+    getRoleLabel,
+    addRoleToUser,
+    removeRoleFromUser
+  } = useUserRoles();
 
-  const fetchAllUsers = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch all profiles (staff/teachers) with proper typing
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .not('nip', 'is', null)
-        .returns<ProfileData[]>();
+  const {
+    activeTab,
+    setActiveTab,
+    searchTerm,
+    setSearchTerm,
+    roleFilter,
+    setRoleFilter,
+    filteredUsers
+  } = useUserFilters(allUsers);
 
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-      }
-
-      // Fetch all students with proper typing
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select(`
-          *,
-          student_enrollments!inner (
-            classes (
-              name,
-              grade
-            )
-          )
-        `)
-        .order('full_name')
-        .returns<StudentData[]>();
-
-      if (studentsError) {
-        console.error('Error fetching students:', studentsError);
-      }
-
-      // Fetch all user roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('is_active', true);
-
-      if (rolesError) {
-        console.error('Error fetching user roles:', rolesError);
-      }
-
-      // Get auth users for email data
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-      }
-
-      // Combine all data
-      const combinedUsers: AllUserData[] = [];
-
-      // Add staff/teachers
-      if (profiles && Array.isArray(profiles)) {
-        profiles.forEach((profile: ProfileData) => {
-          const roles = (userRoles || [])
-            .filter(ur => ur.user_id === profile.id)
-            .map(ur => ur.role as AppRole);
-
-          const authUser = authUsers?.users?.find(au => au.id === profile.id);
-
-          combinedUsers.push({
-            id: profile.id,
-            full_name: profile.full_name,
-            email: authUser?.email || null,
-            nip: profile.nip,
-            nis: null,
-            phone: profile.phone,
-            user_type: 'staff',
-            roles,
-            has_user_account: true,
-            created_at: profile.created_at || new Date().toISOString()
-          });
-        });
-      }
-
-      // Add students
-      if (students && Array.isArray(students)) {
-        students.forEach((student: StudentData) => {
-          const enrollment = student.student_enrollments?.[0];
-          const roles = (userRoles || [])
-            .filter(ur => ur.user_id === student.user_id)
-            .map(ur => ur.role as AppRole);
-
-          const authUser = authUsers?.users?.find(au => au.id === student.user_id);
-
-          combinedUsers.push({
-            id: student.id,
-            full_name: student.full_name,
-            email: authUser?.email || null,
-            nip: null,
-            nis: student.nis,
-            phone: student.phone,
-            user_type: 'student',
-            roles,
-            current_class: enrollment?.classes ? 
-              `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
-            has_user_account: !!student.user_id,
-            created_at: student.created_at
-          });
-        });
-      }
-
-      // Sort by name
-      combinedUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
-      
-      setAllUsers(combinedUsers);
-    } catch (error) {
-      console.error('Error in fetchAllUsers:', error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data pengguna: " + (error as Error).message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addRoleToUser = async () => {
-    if (!selectedUser || !newRole) return;
-
-    try {
-      setIsAddingRole(true);
-      
-      // Find the actual user_id (for students, we need to get it from the student record)
-      let targetUserId = selectedUser.id;
-      
-      if (selectedUser.user_type === 'student' && !selectedUser.has_user_account) {
-        toast({
-          title: "Error",
-          description: "Siswa belum memiliki akun pengguna. Buat akun terlebih dahulu.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (selectedUser.user_type === 'student') {
-        // Get the user_id from student record
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('user_id')
-          .eq('id', selectedUser.id)
-          .single();
-        
-        if (studentData?.user_id) {
-          targetUserId = studentData.user_id;
-        }
-      }
-      
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: targetUserId,
-          role: newRole as any,
-          assigned_by: user?.id
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: `Role ${getRoleLabel(newRole)} berhasil ditambahkan`
-      });
-
-      setNewRole('');
-      setSelectedUser(null);
-      fetchAllUsers();
-    } catch (error) {
-      console.error('Error adding role:', error);
-      toast({
-        title: "Error",
-        description: "Gagal menambahkan role: " + (error as Error).message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsAddingRole(false);
-    }
-  };
-
-  const removeRoleFromUser = async (userData: AllUserData, role: AppRole) => {
-    try {
-      let targetUserId = userData.id;
-      
-      if (userData.user_type === 'student') {
-        // Get the user_id from student record
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('user_id')
-          .eq('id', userData.id)
-          .single();
-        
-        if (studentData?.user_id) {
-          targetUserId = studentData.user_id;
-        }
-      }
-
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ is_active: false })
-        .eq('user_id', targetUserId)
-        .eq('role', role as any);
-
-      if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: `Role ${getRoleLabel(role)} berhasil dihapus`
-      });
-
-      fetchAllUsers();
-    } catch (error) {
-      console.error('Error removing role:', error);
-      toast({
-        title: "Error",
-        description: "Gagal menghapus role: " + (error as Error).message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const createStudentUserAccount = async (studentData: AllUserData) => {
-    if (!user?.id) {
-      toast({
-        title: "Error",
-        description: "User ID tidak ditemukan",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Generate UUID for new profile
-      const newUserId = crypto.randomUUID();
-      
-      // Create profile for student with proper ID
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: newUserId,
-          full_name: studentData.full_name,
-          nis: studentData.nis
-        })
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Update student with user_id
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ user_id: profile.id })
-        .eq('id', studentData.id);
-
-      if (updateError) throw updateError;
-
-      // Add siswa role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: profile.id,
-          role: 'siswa',
-          assigned_by: user.id
-        });
-
-      if (roleError) throw roleError;
-
-      const tempEmail = `${studentData.nis}@temp.smkn1kendal.sch.id`;
-      const tempPassword = `siswa${studentData.nis}`;
-
-      toast({
-        title: "Berhasil",
-        description: `Akun user berhasil dibuat untuk ${studentData.full_name}. Email: ${tempEmail}, Password: ${tempPassword}`
-      });
-
-      fetchAllUsers();
-    } catch (error) {
-      console.error('Error creating user account:', error);
-      toast({
-        title: "Error",
-        description: "Gagal membuat akun user: " + (error as Error).message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const resetPassword = async (userData: AllUserData) => {
-    try {
-      const identifier = userData.user_type === 'student' ? userData.nis : userData.nip;
-      const prefix = userData.user_type === 'student' ? 'siswa' : 'staff';
-      const newPassword = `${prefix}${identifier}`;
-      
-      toast({
-        title: "Password direset",
-        description: `Password baru untuk ${userData.full_name}: ${newPassword}. Silakan berikan kepada pengguna.`
-      });
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast({
-        title: "Error",
-        description: "Gagal mereset password: " + (error as Error).message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeleteUser = async () => {
+  const handleDeleteUserConfirm = async () => {
     if (!userToDelete) return;
-
-    try {
-      if (userToDelete.user_type === 'student') {
-        // For students, delete from students table
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('user_id')
-          .eq('id', userToDelete.id)
-          .single();
-
-        if (studentData?.user_id) {
-          // Delete user roles
-          await supabase
-            .from('user_roles')
-            .delete()
-            .eq('user_id', studentData.user_id);
-
-          // Delete profile
-          await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', studentData.user_id);
-        }
-
-        // Delete student enrollments
-        await supabase
-          .from('student_enrollments')
-          .delete()
-          .eq('student_id', userToDelete.id);
-
-        // Delete student record
-        const { error } = await supabase
-          .from('students')
-          .delete()
-          .eq('id', userToDelete.id);
-
-        if (error) throw error;
-      } else {
-        // For staff, delete from profiles table
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userToDelete.id);
-
-        const { error } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userToDelete.id);
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Berhasil",
-        description: "Pengguna berhasil dihapus"
-      });
-
-      setIsDeleteDialogOpen(false);
-      setUserToDelete(null);
-      fetchAllUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast({
-        title: "Error",
-        description: "Gagal menghapus pengguna: " + (error as Error).message,
-        variant: "destructive"
-      });
-    }
+    await handleDeleteUser(userToDelete);
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
   };
-
-  useEffect(() => {
-    if (hasRole('admin')) {
-      fetchAllUsers();
-    }
-  }, [hasRole]);
-
-  // Filter users based on search term, tab, and role filter
-  const filteredUsers = allUsers.filter(userData => {
-    const matchesSearch = userData.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (userData.nis && userData.nis.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (userData.nip && userData.nip.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (userData.email && userData.email.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesTab = activeTab === 'all' || 
-      (activeTab === 'staff' && userData.user_type === 'staff') ||
-      (activeTab === 'students' && userData.user_type === 'student');
-
-    const matchesRole = roleFilter === 'all' || userData.roles.includes(roleFilter);
-
-    return matchesSearch && matchesTab && matchesRole;
-  });
 
   if (!hasRole('admin')) {
     return (
@@ -599,113 +170,18 @@ export default function UserManagement() {
                     </Alert>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nama</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>NIP/NIS</TableHead>
-                          <TableHead>Tipe</TableHead>
-                          <TableHead>Kelas</TableHead>
-                          <TableHead>Status Akun</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Aksi</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredUsers.map((userData) => (
-                          <TableRow key={`${userData.user_type}-${userData.id}`}>
-                            <TableCell className="font-medium">{userData.full_name}</TableCell>
-                            <TableCell>{userData.email || '-'}</TableCell>
-                            <TableCell>{userData.nip || userData.nis || '-'}</TableCell>
-                            <TableCell>
-                              <Badge variant={userData.user_type === 'staff' ? 'default' : 'secondary'}>
-                                {userData.user_type === 'staff' ? 'Staff/Guru' : 'Siswa'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{userData.current_class || '-'}</TableCell>
-                            <TableCell>
-                              {userData.has_user_account ? (
-                                <Badge variant="default" className="text-xs">
-                                  Aktif
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">
-                                  Belum ada akun
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {userData.roles.length === 0 ? (
-                                  <Badge variant="outline" className="text-xs">
-                                    Belum ada role
-                                  </Badge>
-                                ) : (
-                                  userData.roles.map((role, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs">
-                                      {getRoleLabel(role)}
-                                      {userData.has_user_account && (
-                                        <button
-                                          onClick={() => removeRoleFromUser(userData, role)}
-                                          className="ml-1 hover:text-red-600"
-                                        >
-                                          ×
-                                        </button>
-                                      )}
-                                    </Badge>
-                                  ))
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {userData.has_user_account ? (
-                                  <>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setSelectedUser(userData)}
-                                    >
-                                      <UserPlus className="h-4 w-4 mr-1" />
-                                      Role
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => resetPassword(userData)}
-                                    >
-                                      <Key className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                ) : userData.user_type === 'student' ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => createStudentUserAccount(userData)}
-                                  >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Buat Akun
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setUserToDelete(userData);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  <UserTable
+                    users={filteredUsers}
+                    getRoleLabel={getRoleLabel}
+                    onAddRole={setSelectedUser}
+                    onRemoveRole={(userData, role) => removeRoleFromUser(userData, role, fetchAllUsers)}
+                    onCreateAccount={createStudentUserAccount}
+                    onResetPassword={resetPassword}
+                    onDeleteUser={(userData) => {
+                      setUserToDelete(userData);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -759,7 +235,7 @@ export default function UserManagement() {
                     Batal
                   </Button>
                   <Button
-                    onClick={addRoleToUser}
+                    onClick={() => addRoleToUser(fetchAllUsers)}
                     disabled={!newRole || isAddingRole}
                   >
                     {isAddingRole && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -788,7 +264,7 @@ export default function UserManagement() {
               <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
                 Batal
               </Button>
-              <Button variant="destructive" onClick={handleDeleteUser}>
+              <Button variant="destructive" onClick={handleDeleteUserConfirm}>
                 Hapus
               </Button>
             </DialogFooter>
