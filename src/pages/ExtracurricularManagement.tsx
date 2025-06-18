@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Extracur ricularEnrollment } from '@/components/extracurricular/ExtracurricularEnrollment';
+import { ExtracurricularEnrollment } from '@/components/extracurricular/ExtracurricularEnrollment';
 import { StudentExtracurricularEnrollment } from '@/components/student/StudentExtracurricularEnrollment';
 import { StudentExtracurricularActivity } from '@/components/student/StudentExtracurricularActivity';
 import { CoachActivityLog } from '@/components/extracurricular/CoachActivityLog';
