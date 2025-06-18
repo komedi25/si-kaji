@@ -12,7 +12,7 @@ import { ExcelImport } from './ExcelImport';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Major, Class } from '@/types/student';
+import { Major, Class, StudentWithClass } from '@/types/student';
 import type { User } from '@supabase/supabase-js';
 
 interface StudentEnrollment {
@@ -28,14 +28,14 @@ interface StudentData {
   nis: string;
   nisn?: string | null;
   full_name: string;
-  gender: string;
+  gender: 'L' | 'P'; // Fixed: ensure it's properly typed
   birth_place?: string | null;
   birth_date?: string | null;
   phone?: string | null;
   address?: string | null;
   parent_name?: string | null;
   parent_phone?: string | null;
-  status: string;
+  status: 'active' | 'graduated' | 'transferred' | 'dropped'; // Fixed: proper union type
   admission_date: string;
   created_at: string;
   updated_at: string;
@@ -676,7 +676,7 @@ export const StudentDataManager = () => {
         <EditStudentDialog
           open={showEditDialog}
           onOpenChange={setShowEditDialog}
-          student={selectedStudent}
+          student={selectedStudent as StudentWithClass}
           onSuccess={handleEditSuccess}
           majors={majors}
           classes={classes}

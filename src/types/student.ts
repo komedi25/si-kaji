@@ -1,4 +1,3 @@
-
 export interface AcademicYear {
   id: string;
   year_start: number;
@@ -75,8 +74,9 @@ export interface StudentEnrollment {
   academic_years?: AcademicYear;
 }
 
+// Keep the interface simple and consistent
 export interface StudentWithClass extends Student {
-  current_class?: string; // Changed from Class to string to match usage
+  current_class?: string; // Keep as string for consistency
   current_enrollment?: StudentEnrollment;
 }
 

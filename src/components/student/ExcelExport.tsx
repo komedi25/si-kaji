@@ -24,8 +24,8 @@ export const ExcelExport = ({ students, filename = 'data-siswa' }: ExcelExportPr
       'Nama Orang Tua': student.parent_name || '',
       'Telepon Orang Tua': student.parent_phone || '',
       'Alamat Orang Tua': student.parent_address || '',
-      'Kelas': student.current_class?.name || '',
-      'Jurusan': student.current_class?.major?.name || '',
+      'Kelas': student.current_class || '',
+      'Jurusan': '', // Since current_class is now string, we can't access major
       'Status': student.status,
       'Tanggal Masuk': student.admission_date,
       'Tanggal Lulus': student.graduation_date || ''
