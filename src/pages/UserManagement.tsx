@@ -122,51 +122,55 @@ export default function UserManagement() {
       const combinedUsers: AllUserData[] = [];
 
       // Add staff/teachers
-      (profiles || []).forEach(profile => {
-        const roles = (userRoles || [])
-          .filter(ur => ur.user_id === profile.id)
-          .map(ur => ur.role as AppRole);
+      if (profiles) {
+        profiles.forEach(profile => {
+          const roles = (userRoles || [])
+            .filter(ur => ur.user_id === profile.id)
+            .map(ur => ur.role as AppRole);
 
-        const authUser = authUsers?.users?.find(au => au.id === profile.id);
+          const authUser = authUsers?.users?.find(au => au.id === profile.id);
 
-        combinedUsers.push({
-          id: profile.id,
-          full_name: profile.full_name,
-          email: authUser?.email || null,
-          nip: profile.nip,
-          nis: null,
-          phone: profile.phone,
-          user_type: 'staff',
-          roles,
-          has_user_account: true,
-          created_at: profile.created_at
+          combinedUsers.push({
+            id: profile.id,
+            full_name: profile.full_name,
+            email: authUser?.email || null,
+            nip: profile.nip,
+            nis: null,
+            phone: profile.phone,
+            user_type: 'staff',
+            roles,
+            has_user_account: true,
+            created_at: profile.created_at || new Date().toISOString()
+          });
         });
-      });
+      }
 
       // Add students
-      (students || []).forEach((student: any) => {
-        const enrollment = student.student_enrollments?.[0];
-        const roles = (userRoles || [])
-          .filter(ur => ur.user_id === student.user_id)
-          .map(ur => ur.role as AppRole);
+      if (students) {
+        students.forEach((student: any) => {
+          const enrollment = student.student_enrollments?.[0];
+          const roles = (userRoles || [])
+            .filter(ur => ur.user_id === student.user_id)
+            .map(ur => ur.role as AppRole);
 
-        const authUser = authUsers?.users?.find(au => au.id === student.user_id);
+          const authUser = authUsers?.users?.find(au => au.id === student.user_id);
 
-        combinedUsers.push({
-          id: student.id,
-          full_name: student.full_name,
-          email: authUser?.email || null,
-          nip: null,
-          nis: student.nis,
-          phone: student.phone,
-          user_type: 'student',
-          roles,
-          current_class: enrollment?.classes ? 
-            `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
-          has_user_account: !!student.user_id,
-          created_at: student.created_at
+          combinedUsers.push({
+            id: student.id,
+            full_name: student.full_name,
+            email: authUser?.email || null,
+            nip: null,
+            nis: student.nis,
+            phone: student.phone,
+            user_type: 'student',
+            roles,
+            current_class: enrollment?.classes ? 
+              `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
+            has_user_account: !!student.user_id,
+            created_at: student.created_at
+          });
         });
-      });
+      }
 
       // Sort by name
       combinedUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
@@ -287,11 +291,24 @@ export default function UserManagement() {
   };
 
   const createStudentUserAccount = async (studentData: AllUserData) => {
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User ID tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      // Create profile for student
+      // Generate UUID for new profile
+      const newUserId = crypto.randomUUID();
+      
+      // Create profile for student with proper ID
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: newUserId,
           full_name: studentData.full_name,
           nis: studentData.nis
         })
@@ -314,7 +331,7 @@ export default function UserManagement() {
         .insert({
           user_id: profile.id,
           role: 'siswa',
-          assigned_by: user?.id
+          assigned_by: user.id
         });
 
       if (roleError) throw roleError;
