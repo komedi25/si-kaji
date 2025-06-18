@@ -1,3 +1,4 @@
+
 export interface AcademicYear {
   id: string;
   year_start: number;
@@ -54,6 +55,10 @@ export interface Student {
   photo_url?: string;
   created_at: string;
   updated_at: string;
+  // Add properties that are used in StudentDataManager
+  current_class?: string;
+  user_email?: string | null;
+  has_user_account?: boolean;
 }
 
 export interface StudentEnrollment {
@@ -71,7 +76,7 @@ export interface StudentEnrollment {
 }
 
 export interface StudentWithClass extends Student {
-  current_class?: Class;
+  current_class?: string; // Changed from Class to string to match usage
   current_enrollment?: StudentEnrollment;
 }
 
