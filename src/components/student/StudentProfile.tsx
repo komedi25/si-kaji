@@ -51,7 +51,7 @@ export const StudentProfile = () => {
         .from('students')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching student data:', error);
@@ -64,7 +64,13 @@ export const StudentProfile = () => {
         return;
       }
 
-      setStudentData(data);
+      if (data) {
+        setStudentData(data);
+      } else {
+        // If no student data found, show message but don't show error
+        console.log('No student data found for user:', user.id);
+        setStudentData(null);
+      }
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -123,8 +129,24 @@ export const StudentProfile = () => {
   if (!studentData) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <p className="text-center text-gray-500">Data siswa tidak ditemukan</p>
+        <CardContent className="p-6 text-center">
+          <div className="space-y-4">
+            <div className="text-center">
+              <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900">Data Siswa Belum Tersedia</h3>
+              <p className="text-gray-500 mt-2">
+                Data pribadi Anda belum terdaftar dalam sistem. Silakan hubungi administrator sekolah untuk mendaftarkan data Anda.
+              </p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Hubungi bagian tata usaha sekolah</li>
+                <li>• Berikan informasi akun Anda: {user?.email}</li>
+                <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
+              </ul>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );

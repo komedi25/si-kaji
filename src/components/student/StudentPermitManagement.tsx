@@ -183,10 +183,10 @@ export const StudentPermitManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Perizinan Saya</h2>
+        <h2 className="text-xl font-semibold">Perizinan & Kegiatan</h2>
         <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Ajukan Izin
+          Ajukan Izin/Kegiatan
         </Button>
       </div>
 
@@ -194,7 +194,7 @@ export const StudentPermitManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Form Pengajuan Izin</span>
+              <span>Form Pengajuan Izin/Kegiatan</span>
               <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -203,7 +203,7 @@ export const StudentPermitManagement = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="permit_type">Jenis Izin</Label>
+                <Label htmlFor="permit_type">Jenis Permohonan</Label>
                 <select
                   id="permit_type"
                   className="w-full p-2 border rounded-md"
@@ -211,10 +211,11 @@ export const StudentPermitManagement = () => {
                   onChange={(e) => setFormData({...formData, permit_type: e.target.value})}
                   required
                 >
-                  <option value="">Pilih jenis izin</option>
-                  <option value="sakit">Sakit</option>
+                  <option value="">Pilih jenis permohonan</option>
+                  <option value="sakit">Izin Sakit</option>
                   <option value="keluarga">Urusan Keluarga</option>
                   <option value="keperluan_penting">Keperluan Penting</option>
+                  <option value="kegiatan_luar">Kegiatan di Luar Jam Pembelajaran</option>
                   <option value="lainnya">Lainnya</option>
                 </select>
               </div>
@@ -242,17 +243,26 @@ export const StudentPermitManagement = () => {
               </div>
               
               <div>
-                <Label htmlFor="reason">Alasan</Label>
+                <Label htmlFor="reason">Alasan/Tujuan</Label>
                 <Textarea
                   id="reason"
                   value={formData.reason}
                   onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                  placeholder="Jelaskan alasan atau tujuan permohonan izin/kegiatan"
                   required
                 />
               </div>
               
+              {formData.permit_type === 'kegiatan_luar' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Catatan:</strong> Permohonan kegiatan di luar jam pembelajaran akan direview oleh wali kelas dan dilanjutkan ke wakil kepala sekolah bidang kesiswaan untuk persetujuan.
+                  </p>
+                </div>
+              )}
+              
               <div className="flex gap-2">
-                <Button type="submit">Submit Pengajuan</Button>
+                <Button type="submit">Submit Permohonan</Button>
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Batal
                 </Button>
@@ -263,13 +273,15 @@ export const StudentPermitManagement = () => {
       )}
 
       <div className="space-y-4">
+        <h3 className="text-lg font-medium">Riwayat Permohonan</h3>
         {permits.map((permit) => (
           <Card key={permit.id}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  {permit.permit_type.charAt(0).toUpperCase() + permit.permit_type.slice(1).replace('_', ' ')}
+                  {permit.permit_type === 'kegiatan_luar' ? 'Kegiatan di Luar Jam Pembelajaran' : 
+                   permit.permit_type.charAt(0).toUpperCase() + permit.permit_type.slice(1).replace('_', ' ')}
                 </span>
                 {getStatusBadge(permit.status)}
               </CardTitle>
@@ -285,7 +297,7 @@ export const StudentPermitManagement = () => {
               </div>
               
               <div>
-                <strong>Alasan:</strong>
+                <strong>Alasan/Tujuan:</strong>
                 <div className="mt-1 text-sm text-gray-600">
                   {permit.reason}
                 </div>
@@ -307,7 +319,7 @@ export const StudentPermitManagement = () => {
       {permits.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Belum ada pengajuan izin</p>
+            <p className="text-gray-500">Belum ada permohonan izin/kegiatan</p>
           </CardContent>
         </Card>
       )}

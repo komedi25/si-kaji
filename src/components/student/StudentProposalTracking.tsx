@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Calendar, Clock, User, Plus } from 'lucide-react';
+import { FileText, Calendar, Clock, User, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { StudentActivityProposalForm } from './StudentActivityProposalForm';
 
 interface ActivityProposal {
   id: string;
@@ -113,43 +114,32 @@ export const StudentProposalTracking = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold mb-2">Status Proposal Kegiatan Saya</h2>
+          <h2 className="text-xl font-semibold mb-2">Proposal Kegiatan</h2>
           <p className="text-gray-600">
-            Pantau status pengajuan proposal kegiatan yang telah Anda submit
+            Buat dan pantau status pengajuan proposal kegiatan Anda
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Buat Proposal
+        <Button onClick={() => setShowForm(!showForm)}>
+          {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+          {showForm ? 'Tutup Form' : 'Buat Proposal'}
         </Button>
       </div>
 
       {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Form Proposal Kegiatan Baru</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-center text-gray-500 py-8">
-              Form pengajuan proposal akan segera tersedia. Silakan hubungi admin untuk sementara waktu.
-            </p>
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                Tutup
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div>
+          <StudentActivityProposalForm />
+        </div>
       )}
 
       <div className="space-y-4">
+        <h3 className="text-lg font-medium">Status Proposal Saya</h3>
         {proposals.map((proposal) => (
           <Card key={proposal.id}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  {proposal.proposal_number}
+                  {proposal.proposal_number || 'Draft'}
                 </span>
                 {getStatusBadge(proposal.status)}
               </CardTitle>
@@ -203,7 +193,7 @@ export const StudentProposalTracking = () => {
                 </div>
               )}
 
-              {proposal.status === 'approved' && !proposal.approved_at && (
+              {proposal.status === 'approved' && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="text-green-700 text-sm">
                     ✅ Proposal Anda telah disetujui! Silakan lanjutkan persiapan kegiatan sesuai rencana.
@@ -218,6 +208,14 @@ export const StudentProposalTracking = () => {
                   </div>
                 </div>
               )}
+
+              {proposal.status === 'draft' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="text-yellow-700 text-sm">
+                    📝 Proposal masih dalam status draft. Lengkapi dan submit untuk review.
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -226,7 +224,7 @@ export const StudentProposalTracking = () => {
       {proposals.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Belum ada proposal kegiatan yang disubmit</p>
+            <p className="text-gray-500">Belum ada proposal kegiatan yang dibuat</p>
           </CardContent>
         </Card>
       )}

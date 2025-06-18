@@ -75,24 +75,10 @@ export const Sidebar = () => {
       requiredRoles: ['siswa'],
     },
     {
-      title: 'Perizinan',
-      href: '#',
+      title: 'Perizinan & Kegiatan',
+      href: '/permits',
       icon: FileX,
       requiredRoles: ['siswa'],
-      children: [
-        {
-          title: 'Ajukan Izin',
-          href: '/permits?tab=form',
-          icon: FileX,
-          requiredRoles: ['siswa'],
-        },
-        {
-          title: 'Status Izin',
-          href: '/permits?tab=status',
-          icon: CheckSquare,
-          requiredRoles: ['siswa'],
-        },
-      ],
     },
     {
       title: 'Permohonan Surat',
@@ -102,23 +88,9 @@ export const Sidebar = () => {
     },
     {
       title: 'Konseling',
-      href: '#',
+      href: '/counseling',
       icon: Heart,
       requiredRoles: ['siswa'],
-      children: [
-        {
-          title: 'Ajukan Konseling',
-          href: '/counseling?tab=request',
-          icon: Heart,
-          requiredRoles: ['siswa'],
-        },
-        {
-          title: 'Riwayat Konseling',
-          href: '/counseling?tab=history',
-          icon: Clock,
-          requiredRoles: ['siswa'],
-        },
-      ],
     },
     {
       title: 'Ekstrakurikuler',
@@ -142,7 +114,7 @@ export const Sidebar = () => {
     },
     {
       title: 'Proposal Kegiatan',
-      href: '/activity-proposal?tab=student-proposal',
+      href: '/activity-proposal',
       icon: ClipboardList,
       requiredRoles: ['siswa'],
     },
