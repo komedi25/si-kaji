@@ -28,7 +28,9 @@ export const StudentExtracurricularEnrollment = () => {
   const [studentId, setStudentId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStudentId();
+    if (user?.id) {
+      fetchStudentId();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -38,16 +40,37 @@ export const StudentExtracurricularEnrollment = () => {
   }, [studentId]);
 
   const fetchStudentId = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
 
-    const { data } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
 
-    if (data) {
-      setStudentId(data.id);
+      if (error) {
+        console.error('Error fetching student ID:', error);
+        toast({
+          title: "Error",
+          description: "Tidak dapat menemukan data siswa",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        setStudentId(data.id);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error in fetchStudentId:', error);
+      setLoading(false);
     }
   };
 
@@ -74,14 +97,14 @@ export const StudentExtracurricularEnrollment = () => {
 
       // Get participant counts
       const extracurricularsWithEnrollment = await Promise.all(
-        extracurricularsData.map(async (extracurricular) => {
+        (extracurricularsData || []).map(async (extracurricular) => {
           const { count } = await supabase
             .from('extracurricular_enrollments')
             .select('*', { count: 'exact' })
             .eq('extracurricular_id', extracurricular.id)
             .eq('status', 'active');
 
-          const isEnrolled = enrollmentsData.some(
+          const isEnrolled = (enrollmentsData || []).some(
             enrollment => enrollment.extracurricular_id === extracurricular.id
           );
 
@@ -109,7 +132,6 @@ export const StudentExtracurricularEnrollment = () => {
   const handleEnroll = async (extracurricular: Extracurricular) => {
     if (!studentId) return;
 
-    // Check if already enrolled
     if (extracurricular.is_enrolled) {
       toast({
         title: "Info",
@@ -119,7 +141,6 @@ export const StudentExtracurricularEnrollment = () => {
       return;
     }
 
-    // Check if full
     if (extracurricular.max_participants && 
         extracurricular.current_participants >= extracurricular.max_participants) {
       toast({
@@ -273,7 +294,7 @@ export const StudentExtracurricularEnrollment = () => {
         ))}
       </div>
 
-      {extracurriculars.length === 0 && (
+      {extracurriculars.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-gray-500">Tidak ada ekstrakurikuler yang tersedia saat ini</p>

@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Calendar, Clock, User } from 'lucide-react';
+import { FileText, Calendar, Clock, User, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -29,13 +30,19 @@ export const StudentProposalTracking = () => {
   const { toast } = useToast();
   const [proposals, setProposals] = useState<ActivityProposal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    fetchProposals();
+    if (user?.id) {
+      fetchProposals();
+    }
   }, [user]);
 
   const fetchProposals = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -104,12 +111,36 @@ export const StudentProposalTracking = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Status Proposal Kegiatan Saya</h2>
-        <p className="text-gray-600 mb-6">
-          Pantau status pengajuan proposal kegiatan yang telah Anda submit
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Status Proposal Kegiatan Saya</h2>
+          <p className="text-gray-600">
+            Pantau status pengajuan proposal kegiatan yang telah Anda submit
+          </p>
+        </div>
+        <Button onClick={() => setShowForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Buat Proposal
+        </Button>
       </div>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Form Proposal Kegiatan Baru</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-gray-500 py-8">
+              Form pengajuan proposal akan segera tersedia. Silakan hubungi admin untuk sementara waktu.
+            </p>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowForm(false)}>
+                Tutup
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
         {proposals.map((proposal) => (
@@ -192,7 +223,7 @@ export const StudentProposalTracking = () => {
         ))}
       </div>
 
-      {proposals.length === 0 && (
+      {proposals.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-gray-500">Belum ada proposal kegiatan yang disubmit</p>

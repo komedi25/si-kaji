@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Plus, X, Eye } from 'lucide-react';
+import { FileText, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -39,7 +39,9 @@ export const StudentPermitManagement = () => {
   });
 
   useEffect(() => {
-    fetchStudentId();
+    if (user?.id) {
+      fetchStudentId();
+    }
   }, [user]);
 
   useEffect(() => {
@@ -49,16 +51,37 @@ export const StudentPermitManagement = () => {
   }, [studentId]);
 
   const fetchStudentId = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     
-    const { data } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (data) {
-      setStudentId(data.id);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching student ID:', error);
+        toast({
+          title: "Error",
+          description: "Tidak dapat menemukan data siswa",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        setStudentId(data.id);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error in fetchStudentId:', error);
+      setLoading(false);
     }
   };
 
@@ -122,31 +145,6 @@ export const StudentPermitManagement = () => {
       toast({
         title: "Error",
         description: "Gagal mengajukan izin",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCancel = async (permitId: string) => {
-    try {
-      const { error } = await supabase
-        .from('student_permits')
-        .update({ status: 'cancelled' })
-        .eq('id', permitId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Berhasil",
-        description: "Pengajuan izin berhasil dibatalkan"
-      });
-
-      fetchPermits();
-    } catch (error) {
-      console.error('Error cancelling permit:', error);
-      toast({
-        title: "Error",
-        description: "Gagal membatalkan pengajuan",
         variant: "destructive"
       });
     }
@@ -301,24 +299,12 @@ export const StudentPermitManagement = () => {
                   </div>
                 </div>
               )}
-              
-              {permit.status === 'pending' && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleCancel(permit.id)}
-                  >
-                    Batalkan
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {permits.length === 0 && (
+      {permits.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
             <p className="text-gray-500">Belum ada pengajuan izin</p>

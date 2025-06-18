@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Save, Camera } from 'lucide-react';
+import { User, Save } from 'lucide-react';
 
 interface StudentData {
   id: string;
@@ -35,11 +35,16 @@ export const StudentProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    fetchStudentData();
+    if (user?.id) {
+      fetchStudentData();
+    }
   }, [user]);
 
   const fetchStudentData = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -55,12 +60,18 @@ export const StudentProfile = () => {
           description: "Gagal memuat data pribadi",
           variant: "destructive"
         });
+        setLoading(false);
         return;
       }
 
       setStudentData(data);
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data pribadi",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
