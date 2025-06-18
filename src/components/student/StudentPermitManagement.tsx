@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -169,7 +168,16 @@ export const StudentPermitManagement = () => {
     }
 
     try {
-      const permitData = {
+      const permitData: {
+        student_id: string;
+        permit_type: string;
+        reason: string;
+        start_date: string;
+        end_date: string;
+        status: string;
+        start_time?: string;
+        end_time?: string;
+      } = {
         student_id: studentId,
         permit_type: formData.permit_type,
         reason: formData.reason,
