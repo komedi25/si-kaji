@@ -19,6 +19,8 @@ interface StudentPermit {
   reason: string;
   start_date: string;
   end_date: string;
+  start_time?: string;
+  end_time?: string;
   status: string;
   review_notes?: string;
   submitted_at: string;
@@ -35,7 +37,9 @@ export const StudentPermitManagement = () => {
     permit_type: '',
     reason: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    start_time: '',
+    end_time: ''
   });
 
   useEffect(() => {
@@ -57,17 +61,19 @@ export const StudentPermitManagement = () => {
     }
     
     try {
+      console.log('Fetching student data for user ID:', user.id);
+      
       const { data, error } = await supabase
         .from('students')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error('Error fetching student ID:', error);
         toast({
           title: "Error",
-          description: "Tidak dapat menemukan data siswa",
+          description: "Gagal memuat data siswa: " + error.message,
           variant: "destructive"
         });
         setLoading(false);
@@ -75,12 +81,24 @@ export const StudentPermitManagement = () => {
       }
 
       if (data) {
+        console.log('Student data found:', data);
         setStudentId(data.id);
       } else {
+        console.log('No student data found for user:', user.id);
+        toast({
+          title: "Info",
+          description: "Data siswa tidak ditemukan. Silakan hubungi administrator untuk menghubungkan akun Anda dengan data siswa.",
+          variant: "destructive"
+        });
         setLoading(false);
       }
     } catch (error) {
       console.error('Error in fetchStudentId:', error);
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat memuat data siswa",
+        variant: "destructive"
+      });
       setLoading(false);
     }
   };
@@ -89,13 +107,20 @@ export const StudentPermitManagement = () => {
     if (!studentId) return;
 
     try {
+      console.log('Fetching permits for student ID:', studentId);
+      
       const { data, error } = await supabase
         .from('student_permits')
         .select('*')
         .eq('student_id', studentId)
         .order('submitted_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching permits:', error);
+        throw error;
+      }
+      
+      console.log('Permits fetched:', data);
       setPermits(data || []);
     } catch (error) {
       console.error('Error fetching permits:', error);
@@ -111,19 +136,59 @@ export const StudentPermitManagement = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId) return;
+    if (!studentId) {
+      toast({
+        title: "Error",
+        description: "Data siswa tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validasi khusus untuk kegiatan di luar jam pembelajaran
+    if (formData.permit_type === 'kegiatan_luar') {
+      if (!formData.start_time || !formData.end_time) {
+        toast({
+          title: "Error",
+          description: "Waktu mulai dan selesai wajib diisi untuk kegiatan di luar jam pembelajaran",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validasi jam berakhir maksimal 17:15
+      const endTime = formData.end_time;
+      if (endTime > '17:15') {
+        toast({
+          title: "Error",
+          description: "Kegiatan siswa harus berakhir maksimal pukul 17:15 di hari kerja",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
 
     try {
+      const permitData = {
+        student_id: studentId,
+        permit_type: formData.permit_type,
+        reason: formData.reason,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        status: 'pending'
+      };
+
+      // Tambahkan waktu jika ada
+      if (formData.start_time) {
+        permitData.start_time = formData.start_time;
+      }
+      if (formData.end_time) {
+        permitData.end_time = formData.end_time;
+      }
+
       const { error } = await supabase
         .from('student_permits')
-        .insert({
-          student_id: studentId,
-          permit_type: formData.permit_type,
-          reason: formData.reason,
-          start_date: formData.start_date,
-          end_date: formData.end_date,
-          status: 'pending'
-        });
+        .insert(permitData);
 
       if (error) throw error;
 
@@ -136,7 +201,9 @@ export const StudentPermitManagement = () => {
         permit_type: '',
         reason: '',
         start_date: '',
-        end_date: ''
+        end_date: '',
+        start_time: '',
+        end_time: ''
       });
       setShowForm(false);
       fetchPermits();
@@ -172,11 +239,49 @@ export const StudentPermitManagement = () => {
     );
   };
 
+  const getPermitTypeLabel = (type: string) => {
+    const labels = {
+      sakit: 'Izin Sakit',
+      keluarga: 'Urusan Keluarga',
+      keperluan_penting: 'Keperluan Penting',
+      kegiatan_luar: 'Kegiatan di Luar Jam Pembelajaran',
+      lainnya: 'Lainnya'
+    };
+    return labels[type as keyof typeof labels] || type;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
+    );
+  }
+
+  // Tampilkan pesan jika data siswa tidak ditemukan
+  if (!studentId) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <div className="space-y-4">
+            <div className="text-center">
+              <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900">Data Siswa Belum Tersedia</h3>
+              <p className="text-gray-500 mt-2">
+                Data siswa Anda belum terhubung dengan akun ini. Silakan hubungi administrator sekolah untuk menghubungkan data siswa dengan akun Anda.
+              </p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Hubungi bagian tata usaha sekolah</li>
+                <li>• Berikan informasi akun Anda: {user?.email}</li>
+                <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -220,27 +325,60 @@ export const StudentPermitManagement = () => {
                 </select>
               </div>
               
-              <div>
-                <Label htmlFor="start_date">Tanggal Mulai</Label>
-                <Input
-                  id="start_date"
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_date">Tanggal Mulai</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="end_date">Tanggal Selesai</Label>
+                  <Input
+                    id="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    required
+                  />
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="end_date">Tanggal Selesai</Label>
-                <Input
-                  id="end_date"
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                  required
-                />
-              </div>
+
+              {/* Tampilkan input waktu hanya untuk kegiatan di luar jam pembelajaran */}
+              {formData.permit_type === 'kegiatan_luar' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="start_time">Waktu Mulai <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="start_time"
+                      type="time"
+                      value={formData.start_time}
+                      onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="end_time">Waktu Selesai <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                      max="17:15"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Maksimal pukul 17:15 di hari kerja
+                    </p>
+                  </div>
+                </div>
+              )}
               
               <div>
                 <Label htmlFor="reason">Alasan/Tujuan</Label>
@@ -256,7 +394,7 @@ export const StudentPermitManagement = () => {
               {formData.permit_type === 'kegiatan_luar' && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>Catatan:</strong> Permohonan kegiatan di luar jam pembelajaran akan direview oleh wali kelas dan dilanjutkan ke wakil kepala sekolah bidang kesiswaan untuk persetujuan.
+                    <strong>Catatan:</strong> Permohonan kegiatan di luar jam pembelajaran akan direview oleh wali kelas dan dilanjutkan ke wakil kepala sekolah bidang kesiswaan untuk persetujuan. Kegiatan harus berakhir maksimal pukul 17:15 di hari kerja.
                   </p>
                 </div>
               )}
@@ -280,8 +418,7 @@ export const StudentPermitManagement = () => {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  {permit.permit_type === 'kegiatan_luar' ? 'Kegiatan di Luar Jam Pembelajaran' : 
-                   permit.permit_type.charAt(0).toUpperCase() + permit.permit_type.slice(1).replace('_', ' ')}
+                  {getPermitTypeLabel(permit.permit_type)}
                 </span>
                 {getStatusBadge(permit.status)}
               </CardTitle>
@@ -295,6 +432,12 @@ export const StudentPermitManagement = () => {
                   <strong>Diajukan:</strong> {format(new Date(permit.submitted_at), 'dd/MM/yyyy HH:mm', { locale: id })}
                 </div>
               </div>
+
+              {permit.start_time && permit.end_time && (
+                <div className="text-sm">
+                  <strong>Waktu:</strong> {permit.start_time} - {permit.end_time}
+                </div>
+              )}
               
               <div>
                 <strong>Alasan/Tujuan:</strong>
