@@ -1,3 +1,4 @@
+
 export type AppRole = 
   | 'admin'
   | 'kepala_sekolah'
@@ -23,6 +24,20 @@ export interface UserProfile {
   address?: string;
   created_at: string;
   updated_at: string;
+  // Student specific fields
+  nisn?: string;
+  gender?: 'L' | 'P';
+  birth_place?: string;
+  birth_date?: string;
+  religion?: string;
+  parent_name?: string;
+  parent_phone?: string;
+  parent_address?: string;
+  admission_date?: string;
+  graduation_date?: string;
+  status?: 'active' | 'graduated' | 'transferred' | 'dropped';
+  photo_url?: string;
+  current_class?: string;
 }
 
 export interface UserRole {
