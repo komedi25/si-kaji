@@ -3,7 +3,7 @@ import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { StudentPermitManagement } from '@/components/student/StudentPermitManagement';
 import { PermitApproval } from '@/components/permits/PermitApproval';
-import { PermitReport } from '@/components/permits/PermitReport';
+import PermitReport from '@/components/permits/PermitReport';
 import { useAuth } from '@/hooks/useAuth';
 
 const PermitManagement = () => {

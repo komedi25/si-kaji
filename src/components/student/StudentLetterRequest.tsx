@@ -1,25 +1,26 @@
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { FileText, Plus, X, Download } from 'lucide-react';
+import { FileText, Calendar, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id as localeId } from 'date-fns/locale';
 
 interface LetterRequest {
   id: string;
   request_number: string;
   letter_type: string;
   purpose: string;
+  additional_notes: string;
   status: string;
-  additional_notes?: string;
   letter_url?: string;
   created_at: string;
   processed_at?: string;
@@ -30,8 +31,7 @@ export const StudentLetterRequest = () => {
   const { toast } = useToast();
   const [requests, setRequests] = useState<LetterRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [studentId, setStudentId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     letter_type: '',
     purpose: '',
@@ -39,43 +39,33 @@ export const StudentLetterRequest = () => {
   });
 
   useEffect(() => {
-    fetchStudentId();
-  }, [user]);
-
-  useEffect(() => {
-    if (studentId) {
-      fetchRequests();
-    }
-  }, [studentId]);
-
-  const fetchStudentId = async () => {
-    if (!user?.id) return;
-    
-    const { data } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (data) {
-      setStudentId(data.id);
-    }
-  };
+    fetchRequests();
+  }, []);
 
   const fetchRequests = async () => {
-    if (!studentId) return;
+    if (!user) return;
 
     try {
+      // Get student data first
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (studentError) throw studentError;
+
       const { data, error } = await supabase
         .from('letter_requests')
         .select('*')
-        .eq('student_id', studentId)
+        .eq('student_id', studentData.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
       setRequests(data || []);
     } catch (error) {
-      console.error('Error fetching letter requests:', error);
+      console.error('Error fetching requests:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data permohonan surat",
@@ -86,15 +76,35 @@ export const StudentLetterRequest = () => {
     }
   };
 
+  const generateRequestNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `SR${year}${month}${day}${random}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId) return;
+    if (!user) return;
 
+    setSubmitting(true);
     try {
+      // Get student data
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (studentError) throw studentError;
+
       const { error } = await supabase
         .from('letter_requests')
         .insert({
-          student_id: studentId,
+          student_id: studentData.id,
+          request_number: generateRequestNumber(),
           letter_type: formData.letter_type,
           purpose: formData.purpose,
           additional_notes: formData.additional_notes,
@@ -105,7 +115,7 @@ export const StudentLetterRequest = () => {
 
       toast({
         title: "Berhasil",
-        description: "Permohonan surat berhasil disubmit"
+        description: "Permohonan surat berhasil diajukan"
       });
 
       setFormData({
@@ -113,40 +123,41 @@ export const StudentLetterRequest = () => {
         purpose: '',
         additional_notes: ''
       });
-      setShowForm(false);
+
       fetchRequests();
     } catch (error) {
-      console.error('Error submitting letter request:', error);
+      console.error('Error submitting request:', error);
       toast({
         title: "Error",
         description: "Gagal mengajukan permohonan surat",
         variant: "destructive"
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      pending: 'secondary',
-      processing: 'default',
-      ready: 'outline',
-      completed: 'default',
-      rejected: 'destructive'
-    } as const;
-
-    const labels = {
-      pending: 'Menunggu',
-      processing: 'Diproses',
-      ready: 'Siap Diambil',
-      completed: 'Selesai',
-      rejected: 'Ditolak'
+    const statusConfig = {
+      pending: { label: 'Menunggu', variant: 'secondary' as const },
+      processing: { label: 'Diproses', variant: 'default' as const },
+      completed: { label: 'Selesai', variant: 'default' as const },
+      rejected: { label: 'Ditolak', variant: 'destructive' as const }
     };
+    
+    const config = statusConfig[status as keyof typeof statusConfig];
+    return config ? <Badge variant={config.variant}>{config.label}</Badge> : null;
+  };
 
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
-    );
+  const getLetterTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      active_student: 'Surat Keterangan Aktif Kuliah',
+      good_conduct: 'Surat Kelakuan Baik',
+      graduation: 'Surat Keterangan Lulus',
+      transfer: 'Surat Pindah Sekolah',
+      other: 'Lainnya'
+    };
+    return types[type] || type;
   };
 
   if (loading) {
@@ -159,143 +170,115 @@ export const StudentLetterRequest = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Permohonan Surat</h2>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ajukan Surat
-        </Button>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Permohonan Surat Baru
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="letter_type">Jenis Surat</Label>
+              <Select value={formData.letter_type} onValueChange={(value) => setFormData({ ...formData, letter_type: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih jenis surat" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active_student">Surat Keterangan Aktif Siswa</SelectItem>
+                  <SelectItem value="good_conduct">Surat Kelakuan Baik</SelectItem>
+                  <SelectItem value="graduation">Surat Keterangan Lulus</SelectItem>
+                  <SelectItem value="transfer">Surat Pindah Sekolah</SelectItem>
+                  <SelectItem value="other">Lainnya</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Form Permohonan Surat</span>
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="letter_type">Jenis Surat</Label>
-                <select
-                  id="letter_type"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.letter_type}
-                  onChange={(e) => setFormData({...formData, letter_type: e.target.value})}
-                  required
-                >
-                  <option value="">Pilih jenis surat</option>
-                  <option value="keterangan_aktif">Surat Keterangan Siswa Aktif</option>
-                  <option value="keterangan_berkelakuan_baik">Surat Keterangan Berkelakuan Baik</option>
-                  <option value="rekomendasi">Surat Rekomendasi</option>
-                  <option value="keterangan_lulus">Surat Keterangan Lulus</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-              </div>
-              
-              <div>
-                <Label htmlFor="purpose">Keperluan</Label>
-                <Textarea
-                  id="purpose"
-                  placeholder="Jelaskan keperluan surat ini..."
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="additional_notes">Catatan Tambahan (Opsional)</Label>
-                <Textarea
-                  id="additional_notes"
-                  placeholder="Tambahkan catatan jika diperlukan..."
-                  value={formData.additional_notes}
-                  onChange={(e) => setFormData({...formData, additional_notes: e.target.value})}
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Button type="submit">Submit Permohonan</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Batal
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <div>
+              <Label htmlFor="purpose">Tujuan Penggunaan</Label>
+              <Input
+                id="purpose"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                placeholder="Contoh: Untuk keperluan beasiswa, pendaftaran kuliah, dll"
+                required
+              />
+            </div>
 
-      <div className="space-y-4">
-        {requests.map((request) => (
-          <Card key={request.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  {request.request_number}
-                </span>
-                {getStatusBadge(request.status)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Jenis Surat:</strong> {request.letter_type.replace('_', ' ').toUpperCase()}
-                </div>
-                <div>
-                  <strong>Tanggal Pengajuan:</strong> {format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: id })}
-                </div>
-                {request.processed_at && (
-                  <div>
-                    <strong>Tanggal Diproses:</strong> {format(new Date(request.processed_at), 'dd/MM/yyyy HH:mm', { locale: id })}
+            <div>
+              <Label htmlFor="additional_notes">Catatan Tambahan</Label>
+              <Textarea
+                id="additional_notes"
+                value={formData.additional_notes}
+                onChange={(e) => setFormData({ ...formData, additional_notes: e.target.value })}
+                placeholder="Catatan atau keterangan tambahan (opsional)"
+              />
+            </div>
+
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Mengajukan...' : 'Ajukan Permohonan'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Riwayat Permohonan Surat</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {requests.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              Belum ada permohonan surat
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <div key={request.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold">{getLetterTypeLabel(request.letter_type)}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        No. {request.request_number}
+                      </p>
+                    </div>
+                    {getStatusBadge(request.status)}
                   </div>
-                )}
-              </div>
-              
-              <div>
-                <strong>Keperluan:</strong>
-                <div className="mt-1 text-sm text-gray-600">
-                  {request.purpose}
-                </div>
-              </div>
-              
-              {request.additional_notes && (
-                <div>
-                  <strong>Catatan:</strong>
-                  <div className="mt-1 text-sm text-gray-600">
-                    {request.additional_notes}
+                  
+                  <p className="text-sm"><strong>Tujuan:</strong> {request.purpose}</p>
+                  
+                  {request.additional_notes && (
+                    <p className="text-sm"><strong>Catatan:</strong> {request.additional_notes}</p>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    Diajukan: {format(new Date(request.created_at), 'dd MMMM yyyy HH:mm', { locale: localeId })}
+                    {request.processed_at && (
+                      <>
+                        {' • '}
+                        Diproses: {format(new Date(request.processed_at), 'dd MMMM yyyy HH:mm', { locale: localeId })}
+                      </>
+                    )}
                   </div>
-                </div>
-              )}
-              
-              {request.letter_url && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(request.letter_url, '_blank')}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Unduh Surat
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
-      {requests.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Belum ada permohonan surat</p>
-          </CardContent>
-        </Card>
-      )}
+                  {request.letter_url && (
+                    <div className="pt-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={request.letter_url} target="_blank" rel="noopener noreferrer">
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Surat
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

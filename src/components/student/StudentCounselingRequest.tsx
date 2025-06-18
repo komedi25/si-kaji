@@ -1,31 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Heart, Plus, X, Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, User, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id as localeId } from 'date-fns/locale';
 
 interface CounselingSession {
   id: string;
   session_date: string;
   session_time: string;
   session_type: string;
-  topic?: string;
+  topic: string;
   status: string;
-  duration_minutes: number;
-  created_at: string;
   counselor_id: string;
-  profiles?: {
+  counselor?: {
     full_name: string;
   };
+  created_at: string;
 }
 
 interface Counselor {
@@ -39,86 +39,51 @@ export const StudentCounselingRequest = () => {
   const [sessions, setSessions] = useState<CounselingSession[]>([]);
   const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [studentId, setStudentId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    counselor_id: '',
     session_date: '',
-    session_time: '',
+    session_time: '09:00',
     session_type: 'individual',
     topic: '',
-    duration_minutes: 60
+    counselor_id: ''
   });
 
   useEffect(() => {
-    fetchStudentId();
+    fetchSessions();
     fetchCounselors();
-  }, [user]);
-
-  useEffect(() => {
-    if (studentId) {
-      fetchSessions();
-    }
-  }, [studentId]);
-
-  const fetchStudentId = async () => {
-    if (!user?.id) return;
-    
-    const { data } = await supabase
-      .from('students')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (data) {
-      setStudentId(data.id);
-    }
-  };
-
-  const fetchCounselors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select(`
-          user_id,
-          profiles!inner(id, full_name)
-        `)
-        .eq('role', 'guru_bk')
-        .eq('is_active', true);
-
-      if (error) throw error;
-      
-      const counselorData = data?.map(item => ({
-        id: item.profiles.id,
-        full_name: item.profiles.full_name
-      })) || [];
-      
-      setCounselors(counselorData);
-    } catch (error) {
-      console.error('Error fetching counselors:', error);
-    }
-  };
+  }, []);
 
   const fetchSessions = async () => {
-    if (!studentId) return;
+    if (!user) return;
 
     try {
+      // Get student data first
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (studentError) throw studentError;
+
+      // Then get counseling sessions
       const { data, error } = await supabase
         .from('counseling_sessions')
         .select(`
           *,
-          profiles!counseling_sessions_counselor_id_fkey(full_name)
+          counselor:profiles!counselor_id(full_name)
         `)
-        .eq('student_id', studentId)
+        .eq('student_id', studentData.id)
         .order('session_date', { ascending: false });
 
       if (error) throw error;
+
       setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching counseling sessions:', error);
+      console.error('Error fetching sessions:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data konseling",
+        description: "Gagal memuat data sesi konseling",
         variant: "destructive"
       });
     } finally {
@@ -126,21 +91,62 @@ export const StudentCounselingRequest = () => {
     }
   };
 
+  const fetchCounselors = async () => {
+    try {
+      // Get users with guru_bk role
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select(`
+          user_id,
+          profiles!inner(
+            id,
+            full_name
+          )
+        `)
+        .eq('role', 'guru_bk');
+
+      if (error) throw error;
+
+      const counselorData = data?.map(item => ({
+        id: item.user_id,
+        full_name: item.profiles?.full_name || 'Unknown'
+      })) || [];
+
+      setCounselors(counselorData);
+    } catch (error) {
+      console.error('Error fetching counselors:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data guru BK",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId) return;
+    if (!user) return;
 
+    setSubmitting(true);
     try {
+      // Get student data
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (studentError) throw studentError;
+
       const { error } = await supabase
         .from('counseling_sessions')
         .insert({
-          student_id: studentId,
+          student_id: studentData.id,
           counselor_id: formData.counselor_id,
           session_date: formData.session_date,
           session_time: formData.session_time,
           session_type: formData.session_type,
           topic: formData.topic,
-          duration_minutes: formData.duration_minutes,
           status: 'scheduled'
         });
 
@@ -148,49 +154,39 @@ export const StudentCounselingRequest = () => {
 
       toast({
         title: "Berhasil",
-        description: "Permintaan konseling berhasil diajukan"
+        description: "Pengajuan konseling berhasil disubmit"
       });
 
       setFormData({
-        counselor_id: '',
         session_date: '',
-        session_time: '',
+        session_time: '09:00',
         session_type: 'individual',
         topic: '',
-        duration_minutes: 60
+        counselor_id: ''
       });
-      setShowForm(false);
+
       fetchSessions();
     } catch (error) {
-      console.error('Error submitting counseling request:', error);
+      console.error('Error submitting request:', error);
       toast({
         title: "Error",
         description: "Gagal mengajukan konseling",
         variant: "destructive"
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      scheduled: 'secondary',
-      completed: 'default',
-      cancelled: 'destructive',
-      rescheduled: 'outline'
-    } as const;
-
-    const labels = {
-      scheduled: 'Terjadwal',
-      completed: 'Selesai',
-      cancelled: 'Dibatalkan',
-      rescheduled: 'Dijadwal Ulang'
+    const statusConfig = {
+      scheduled: { label: 'Dijadwalkan', variant: 'default' as const },
+      completed: { label: 'Selesai', variant: 'secondary' as const },
+      cancelled: { label: 'Dibatalkan', variant: 'destructive' as const }
     };
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
-    );
+    
+    const config = statusConfig[status as keyof typeof statusConfig];
+    return config ? <Badge variant={config.variant}>{config.label}</Badge> : null;
   };
 
   if (loading) {
@@ -203,167 +199,131 @@ export const StudentCounselingRequest = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Konseling Saya</h2>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ajukan Konseling
-        </Button>
-      </div>
-
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Form Permintaan Konseling</span>
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Pengajuan Konseling
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="counselor_id">Guru BK</Label>
-                <select
-                  id="counselor_id"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.counselor_id}
-                  onChange={(e) => setFormData({...formData, counselor_id: e.target.value})}
+                <Label htmlFor="session_date">Tanggal Konseling</Label>
+                <Input
+                  id="session_date"
+                  type="date"
+                  value={formData.session_date}
+                  onChange={(e) => setFormData({ ...formData, session_date: e.target.value })}
                   required
-                >
-                  <option value="">Pilih Guru BK</option>
-                  {counselors.map((counselor) => (
-                    <option key={counselor.id} value={counselor.id}>
-                      {counselor.full_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="session_date">Tanggal Konseling</Label>
-                  <Input
-                    id="session_date"
-                    type="date"
-                    value={formData.session_date}
-                    onChange={(e) => setFormData({...formData, session_date: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="session_time">Waktu Konseling</Label>
-                  <Input
-                    id="session_time"
-                    type="time"
-                    value={formData.session_time}
-                    onChange={(e) => setFormData({...formData, session_time: e.target.value})}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="session_type">Jenis Konseling</Label>
-                <select
-                  id="session_type"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.session_type}
-                  onChange={(e) => setFormData({...formData, session_type: e.target.value})}
-                  required
-                >
-                  <option value="individual">Individual</option>
-                  <option value="group">Kelompok</option>
-                </select>
-              </div>
-              
-              <div>
-                <Label htmlFor="topic">Topik/Permasalahan</Label>
-                <Textarea
-                  id="topic"
-                  placeholder="Jelaskan topik atau permasalahan yang ingin dikonsultasikan..."
-                  value={formData.topic}
-                  onChange={(e) => setFormData({...formData, topic: e.target.value})}
                 />
               </div>
               
               <div>
-                <Label htmlFor="duration_minutes">Durasi (menit)</Label>
-                <select
-                  id="duration_minutes"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData({...formData, duration_minutes: parseInt(e.target.value)})}
-                >
-                  <option value={30}>30 menit</option>
-                  <option value={60}>60 menit</option>
-                  <option value={90}>90 menit</option>
-                </select>
+                <Label htmlFor="session_time">Waktu Konseling</Label>
+                <Input
+                  id="session_time"
+                  type="time"
+                  value={formData.session_time}
+                  onChange={(e) => setFormData({ ...formData, session_time: e.target.value })}
+                  required
+                />
               </div>
-              
-              <div className="flex gap-2">
-                <Button type="submit">Submit Permintaan</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Batal
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Riwayat Konseling</h3>
-        {sessions.map((session) => (
-          <Card key={session.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
-                  Konseling {session.session_type === 'individual' ? 'Individual' : 'Kelompok'}
-                </span>
-                {getStatusBadge(session.status)}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>{format(new Date(session.session_date), 'dd MMMM yyyy', { locale: id })}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span>{session.session_time} ({session.duration_minutes} menit)</span>
-                </div>
-                <div>
-                  <strong>Konselor:</strong> {session.profiles?.full_name || 'N/A'}
-                </div>
-                <div>
-                  <strong>Diajukan:</strong> {format(new Date(session.created_at), 'dd/MM/yyyy', { locale: id })}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="session_type">Jenis Konseling</Label>
+                <Select value={formData.session_type} onValueChange={(value) => setFormData({ ...formData, session_type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="group">Kelompok</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              {session.topic && (
-                <div>
-                  <strong>Topik:</strong>
-                  <div className="mt-1 text-sm text-gray-600">
-                    {session.topic}
+
+              <div>
+                <Label htmlFor="counselor_id">Guru BK</Label>
+                <Select value={formData.counselor_id} onValueChange={(value) => setFormData({ ...formData, counselor_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Guru BK" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {counselors.map((counselor) => (
+                      <SelectItem key={counselor.id} value={counselor.id}>
+                        {counselor.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="topic">Topik/Masalah yang Ingin Dibahas</Label>
+              <Textarea
+                id="topic"
+                value={formData.topic}
+                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                placeholder="Jelaskan topik atau masalah yang ingin Anda konsultasikan..."
+                required
+              />
+            </div>
+
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Mengajukan...' : 'Ajukan Konseling'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Riwayat Konseling</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sessions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              Belum ada riwayat konseling
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <div key={session.id} className="border rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold">{session.topic}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {session.session_type === 'individual' ? 'Individual' : 'Kelompok'}
+                      </p>
+                    </div>
+                    {getStatusBadge(session.status)}
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {format(new Date(session.session_date), 'dd MMMM yyyy', { locale: localeId })}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {session.session_time}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <User className="w-4 h-4" />
+                      {session.counselor?.full_name || 'Guru BK'}
+                    </div>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {sessions.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Belum ada riwayat konseling</p>
-          </CardContent>
-        </Card>
-      )}
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
