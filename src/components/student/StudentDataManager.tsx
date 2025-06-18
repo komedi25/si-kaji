@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Users, Search, Plus, Upload, Edit, Trash2, RotateCcw, FileDown } from 'lucide-react';
+import { Users, Search, Plus, Upload, Edit, Trash2, RotateCcw, FileDown, UserPlus } from 'lucide-react';
 import { AddStudentDialog } from './AddStudentDialog';
+import { EditStudentDialog } from './EditStudentDialog';
 import { ExcelImport } from './ExcelImport';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ export const StudentDataManager = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -160,11 +162,177 @@ export const StudentDataManager = () => {
   };
 
   const handleEditStudent = (student: Student) => {
-    // TODO: Implement edit dialog
-    toast({
-      title: "Info",
-      description: "Fitur edit siswa akan segera tersedia"
-    });
+    setSelectedStudent(student);
+    setShowEditDialog(true);
+  };
+
+  const handleCreateUserAccount = async (student: Student) => {
+    if (student.has_user_account) {
+      toast({
+        title: "Info",
+        description: "Siswa sudah memiliki akun user",
+      });
+      return;
+    }
+
+    try {
+      setActionLoading(`create-${student.id}`);
+
+      // Generate email from NIS
+      const email = `${student.nis}@smkn1kendal.sch.id`;
+      const password = `${student.nis}2024`; // Default password
+
+      // Create user account
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: student.full_name,
+          nis: student.nis
+        }
+      });
+
+      if (authError) {
+        if (authError.message.includes('User already registered')) {
+          // User exists, try to link by finding the user
+          const { data: existingUsers } = await supabase.auth.admin.listUsers();
+          const existingUser = existingUsers.users.find(u => u.email === email);
+          
+          if (existingUser) {
+            // Link existing user to student
+            const { error: linkError } = await supabase
+              .from('students')
+              .update({ user_id: existingUser.id })
+              .eq('id', student.id);
+
+            if (linkError) throw linkError;
+
+            // Add student role
+            await supabase.from('user_roles').insert({
+              user_id: existingUser.id,
+              role: 'siswa',
+              assigned_by: (await supabase.auth.getUser()).data.user?.id
+            });
+
+            toast({
+              title: "Berhasil",
+              description: `Akun yang sudah ada berhasil dihubungkan dengan siswa ${student.full_name}`,
+            });
+          }
+        } else {
+          throw authError;
+        }
+      } else if (authData.user) {
+        // Link new user to student
+        const { error: linkError } = await supabase
+          .from('students')
+          .update({ user_id: authData.user.id })
+          .eq('id', student.id);
+
+        if (linkError) throw linkError;
+
+        // Add student role
+        await supabase.from('user_roles').insert({
+          user_id: authData.user.id,
+          role: 'siswa',
+          assigned_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+        toast({
+          title: "Berhasil",
+          description: `Akun user berhasil dibuat untuk siswa ${student.full_name}. Email: ${email}, Password: ${password}`,
+        });
+      }
+
+      fetchStudents();
+    } catch (error) {
+      console.error('Error creating user account:', error);
+      toast({
+        title: "Error",
+        description: "Gagal membuat akun user untuk siswa",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleLinkExistingAccount = async (student: Student) => {
+    if (student.has_user_account) {
+      toast({
+        title: "Info",
+        description: "Siswa sudah memiliki akun user",
+      });
+      return;
+    }
+
+    try {
+      setActionLoading(`link-${student.id}`);
+
+      // Try to find user by email pattern or NIS
+      const possibleEmails = [
+        `${student.nis}@smkn1kendal.sch.id`,
+        `${student.nis}@student.smkn1kendal.sch.id`,
+        `${student.full_name.replace(/\s+/g, '.').toLowerCase()}@smkn1kendal.sch.id`
+      ];
+
+      const { data: allUsers } = await supabase.auth.admin.listUsers();
+      let foundUser = null;
+
+      // Search by email patterns
+      for (const email of possibleEmails) {
+        foundUser = allUsers.users.find(u => u.email === email);
+        if (foundUser) break;
+      }
+
+      // Search by NIS in user metadata
+      if (!foundUser) {
+        foundUser = allUsers.users.find(u => 
+          u.user_metadata?.nis === student.nis || 
+          u.user_metadata?.full_name === student.full_name
+        );
+      }
+
+      if (!foundUser) {
+        toast({
+          title: "Tidak Ditemukan",
+          description: "Tidak ditemukan akun user yang cocok. Silakan buat akun baru.",
+        });
+        return;
+      }
+
+      // Link found user to student
+      const { error: linkError } = await supabase
+        .from('students')
+        .update({ user_id: foundUser.id })
+        .eq('id', student.id);
+
+      if (linkError) throw linkError;
+
+      // Add student role if not exists
+      await supabase.from('user_roles').upsert({
+        user_id: foundUser.id,
+        role: 'siswa',
+        assigned_by: (await supabase.auth.getUser()).data.user?.id
+      });
+
+      toast({
+        title: "Berhasil",
+        description: `Akun user ${foundUser.email} berhasil dihubungkan dengan siswa ${student.full_name}`,
+      });
+
+      fetchStudents();
+    } catch (error) {
+      console.error('Error linking existing account:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menghubungkan akun user yang sudah ada",
+        variant: "destructive"
+      });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDeleteStudent = (student: Student) => {
@@ -259,6 +427,16 @@ export const StudentDataManager = () => {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleEditSuccess = () => {
+    fetchStudents();
+    setShowEditDialog(false);
+    setSelectedStudent(null);
+    toast({
+      title: "Berhasil",
+      description: "Data siswa berhasil diperbarui"
+    });
   };
 
   const handleAddSuccess = () => {
@@ -413,27 +591,55 @@ export const StudentDataManager = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditStudent(student)}
+                            title="Edit Data Siswa"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResetPassword(student)}
-                            disabled={!student.has_user_account || actionLoading === `reset-${student.id}`}
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                          </Button>
+                          
+                          {!student.has_user_account ? (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCreateUserAccount(student)}
+                                disabled={actionLoading === `create-${student.id}`}
+                                title="Buat Akun User Baru"
+                              >
+                                <UserPlus className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleLinkExistingAccount(student)}
+                                disabled={actionLoading === `link-${student.id}`}
+                                title="Hubungkan Akun User yang Ada"
+                              >
+                                <Users className="h-3 w-3" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResetPassword(student)}
+                              disabled={actionLoading === `reset-${student.id}`}
+                              title="Reset Password"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                          )}
+                          
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteStudent(student)}
                             disabled={actionLoading === 'delete'}
+                            title="Hapus Siswa"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -454,6 +660,18 @@ export const StudentDataManager = () => {
           open={showAddDialog}
           onOpenChange={setShowAddDialog}
           onSuccess={handleAddSuccess}
+          majors={majors}
+          classes={classes}
+        />
+      )}
+
+      {/* Edit Student Dialog */}
+      {showEditDialog && selectedStudent && (
+        <EditStudentDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          student={selectedStudent}
+          onSuccess={handleEditSuccess}
           majors={majors}
           classes={classes}
         />
