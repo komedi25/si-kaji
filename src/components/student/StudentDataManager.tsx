@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Major, Class } from '@/types/student';
+
+interface StudentEnrollment {
+  classes: {
+    name: string;
+    grade: number;
+  } | null;
+}
 
 interface Student {
   id: string;
@@ -31,6 +37,7 @@ interface Student {
   current_class?: string;
   user_email?: string;
   has_user_account: boolean;
+  student_enrollments?: StudentEnrollment[];
 }
 
 export const StudentDataManager = () => {
