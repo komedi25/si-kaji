@@ -34,10 +34,15 @@ export const StudentActivityProposalForm = () => {
 
     setLoading(true);
     try {
+      // Generate proposal number
+      const year = new Date().getFullYear();
+      const timestamp = Date.now().toString().slice(-4);
+      const proposalNumber = `PROP/${year}/${timestamp}`;
+
       const { error } = await supabase
         .from('activity_proposals')
         .insert({
-          organizer_id: user.id,
+          proposal_number: proposalNumber,
           title: formData.title,
           description: formData.description,
           activity_type: formData.activity_type,
