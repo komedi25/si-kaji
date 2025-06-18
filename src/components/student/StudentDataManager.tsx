@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,7 +124,10 @@ export const StudentDataManager = () => {
       const studentsWithUserInfo = (data as StudentData[] || []).map((student: StudentData): Student => {
         const enrollments = student.student_enrollments as StudentEnrollment[];
         const enrollment = enrollments && enrollments.length > 0 ? enrollments[0] : null;
-        const userAccount = authUsers?.users?.find(u => u.id === student.user_id) || null;
+        
+        // Safely handle the users array and find operation
+        const users = authUsers?.users || [];
+        const userAccount = users.find(u => u.id === student.user_id) || null;
         
         return {
           ...student,
