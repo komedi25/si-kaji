@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,19 +14,21 @@ export const useUserManagement = () => {
   const fetchAllUsers = async () => {
     try {
       setLoading(true);
+      console.log('Fetching all users data...');
       
-      // Fetch all profiles (staff/teachers) with proper typing
+      // Fetch all profiles (staff/teachers) 
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .not('nip', 'is', null)
-        .returns<ProfileData[]>();
+        .order('full_name');
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
 
-      // Fetch all students with enhanced query for better integration
+      console.log('Profiles fetched:', profiles?.length || 0);
+
+      // Fetch all students with class information
       const { data: students, error: studentsError } = await supabase
         .from('students')
         .select(`
@@ -39,12 +40,13 @@ export const useUserManagement = () => {
             )
           )
         `)
-        .order('full_name')
-        .returns<StudentData[]>();
+        .order('full_name');
 
       if (studentsError) {
         console.error('Error fetching students:', studentsError);
       }
+
+      console.log('Students fetched:', students?.length || 0);
 
       // Fetch all user roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -56,36 +58,31 @@ export const useUserManagement = () => {
         console.error('Error fetching user roles:', rolesError);
       }
 
-      // Get auth users for email data
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) {
-        console.error('Error fetching auth users:', authError);
-      }
-
-      // Cast to proper types to avoid TypeScript errors
-      const typedUserRoles = (userRoles || []) as UserRoleData[];
-      const typedAuthUsers = (authUsers?.users || []) as AuthUserData[];
+      console.log('User roles fetched:', userRoles?.length || 0);
 
       // Combine all data
       const combinedUsers: AllUserData[] = [];
 
-      // Add staff/teachers
+      // Add staff/teachers from profiles
       if (profiles && Array.isArray(profiles)) {
         profiles.forEach((profile: ProfileData) => {
-          const roles = typedUserRoles
+          const roles = (userRoles || [])
             .filter(ur => ur.user_id === profile.id)
             .map(ur => ur.role as AppRole);
 
-          const authUser = typedAuthUsers.find(au => au.id === profile.id);
+          // Skip profiles that don't have roles and are not linked to students
+          if (roles.length === 0 && !profile.nip) {
+            return; // Skip this profile
+          }
 
           combinedUsers.push({
             id: profile.id,
             full_name: profile.full_name,
-            email: authUser?.email || null,
+            email: null, // We'll try to get from auth users if needed
             nip: profile.nip,
-            nis: null,
+            nis: profile.nis,
             phone: profile.phone,
-            user_type: 'staff',
+            user_type: profile.nip ? 'staff' : 'student',
             roles,
             has_user_account: true,
             created_at: profile.created_at || new Date().toISOString()
@@ -93,25 +90,23 @@ export const useUserManagement = () => {
         });
       }
 
-      // Add students with proper integration
+      // Add students
       if (students && Array.isArray(students)) {
         students.forEach((student: StudentData) => {
           const enrollment = student.student_enrollments?.[0];
-          const roles = typedUserRoles
+          const roles = (userRoles || [])
             .filter(ur => ur.user_id === student.user_id)
             .map(ur => ur.role as AppRole);
 
-          // If student doesn't have roles but has user_id, add default 'siswa' role
+          // If student has user_id but no roles, add default 'siswa' role
           if (student.user_id && roles.length === 0) {
             roles.push('siswa');
           }
 
-          const authUser = typedAuthUsers.find(au => au.id === student.user_id);
-
           combinedUsers.push({
-            id: student.user_id || student.id, // Use user_id if available, fallback to student id
+            id: student.user_id || student.id,
             full_name: student.full_name,
-            email: authUser?.email || null,
+            email: null,
             nip: null,
             nis: student.nis,
             phone: student.phone,
@@ -121,29 +116,51 @@ export const useUserManagement = () => {
               `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
             has_user_account: !!student.user_id,
             created_at: student.created_at,
-            // Add student-specific data
             student_id: student.id,
             student_status: student.status
           });
         });
       }
 
+      // Remove duplicates based on ID
+      const uniqueUsers = combinedUsers.reduce((acc, current) => {
+        const existing = acc.find(item => item.id === current.id);
+        if (!existing) {
+          acc.push(current);
+        } else {
+          // Merge roles if duplicate found
+          const mergedRoles = [...new Set([...existing.roles, ...current.roles])];
+          existing.roles = mergedRoles;
+          
+          // Keep the more complete data
+          if (current.user_type === 'staff' && existing.user_type === 'student') {
+            existing.user_type = 'staff';
+            existing.nip = current.nip;
+          }
+        }
+        return acc;
+      }, [] as AllUserData[]);
+
+      console.log('Combined users before filtering:', uniqueUsers.length);
+
       // Filter based on user role
-      let filteredUsers = combinedUsers;
+      let filteredUsers = uniqueUsers;
       if (hasRole('siswa')) {
         // Students can only see their own data
-        filteredUsers = combinedUsers.filter(userData => 
+        filteredUsers = uniqueUsers.filter(userData => 
           userData.user_type === 'student' && userData.id === user?.id
         );
       } else if (hasRole('wali_kelas') || hasRole('guru_bk')) {
         // Wali kelas and guru BK can see students and some staff
-        filteredUsers = combinedUsers.filter(userData => 
+        filteredUsers = uniqueUsers.filter(userData => 
           userData.user_type === 'student' || 
           (userData.user_type === 'staff' && 
            (userData.roles.includes('wali_kelas') || userData.roles.includes('guru_bk')))
         );
       }
       // Admin can see all users (no filter)
+
+      console.log('Final users after filtering:', filteredUsers.length);
 
       // Sort by name
       filteredUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
