@@ -3,7 +3,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
 import { AttendanceReport } from '@/components/attendance/AttendanceReport';
-import { SelfAttendanceWidget } from '@/components/attendance/SelfAttendanceWidget';
+import { SelfAttendanceWithRefresh } from '@/components/attendance/SelfAttendanceWithRefresh';
 import { LocationManager } from '@/components/attendance/LocationManager';
 import { ScheduleManager } from '@/components/attendance/ScheduleManager';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,7 +31,7 @@ const AttendanceManagement = () => {
       case 'self':
         return (
           <div className="max-w-md mx-auto">
-            <SelfAttendanceWidget />
+            <SelfAttendanceWithRefresh />
           </div>
         );
       case 'record':
@@ -57,7 +57,7 @@ const AttendanceManagement = () => {
       default:
         return (
           <div className="max-w-md mx-auto">
-            <SelfAttendanceWidget />
+            <SelfAttendanceWithRefresh />
           </div>
         );
     }
