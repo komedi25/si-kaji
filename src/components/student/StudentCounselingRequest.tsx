@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,23 +92,33 @@ export const StudentCounselingRequest = () => {
 
   const fetchCounselors = async () => {
     try {
-      // Get users with guru_bk role
-      const { data, error } = await supabase
+      // First get user IDs that have guru_bk role
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          profiles!inner(
-            id,
-            full_name
-          )
-        `)
-        .eq('role', 'guru_bk');
+        .select('user_id')
+        .eq('role', 'guru_bk')
+        .eq('is_active', true);
 
-      if (error) throw error;
+      if (roleError) throw roleError;
 
-      const counselorData = data?.map(item => ({
-        id: item.user_id,
-        full_name: item.profiles?.full_name || 'Unknown'
+      if (!roleData || roleData.length === 0) {
+        setCounselors([]);
+        return;
+      }
+
+      const userIds = roleData.map(role => role.user_id);
+
+      // Then get profiles for those users
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profileError) throw profileError;
+
+      const counselorData = profileData?.map(profile => ({
+        id: profile.id,
+        full_name: profile.full_name || 'Unknown'
       })) || [];
 
       setCounselors(counselorData);
