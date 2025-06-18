@@ -72,20 +72,25 @@ export const ClassManager = () => {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log('Creating class with data:', data);
       const { error } = await supabase
         .from('classes')
         .insert([data]);
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating class:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       resetForm();
       toast({ title: 'Kelas berhasil ditambahkan' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Mutation error:', error);
       toast({ 
         title: 'Error', 
-        description: error.message,
+        description: error.message || 'Terjadi kesalahan saat menambahkan kelas',
         variant: 'destructive' 
       });
     }
@@ -104,7 +109,7 @@ export const ClassManager = () => {
       resetForm();
       toast({ title: 'Kelas berhasil diupdate' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -125,7 +130,7 @@ export const ClassManager = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       toast({ title: 'Kelas berhasil dihapus' });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ 
         title: 'Error', 
         description: error.message,
@@ -161,14 +166,35 @@ export const ClassManager = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    if (!formData.name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Nama kelas harus diisi',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.grade) {
+      toast({
+        title: 'Error',
+        description: 'Tingkat kelas harus dipilih',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     const data = {
-      name: formData.name,
+      name: formData.name.trim(),
       grade: parseInt(formData.grade),
       major_id: formData.major_id || null,
       academic_year_id: formData.academic_year_id || null,
-      max_students: parseInt(formData.max_students),
+      max_students: parseInt(formData.max_students) || 36,
       is_active: formData.is_active
     };
+
+    console.log('Submitting form with data:', data);
 
     if (editingId) {
       updateMutation.mutate({ id: editingId, data });
@@ -182,9 +208,9 @@ export const ClassManager = () => {
   return (
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="space-y-4 border-b pb-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="name">Nama Kelas</Label>
+            <Label htmlFor="name">Nama Kelas *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -194,7 +220,7 @@ export const ClassManager = () => {
             />
           </div>
           <div>
-            <Label htmlFor="grade">Tingkat</Label>
+            <Label htmlFor="grade">Tingkat *</Label>
             <Select
               value={formData.grade}
               onValueChange={(value) => setFormData({ ...formData, grade: value })}
@@ -211,7 +237,7 @@ export const ClassManager = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="major_id">Jurusan</Label>
             <Select
@@ -219,7 +245,7 @@ export const ClassManager = () => {
               onValueChange={(value) => setFormData({ ...formData, major_id: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih jurusan" />
+                <SelectValue placeholder="Pilih jurusan (opsional)" />
               </SelectTrigger>
               <SelectContent>
                 {majors?.map((major) => (
@@ -237,7 +263,7 @@ export const ClassManager = () => {
               onValueChange={(value) => setFormData({ ...formData, academic_year_id: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih tahun ajaran" />
+                <SelectValue placeholder="Pilih tahun ajaran (opsional)" />
               </SelectTrigger>
               <SelectContent>
                 {academicYears?.map((year) => (
@@ -250,7 +276,7 @@ export const ClassManager = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="max_students">Maksimal Siswa</Label>
             <Input
@@ -259,6 +285,8 @@ export const ClassManager = () => {
               value={formData.max_students}
               onChange={(e) => setFormData({ ...formData, max_students: e.target.value })}
               placeholder="36"
+              min="1"
+              max="50"
             />
           </div>
           <div className="flex items-center space-x-2 mt-6">
@@ -267,14 +295,21 @@ export const ClassManager = () => {
               checked={formData.is_active}
               onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
             />
-            <Label htmlFor="is_active">Aktif</Label>
+            <Label htmlFor="is_active">Status Aktif</Label>
           </div>
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" size="sm">
+          <Button 
+            type="submit" 
+            size="sm"
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
             <Plus className="h-4 w-4 mr-1" />
-            {editingId ? 'Update' : 'Tambah'}
+            {createMutation.isPending || updateMutation.isPending 
+              ? 'Menyimpan...' 
+              : editingId ? 'Update' : 'Tambah'
+            }
           </Button>
           {editingId && (
             <Button type="button" variant="outline" size="sm" onClick={resetForm}>
@@ -285,38 +320,49 @@ export const ClassManager = () => {
       </form>
 
       <div className="space-y-2">
-        {classes?.map((classData) => (
-          <div key={classData.id} className="flex items-center justify-between p-3 border rounded-lg">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{classData.name}</span>
-                <Badge variant="outline">Tingkat {classData.grade}</Badge>
-                {classData.is_active && (
-                  <Badge variant="default">Aktif</Badge>
-                )}
+        {classes?.length === 0 ? (
+          <div className="text-center text-gray-500 py-4">
+            Belum ada data kelas. Silakan tambahkan kelas baru menggunakan form di atas.
+          </div> 
+        ) : (
+          classes?.map((classData) => (
+            <div key={classData.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{classData.name}</span>
+                  <Badge variant="outline">Tingkat {classData.grade}</Badge>
+                  {classData.is_active ? (
+                    <Badge variant="default">Aktif</Badge>
+                  ) : (
+                    <Badge variant="secondary">Non-Aktif</Badge>
+                  )}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {classData.major?.name ? `${classData.major.name} • ` : ''}
+                  {classData.academic_year?.name ? `${classData.academic_year.name} • ` : ''}
+                  Max: {classData.max_students} siswa
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                {classData.major?.name} • {classData.academic_year?.name} • Max: {classData.max_students} siswa
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEdit(classData)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => deleteMutation.mutate(classData.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleEdit(classData)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => deleteMutation.mutate(classData.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
