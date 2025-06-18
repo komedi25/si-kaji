@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { ExtracurricularEnrollment } from '@/components/extracurricular/ExtracurricularEnrollment';
+import { Extracur ricularEnrollment } from '@/components/extracurricular/ExtracurricularEnrollment';
 import { StudentExtracurricularEnrollment } from '@/components/student/StudentExtracurricularEnrollment';
+import { StudentExtracurricularActivity } from '@/components/student/StudentExtracurricularActivity';
 import { CoachActivityLog } from '@/components/extracurricular/CoachActivityLog';
 import { CoachAttendance } from '@/components/extracurricular/CoachAttendance';
 import { ExtracurricularManager } from '@/components/masterData/ExtracurricularManager';
@@ -29,7 +30,7 @@ const ExtracurricularManagement = () => {
         case 'enrollment':
           return <StudentExtracurricularEnrollment />;
         case 'my-activities':
-          return <div>My Activities - Coming Soon</div>; // TODO: Implement student activities view
+          return <StudentExtracurricularActivity />;
         default:
           return <StudentExtracurricularEnrollment />;
       }

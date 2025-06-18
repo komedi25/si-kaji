@@ -5,9 +5,12 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ActivityProposalForm } from '@/components/proposals/ActivityProposalForm';
 import { FacilityBooking } from '@/components/proposals/FacilityBooking';
 import { ActivityReport } from '@/components/proposals/ActivityReport';
+import { StudentProposalTracking } from '@/components/student/StudentProposalTracking';
+import { useAuth } from '@/hooks/useAuth';
 
 const ActivityProposal = () => {
   const location = useLocation();
+  const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('proposal');
 
   useEffect(() => {
@@ -19,6 +22,20 @@ const ActivityProposal = () => {
   }, [location.search]);
 
   const renderContent = () => {
+    // If user is a student, show their proposal tracking
+    if (hasRole('siswa')) {
+      switch (activeTab) {
+        case 'student-proposal':
+        case 'tracking':
+          return <StudentProposalTracking />;
+        case 'proposal':
+          return <ActivityProposalForm />;
+        default:
+          return <StudentProposalTracking />;
+      }
+    }
+
+    // For other roles, show the management views
     switch (activeTab) {
       case 'proposal':
         return <ActivityProposalForm />;
@@ -35,9 +52,14 @@ const ActivityProposal = () => {
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Sistem Perencanaan & Proposal Kegiatan</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            {hasRole('siswa') ? 'Proposal Kegiatan Saya' : 'Sistem Perencanaan & Proposal Kegiatan'}
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Kelola proposal kegiatan OSIS dan ekstrakurikuler dengan sistem persetujuan bertingkat
+            {hasRole('siswa') 
+              ? 'Pantau status pengajuan proposal kegiatan Anda'
+              : 'Kelola proposal kegiatan OSIS dan ekstrakurikuler dengan sistem persetujuan bertingkat'
+            }
           </p>
         </div>
 

@@ -1,43 +1,41 @@
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { StudentLetterRequest } from '@/components/student/StudentLetterRequest';
 import { LetterRequestForm } from '@/components/letters/LetterRequestForm';
-import { StudentMutation } from '@/components/documents/StudentMutation';
-import { LetterTemplates } from '@/components/documents/LetterTemplates';
+import { DocumentUpload } from '@/components/documents/DocumentUpload';
+import { useAuth } from '@/hooks/useAuth';
 
 const DocumentManagement = () => {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState('letters');
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, [location.search]);
+  const { hasRole } = useAuth();
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'letters':
-        return <LetterRequestForm />;
-      case 'mutations':
-        return <StudentMutation />;
-      case 'templates':
-        return <LetterTemplates />;
-      default:
-        return <LetterRequestForm />;
+    // If user is a student, show their letter request management
+    if (hasRole('siswa')) {
+      return <StudentLetterRequest />;
     }
+
+    // For admin and teachers, show the management interface
+    return (
+      <div className="space-y-6">
+        <LetterRequestForm />
+        <DocumentUpload />
+      </div>
+    );
   };
 
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Sistem Permohonan Surat & Mutasi</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            {hasRole('siswa') ? 'Permohonan Surat' : 'Manajemen Dokumen'}
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Kelola permohonan surat keterangan dan proses mutasi siswa
+            {hasRole('siswa') 
+              ? 'Ajukan permohonan surat dan pantau status pemrosesan'
+              : 'Kelola permohonan surat siswa dan dokumen sekolah'
+            }
           </p>
         </div>
 

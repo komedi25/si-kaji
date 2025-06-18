@@ -1,59 +1,47 @@
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { PermitInputForm } from '@/components/permits/PermitInputForm';
+import { StudentPermitManagement } from '@/components/student/StudentPermitManagement';
 import { PermitApproval } from '@/components/permits/PermitApproval';
-import { PermitForm } from '@/components/permits/PermitForm';
-import PermitReport from '@/components/permits/PermitReport';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PermitReport } from '@/components/permits/PermitReport';
+import { useAuth } from '@/hooks/useAuth';
 
 const PermitManagement = () => {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState('input');
+  const { hasRole } = useAuth();
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setActiveTab(tab);
+  const renderContent = () => {
+    // If user is a student, show their permit management
+    if (hasRole('siswa')) {
+      return <StudentPermitManagement />;
     }
-  }, [location.search]);
+
+    // For admin and teachers, show the management interface
+    return (
+      <div className="space-y-6">
+        <PermitApproval />
+        <PermitReport />
+      </div>
+    );
+  };
 
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Manajemen Perizinan</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            {hasRole('siswa') ? 'Perizinan Saya' : 'Manajemen Perizinan'}
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Kelola pengajuan izin siswa dengan workflow persetujuan otomatis
+            {hasRole('siswa') 
+              ? 'Kelola pengajuan izin dan pantau status persetujuan'
+              : 'Kelola permohonan izin siswa dan proses persetujuan'
+            }
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="input">Input Izin</TabsTrigger>
-            <TabsTrigger value="approval">Persetujuan</TabsTrigger>
-            <TabsTrigger value="form">Form Izin</TabsTrigger>
-            <TabsTrigger value="report">Laporan</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="input" className="space-y-4">
-            <PermitInputForm />
-          </TabsContent>
-
-          <TabsContent value="approval" className="space-y-4">
-            <PermitApproval />
-          </TabsContent>
-
-          <TabsContent value="form" className="space-y-4">
-            <PermitForm />
-          </TabsContent>
-
-          <TabsContent value="report" className="space-y-4">
-            <PermitReport />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+          {renderContent()}
+        </div>
       </div>
     </AppLayout>
   );
