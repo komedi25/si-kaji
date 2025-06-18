@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,12 +120,13 @@ export const StudentDataManager = () => {
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       
       const studentsWithUserInfo = (data || []).map(student => {
-        const enrollment = student.student_enrollments?.[0];
+        const enrollments = student.student_enrollments as StudentEnrollment[];
+        const enrollment = enrollments && enrollments.length > 0 ? enrollments[0] : null;
         const userAccount = authUsers?.users?.find(u => u.id === student.user_id);
         
         return {
           ...student,
-          current_class: enrollment?.classes?.name ? 
+          current_class: enrollment?.classes ? 
             `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
           user_email: userAccount?.email || null,
           has_user_account: !!userAccount
