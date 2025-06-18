@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,24 +20,27 @@ interface StudentEnrollment {
   } | null;
 }
 
-interface Student {
+interface StudentData {
   id: string;
-  user_id?: string;
+  user_id?: string | null;
   nis: string;
-  nisn?: string;
+  nisn?: string | null;
   full_name: string;
   gender: string;
-  birth_place?: string;
-  birth_date?: string;
-  phone?: string;
-  address?: string;
-  parent_name?: string;
-  parent_phone?: string;
+  birth_place?: string | null;
+  birth_date?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
   status: string;
-  current_class?: string;
-  user_email?: string;
-  has_user_account: boolean;
   student_enrollments?: StudentEnrollment[];
+}
+
+interface Student extends StudentData {
+  current_class?: string;
+  user_email?: string | null;
+  has_user_account: boolean;
 }
 
 export const StudentDataManager = () => {
@@ -119,7 +121,7 @@ export const StudentDataManager = () => {
       // Get user accounts for students
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       
-      const studentsWithUserInfo = (data || []).map(student => {
+      const studentsWithUserInfo = (data as StudentData[] || []).map((student: StudentData): Student => {
         const enrollments = student.student_enrollments as StudentEnrollment[];
         const enrollment = enrollments && enrollments.length > 0 ? enrollments[0] : null;
         const userAccount = authUsers?.users?.find(u => u.id === student.user_id);
