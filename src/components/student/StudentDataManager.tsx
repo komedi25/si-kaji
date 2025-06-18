@@ -7,6 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Users, Search, Plus } from 'lucide-react';
+import { AddStudentDialog } from './AddStudentDialog';
+import { Major, Class } from '@/types/student';
 
 interface Student {
   id: string;
@@ -23,10 +25,51 @@ export const StudentDataManager = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [majors, setMajors] = useState<Major[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
 
   useEffect(() => {
     fetchStudents();
-  }, []);
+    if (hasRole('admin')) {
+      fetchMajorsAndClasses();
+    }
+  }, [hasRole]);
+
+  const fetchMajorsAndClasses = async () => {
+    try {
+      // Fetch majors
+      const { data: majorsData, error: majorsError } = await supabase
+        .from('majors')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (majorsError) throw majorsError;
+
+      // Fetch classes with major info
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select(`
+          *,
+          major:majors(*)
+        `)
+        .eq('is_active', true)
+        .order('name');
+
+      if (classesError) throw classesError;
+
+      setMajors(majorsData || []);
+      setClasses(classesData || []);
+    } catch (error) {
+      console.error('Error fetching majors and classes:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data jurusan dan kelas",
+        variant: "destructive"
+      });
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -47,6 +90,19 @@ export const StudentDataManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddStudent = () => {
+    setShowAddDialog(true);
+  };
+
+  const handleAddSuccess = () => {
+    fetchStudents();
+    setShowAddDialog(false);
+    toast({
+      title: "Berhasil",
+      description: "Data siswa berhasil ditambahkan"
+    });
   };
 
   const filteredStudents = students.filter(student =>
@@ -71,7 +127,7 @@ export const StudentDataManager = () => {
         </div>
         
         {hasRole('admin') && (
-          <Button>
+          <Button onClick={handleAddStudent}>
             <Plus className="h-4 w-4 mr-2" />
             Tambah Siswa
           </Button>
@@ -111,6 +167,17 @@ export const StudentDataManager = () => {
             <p className="text-gray-500">Tidak ada data siswa yang ditemukan</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Add Student Dialog */}
+      {showAddDialog && (
+        <AddStudentDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          onSuccess={handleAddSuccess}
+          majors={majors}
+          classes={classes}
+        />
       )}
     </div>
   );
