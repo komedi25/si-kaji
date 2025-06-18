@@ -32,6 +32,29 @@ interface AllUserData {
   created_at: string;
 }
 
+interface ProfileData {
+  id: string;
+  full_name: string;
+  nip?: string | null;
+  phone?: string | null;
+  created_at?: string | null;
+}
+
+interface StudentData {
+  id: string;
+  user_id?: string | null;
+  full_name: string;
+  nis: string;
+  phone?: string | null;
+  created_at: string;
+  student_enrollments?: Array<{
+    classes?: {
+      name: string;
+      grade: number;
+    } | null;
+  }> | null;
+}
+
 export default function UserManagement() {
   const { user, hasRole } = useAuth();
   const { toast } = useToast();
@@ -74,17 +97,18 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      // Fetch all profiles (staff/teachers)
+      // Fetch all profiles (staff/teachers) with proper typing
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .not('nip', 'is', null);
+        .not('nip', 'is', null)
+        .returns<ProfileData[]>();
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
 
-      // Fetch all students
+      // Fetch all students with proper typing
       const { data: students, error: studentsError } = await supabase
         .from('students')
         .select(`
@@ -96,7 +120,8 @@ export default function UserManagement() {
             )
           )
         `)
-        .order('full_name');
+        .order('full_name')
+        .returns<StudentData[]>();
 
       if (studentsError) {
         console.error('Error fetching students:', studentsError);
@@ -122,8 +147,8 @@ export default function UserManagement() {
       const combinedUsers: AllUserData[] = [];
 
       // Add staff/teachers
-      if (profiles) {
-        profiles.forEach(profile => {
+      if (profiles && Array.isArray(profiles)) {
+        profiles.forEach((profile: ProfileData) => {
           const roles = (userRoles || [])
             .filter(ur => ur.user_id === profile.id)
             .map(ur => ur.role as AppRole);
@@ -146,8 +171,8 @@ export default function UserManagement() {
       }
 
       // Add students
-      if (students) {
-        students.forEach((student: any) => {
+      if (students && Array.isArray(students)) {
+        students.forEach((student: StudentData) => {
           const enrollment = student.student_enrollments?.[0];
           const roles = (userRoles || [])
             .filter(ur => ur.user_id === student.user_id)
