@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Key, Plus, Trash2, Eye, Edit, MoreHorizontal } from 'lucide-react';
+import { UserPlus, Key, Plus, Trash2, Edit, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppRole } from '@/types/auth';
 import { AllUserData } from '@/types/user';
@@ -40,6 +40,13 @@ export const UserTable = ({
       return <Badge className="text-xs bg-blue-100 text-blue-800">Staff/Guru</Badge>;
     }
     return <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800">Siswa</Badge>;
+  };
+
+  const handleEditStudentData = (userData: AllUserData) => {
+    console.log('Edit student data clicked for:', userData);
+    if (onEditStudentData) {
+      onEditStudentData(userData);
+    }
   };
 
   return (
@@ -138,6 +145,7 @@ export const UserTable = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      {/* Account Management Actions */}
                       {userData.has_user_account ? (
                         <>
                           <DropdownMenuItem onClick={() => onAddRole(userData)}>
@@ -156,10 +164,11 @@ export const UserTable = ({
                         </DropdownMenuItem>
                       ) : null}
                       
-                      {userData.user_type === 'student' && onEditStudentData && (
+                      {/* Student Data Management Actions */}
+                      {userData.user_type === 'student' && (
                         <>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => onEditStudentData(userData)}>
+                          <DropdownMenuItem onClick={() => handleEditStudentData(userData)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Data Siswa
                           </DropdownMenuItem>
@@ -168,6 +177,7 @@ export const UserTable = ({
                       
                       <DropdownMenuSeparator />
                       
+                      {/* Delete Action */}
                       <DropdownMenuItem 
                         onClick={() => onDeleteUser(userData)}
                         className="text-red-600 focus:text-red-600"

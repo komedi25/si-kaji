@@ -92,10 +92,27 @@ export default function UserManagement() {
   };
 
   const handleEditStudentData = (userData: AllUserData) => {
-    if (userData.user_type === 'student' && userData.student_id) {
+    console.log('handleEditStudentData called with:', userData);
+    if (userData.user_type === 'student') {
       setStudentToEdit(userData);
       setIsEditStudentDialogOpen(true);
+    } else {
+      toast({
+        title: "Error",
+        description: "Hanya data siswa yang dapat diedit",
+        variant: "destructive"
+      });
     }
+  };
+
+  const handleEditStudentSuccess = () => {
+    fetchAllUsers();
+    setIsEditStudentDialogOpen(false);
+    setStudentToEdit(null);
+    toast({
+      title: "Berhasil",
+      description: "Data siswa berhasil diperbarui"
+    });
   };
 
   const handleExportData = () => {
@@ -394,11 +411,7 @@ export default function UserManagement() {
             open={isEditStudentDialogOpen}
             onOpenChange={setIsEditStudentDialogOpen}
             studentData={studentToEdit}
-            onSuccess={() => {
-              fetchAllUsers();
-              setIsEditStudentDialogOpen(false);
-              setStudentToEdit(null);
-            }}
+            onSuccess={handleEditStudentSuccess}
           />
         )}
 
