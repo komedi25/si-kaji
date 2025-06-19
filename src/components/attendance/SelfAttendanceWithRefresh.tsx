@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Home, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +48,7 @@ export const SelfAttendanceWithRefresh = () => {
   const [todayAttendance, setTodayAttendance] = useState<SelfAttendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [isWithinSchool, setIsWithinSchool] = useState<boolean | null>(null);
 
   // Update current time every second
   useEffect(() => {
@@ -125,6 +126,14 @@ export const SelfAttendanceWithRefresh = () => {
     fetchTodayAttendance();
   }, [studentId]);
 
+  // Check location status when position changes
+  useEffect(() => {
+    if (position && locations.length > 0) {
+      const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
+      setIsWithinSchool(withinSchool !== null);
+    }
+  }, [position, locations]);
+
   const refreshLocation = () => {
     setRefreshingLocation(true);
     
@@ -141,6 +150,8 @@ export const SelfAttendanceWithRefresh = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setPosition(position);
+        const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
+        setIsWithinSchool(withinSchool !== null);
         setRefreshingLocation(false);
         toast({
           title: "Berhasil",
@@ -158,7 +169,7 @@ export const SelfAttendanceWithRefresh = () => {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0 // Force fresh location
+        maximumAge: 0
       }
     );
   };
@@ -173,6 +184,8 @@ export const SelfAttendanceWithRefresh = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setPosition(position);
+          const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
+          setIsWithinSchool(withinSchool !== null);
           resolve(position);
         },
         (error) => {
@@ -216,11 +229,12 @@ export const SelfAttendanceWithRefresh = () => {
       const position = await getCurrentLocation();
       const { latitude, longitude } = position.coords;
       
+      // Check if within school area - REQUIRED for check in
       const location = isWithinLocation(latitude, longitude);
       if (!location) {
         toast({
           title: "Lokasi Tidak Valid",
-          description: "Anda tidak berada di area sekolah yang diizinkan",
+          description: "Anda harus berada di dalam area sekolah untuk melakukan presensi datang",
           variant: "destructive"
         });
         return;
@@ -239,7 +253,7 @@ export const SelfAttendanceWithRefresh = () => {
           check_in_latitude: latitude,
           check_in_longitude: longitude,
           check_in_location_id: location.id,
-          status: 'present'
+          status: 'present' // Siswa dianggap hadir meskipun hanya check in
         });
 
       if (error) throw error;
@@ -257,7 +271,7 @@ export const SelfAttendanceWithRefresh = () => {
 
       toast({
         title: "Berhasil Check In",
-        description: `Check in berhasil di ${location.name}`,
+        description: `Presensi datang berhasil di ${location.name}`,
       });
     } catch (error: any) {
       toast({
@@ -278,11 +292,12 @@ export const SelfAttendanceWithRefresh = () => {
       const position = await getCurrentLocation();
       const { latitude, longitude } = position.coords;
       
+      // Check if OUTSIDE school area - REQUIRED for check out
       const location = isWithinLocation(latitude, longitude);
-      if (!location) {
+      if (location) {
         toast({
           title: "Lokasi Tidak Valid",
-          description: "Anda tidak berada di area sekolah yang diizinkan",
+          description: "Anda harus berada di luar area sekolah untuk melakukan presensi pulang",
           variant: "destructive"
         });
         return;
@@ -290,6 +305,33 @@ export const SelfAttendanceWithRefresh = () => {
 
       const now = new Date();
       const currentTime = format(now, 'HH:mm:ss');
+      const endOfSchoolTime = '17:15:00';
+
+      // Check if leaving before 17:15 (potential violation)
+      let violationCreated = false;
+      if (currentTime < endOfSchoolTime) {
+        // Create early departure violation
+        const { data: violationType } = await supabase
+          .from('violation_types')
+          .select('id')
+          .eq('name', 'Pulang Sebelum Waktunya')
+          .eq('is_active', true)
+          .single();
+
+        if (violationType) {
+          await supabase
+            .from('student_violations')
+            .insert({
+              student_id: studentId,
+              violation_type_id: violationType.id,
+              violation_date: format(now, 'yyyy-MM-dd'),
+              description: `Pulang sebelum jam 17:15 (pulang jam ${currentTime})`,
+              point_deduction: 10,
+              status: 'active'
+            });
+          violationCreated = true;
+        }
+      }
 
       const { error } = await supabase
         .from('student_self_attendances')
@@ -297,7 +339,7 @@ export const SelfAttendanceWithRefresh = () => {
           check_out_time: currentTime,
           check_out_latitude: latitude,
           check_out_longitude: longitude,
-          check_out_location_id: location.id,
+          notes: violationCreated ? 'Pulang sebelum jam 17:15' : 'Pulang sesuai jadwal'
         })
         .eq('id', todayAttendance.id);
 
@@ -313,10 +355,18 @@ export const SelfAttendanceWithRefresh = () => {
         setTodayAttendance(updatedData);
       }
 
-      toast({
-        title: "Berhasil Check Out",
-        description: `Check out berhasil di ${location.name}`,
-      });
+      if (violationCreated) {
+        toast({
+          title: "Presensi Pulang Berhasil",
+          description: "Peringatan: Anda pulang sebelum jam 17:15. Pelanggaran telah dicatat.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Berhasil Check Out",
+          description: "Presensi pulang berhasil dicatat",
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -329,23 +379,48 @@ export const SelfAttendanceWithRefresh = () => {
   };
 
   const canCheckIn = () => {
-    if (!schedule || todayAttendance?.check_in_time) return false;
+    if (!schedule || todayAttendance?.check_in_time || isWithinSchool === false) return false;
     
     const now = format(currentTime, 'HH:mm:ss');
-    return now >= schedule.check_in_start && now <= schedule.check_in_end;
+    return now >= schedule.check_in_start && now <= schedule.check_in_end && isWithinSchool === true;
   };
 
   const canCheckOut = () => {
-    if (!schedule || !todayAttendance?.check_in_time || todayAttendance?.check_out_time) return false;
+    if (!todayAttendance?.check_in_time || todayAttendance?.check_out_time || isWithinSchool === true) return false;
     
-    const now = format(currentTime, 'HH:mm:ss');
-    return now >= schedule.check_out_start && now <= schedule.check_out_end;
+    // Can check out anytime after check in, but must be outside school
+    return isWithinSchool === false;
   };
 
-  const isLate = () => {
-    if (!schedule || !todayAttendance?.check_in_time) return false;
-    return todayAttendance.check_in_time > schedule.check_in_end;
+  const getCheckInButtonText = () => {
+    if (todayAttendance?.check_in_time) return "Sudah Check In";
+    if (isWithinSchool === null) return "Memuat Lokasi...";
+    if (isWithinSchool === false) return "Harus di Dalam Sekolah";
+    if (!schedule) return "Tidak Ada Jadwal";
+    
+    const now = format(currentTime, 'HH:mm:ss');
+    if (now < schedule.check_in_start) return `Belum Waktunya (${schedule.check_in_start})`;
+    if (now > schedule.check_in_end) return "Waktu Check In Habis";
+    
+    return "Check In";
   };
+
+  const getCheckOutButtonText = () => {
+    if (!todayAttendance?.check_in_time) return "Check In Dulu";
+    if (todayAttendance?.check_out_time) return "Sudah Check Out";
+    if (isWithinSchool === null) return "Memuat Lokasi...";
+    if (isWithinSchool === true) return "Harus di Luar Sekolah";
+    
+    return "Check Out";
+  };
+
+  const getLocationStatus = () => {
+    if (isWithinSchool === null) return { text: "Memuat lokasi...", color: "text-gray-500", icon: Clock };
+    if (isWithinSchool) return { text: "Di dalam sekolah", color: "text-green-600", icon: Home };
+    return { text: "Di luar sekolah", color: "text-blue-600", icon: LogOut };
+  };
+
+  const locationStatus = getLocationStatus();
 
   const getStatusBadge = () => {
     if (!todayAttendance) {
@@ -357,11 +432,16 @@ export const SelfAttendanceWithRefresh = () => {
     }
 
     if (todayAttendance.check_out_time) {
+      const checkOutTime = todayAttendance.check_out_time;
+      const endOfSchoolTime = '17:15:00';
+      if (checkOutTime < endOfSchoolTime) {
+        return <Badge variant="destructive">Pulang Lebih Awal</Badge>;
+      }
       return <Badge variant="default">Selesai</Badge>;
     }
 
     if (todayAttendance.check_in_time) {
-      return <Badge variant="secondary">Sudah Check In</Badge>;
+      return <Badge className="bg-green-100 text-green-800">Hadir</Badge>;
     }
 
     return <Badge variant="secondary">Belum Presensi</Badge>;
@@ -399,13 +479,13 @@ export const SelfAttendanceWithRefresh = () => {
               Refresh
             </Button>
           </div>
-          {position ? (
-            <div className="text-xs text-green-600">
-              ✓ Lokasi terdeteksi ({position.coords.latitude.toFixed(6)}, {position.coords.longitude.toFixed(6)})
-            </div>
-          ) : (
-            <div className="text-xs text-red-600">
-              ✗ Belum mendapatkan lokasi - Klik Refresh untuk memperbarui
+          <div className={`flex items-center gap-2 ${locationStatus.color}`}>
+            <locationStatus.icon className="h-4 w-4" />
+            <span className="text-sm font-medium">{locationStatus.text}</span>
+          </div>
+          {position && (
+            <div className="text-xs text-gray-500 mt-1">
+              Koordinat: {position.coords.latitude.toFixed(6)}, {position.coords.longitude.toFixed(6)}
             </div>
           )}
         </div>
@@ -415,7 +495,8 @@ export const SelfAttendanceWithRefresh = () => {
             <div className="text-sm font-medium mb-2">Jadwal Hari Ini:</div>
             <div className="text-xs space-y-1">
               <div>Check In: {schedule.check_in_start} - {schedule.check_in_end}</div>
-              <div>Check Out: {schedule.check_out_start} - {schedule.check_out_end}</div>
+              <div className="text-gray-600">Check Out: Kapan saja (di luar sekolah)</div>
+              <div className="text-red-600">Batas Pulang: 17:15 WIB</div>
             </div>
           </div>
         )}
@@ -431,13 +512,15 @@ export const SelfAttendanceWithRefresh = () => {
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <span>Check In: {todayAttendance.check_in_time}</span>
-                {isLate() && <AlertTriangle className="h-4 w-4 text-red-500" />}
               </div>
             )}
             {todayAttendance.check_out_time && (
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-blue-500" />
                 <span>Check Out: {todayAttendance.check_out_time}</span>
+                {todayAttendance.check_out_time < '17:15:00' && (
+                  <AlertTriangle className="h-4 w-4 text-red-500" title="Pulang sebelum jam 17:15" />
+                )}
               </div>
             )}
           </div>
@@ -450,8 +533,8 @@ export const SelfAttendanceWithRefresh = () => {
             className="w-full"
             variant={canCheckIn() ? "default" : "secondary"}
           >
-            <MapPin className="h-4 w-4 mr-2" />
-            {loading ? "Memproses..." : "Check In"}
+            <Home className="h-4 w-4 mr-2" />
+            {loading ? "Memproses..." : getCheckInButtonText()}
           </Button>
           
           <Button
@@ -460,9 +543,20 @@ export const SelfAttendanceWithRefresh = () => {
             className="w-full"
             variant={canCheckOut() ? "default" : "secondary"}
           >
-            <MapPin className="h-4 w-4 mr-2" />
-            {loading ? "Memproses..." : "Check Out"}
+            <LogOut className="h-4 w-4 mr-2" />
+            {loading ? "Memproses..." : getCheckOutButtonText()}
           </Button>
+        </div>
+
+        {/* Info Box */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="text-xs space-y-1">
+            <div className="font-medium text-blue-800">Aturan Presensi:</div>
+            <div>• Check In: Harus di dalam area sekolah</div>
+            <div>• Check Out: Harus di luar area sekolah</div>
+            <div>• Siswa dianggap hadir meski hanya check in</div>
+            <div>• Pulang sebelum jam 17:15 akan dicatat sebagai pelanggaran</div>
+          </div>
         </div>
 
         {locations.length > 0 && (
