@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -519,7 +518,7 @@ export const SelfAttendanceWithRefresh = () => {
                 <CheckCircle className="h-4 w-4 text-blue-500" />
                 <span>Check Out: {todayAttendance.check_out_time}</span>
                 {todayAttendance.check_out_time < '17:15:00' && (
-                  <AlertTriangle className="h-4 w-4 text-red-500" title="Pulang sebelum jam 17:15" />
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
                 )}
               </div>
             )}
