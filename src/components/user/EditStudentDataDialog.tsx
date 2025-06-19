@@ -72,12 +72,12 @@ export const EditStudentDataDialog = ({
           address: student.address || '',
           birth_place: student.birth_place || '',
           birth_date: student.birth_date || '',
-          gender: student.gender || 'L',
+          gender: (student.gender as 'L' | 'P') || 'L',
           religion: student.religion || '',
           parent_name: student.parent_name || '',
           parent_phone: student.parent_phone || '',
           parent_address: student.parent_address || '',
-          status: student.status || 'active'
+          status: (student.status as 'active' | 'graduated' | 'transferred' | 'dropped') || 'active'
         });
 
         // Get current class enrollment
@@ -304,7 +304,7 @@ export const EditStudentDataDialog = ({
 
             <div>
               <Label htmlFor="status">Status Siswa</Label>
-              <Select value={formData.status} onValueChange={(value: any) => setFormData(prev => ({ ...prev, status: value }))}>
+              <Select value={formData.status} onValueChange={(value: 'active' | 'graduated' | 'transferred' | 'dropped') => setFormData(prev => ({ ...prev, status: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
