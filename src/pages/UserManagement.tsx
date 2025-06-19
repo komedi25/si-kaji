@@ -8,6 +8,7 @@ import { Loader2, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AddUserDialog } from '@/components/user/AddUserDialog';
 import { BulkUserImport } from '@/components/user/BulkUserImport';
+import { EditStudentDataDialog } from '@/components/user/EditStudentDataDialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,7 +29,9 @@ export default function UserManagement() {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AllUserData | null>(null);
+  const [studentToEdit, setStudentToEdit] = useState<AllUserData | null>(null);
 
   // Use custom hooks
   const {
@@ -84,6 +87,13 @@ export default function UserManagement() {
     await handleDeleteUser(userToDelete);
     setIsDeleteDialogOpen(false);
     setUserToDelete(null);
+  };
+
+  const handleEditStudentData = (userData: AllUserData) => {
+    if (userData.user_type === 'student' && userData.student_id) {
+      setStudentToEdit(userData);
+      setIsEditStudentDialogOpen(true);
+    }
   };
 
   const handleExportData = () => {
@@ -284,6 +294,7 @@ export default function UserManagement() {
                   setUserToDelete(userData);
                   setIsDeleteDialogOpen(true);
                 }}
+                onEditStudentData={handleEditStudentData}
               />
             )}
           </CardContent>
@@ -373,6 +384,20 @@ export default function UserManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Student Data Dialog */}
+        {studentToEdit && (
+          <EditStudentDataDialog
+            open={isEditStudentDialogOpen}
+            onOpenChange={setIsEditStudentDialogOpen}
+            studentData={studentToEdit}
+            onSuccess={() => {
+              fetchAllUsers();
+              setIsEditStudentDialogOpen(false);
+              setStudentToEdit(null);
+            }}
+          />
+        )}
 
         {/* Add User Dialog - Only for Admin */}
         {hasRole('admin') && (

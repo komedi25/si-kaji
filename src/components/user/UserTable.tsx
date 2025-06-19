@@ -15,6 +15,7 @@ interface UserTableProps {
   onCreateAccount: (userData: AllUserData) => void;
   onResetPassword: (userData: AllUserData) => void;
   onDeleteUser: (userData: AllUserData) => void;
+  onEditStudentData?: (userData: AllUserData) => void;
 }
 
 export const UserTable = ({ 
@@ -24,7 +25,8 @@ export const UserTable = ({
   onRemoveRole, 
   onCreateAccount, 
   onResetPassword, 
-  onDeleteUser 
+  onDeleteUser,
+  onEditStudentData 
 }: UserTableProps) => {
   const getStatusBadge = (userData: AllUserData) => {
     if (userData.has_user_account) {
@@ -66,6 +68,11 @@ export const UserTable = ({
                   {userData.current_class && (
                     <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block">
                       Kelas: {userData.current_class}
+                    </div>
+                  )}
+                  {userData.student_status && userData.student_status !== 'active' && (
+                    <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded inline-block">
+                      Status: {userData.student_status}
                     </div>
                   )}
                 </div>
@@ -148,6 +155,16 @@ export const UserTable = ({
                           Buat Akun User
                         </DropdownMenuItem>
                       ) : null}
+                      
+                      {userData.user_type === 'student' && onEditStudentData && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onEditStudentData(userData)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Data Siswa
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       
                       <DropdownMenuSeparator />
                       
