@@ -8,6 +8,7 @@ import { Loader2, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AddUserDialog } from '@/components/user/AddUserDialog';
 import { BulkUserImport } from '@/components/user/BulkUserImport';
+import { BulkStudentImport } from '@/components/user/BulkStudentImport';
 import { EditStudentDataDialog } from '@/components/user/EditStudentDataDialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ export default function UserManagement() {
   const [searchParams] = useSearchParams();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isBulkStudentImportOpen, setIsBulkStudentImportOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<AllUserData | null>(null);
@@ -223,6 +225,7 @@ export default function UserManagement() {
             <UserActions
               onAddUser={() => setIsAddUserDialogOpen(true)}
               onBulkImport={() => setIsBulkImportOpen(true)}
+              onBulkStudentImport={() => setIsBulkStudentImportOpen(true)}
               onRefresh={fetchAllUsers}
               onExportData={handleExportData}
               onGenerateReport={handleGenerateReport}
@@ -411,6 +414,12 @@ export default function UserManagement() {
             <BulkUserImport
               open={isBulkImportOpen}
               onOpenChange={setIsBulkImportOpen}
+              onImportComplete={fetchAllUsers}
+            />
+
+            <BulkStudentImport
+              open={isBulkStudentImportOpen}
+              onOpenChange={setIsBulkStudentImportOpen}
               onImportComplete={fetchAllUsers}
             />
           </>
