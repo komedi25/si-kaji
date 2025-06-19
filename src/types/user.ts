@@ -46,6 +46,7 @@ export interface StudentData {
 export interface UserRoleData {
   user_id: string;
   role: string;
+  is_active?: boolean;
 }
 
 export interface AuthUserData {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,7 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Fetching all users data...');
       
-      // Fetch all profiles (staff/teachers) 
+      // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -62,43 +63,60 @@ export const useUserManagement = () => {
 
       // Combine all data
       const combinedUsers: AllUserData[] = [];
+      const userIdSet = new Set<string>();
 
-      // Add staff/teachers from profiles
+      // Add all profiles (both staff and students who have profiles)
       if (profiles && Array.isArray(profiles)) {
         profiles.forEach((profile: ProfileData) => {
           const roles = (userRoles || [])
             .filter(ur => ur.user_id === profile.id)
             .map(ur => ur.role as AppRole);
 
-          // Only include profiles that have roles or NIP (staff)
-          if (roles.length > 0 || profile.nip) {
-            combinedUsers.push({
-              id: profile.id,
-              full_name: profile.full_name,
-              email: null,
-              nip: profile.nip,
-              nis: profile.nis,
-              phone: profile.phone,
-              user_type: profile.nip ? 'staff' : 'student',
-              roles,
-              has_user_account: true,
-              created_at: profile.created_at || new Date().toISOString()
-            });
-          }
+          combinedUsers.push({
+            id: profile.id,
+            full_name: profile.full_name,
+            email: null,
+            nip: profile.nip,
+            nis: profile.nis,
+            phone: profile.phone,
+            user_type: profile.nip ? 'staff' : 'student',
+            roles,
+            has_user_account: true,
+            created_at: profile.created_at || new Date().toISOString()
+          });
+
+          userIdSet.add(profile.id);
         });
       }
 
-      // Add students
+      // Add students who don't have profiles yet
       if (students && Array.isArray(students)) {
         students.forEach((student: StudentData) => {
-          const enrollment = student.student_enrollments?.[0];
-          const roles = (userRoles || [])
-            .filter(ur => ur.user_id === student.user_id)
-            .map(ur => ur.role as AppRole);
+          // Skip if this student already has a profile
+          if (student.user_id && userIdSet.has(student.user_id)) {
+            // Update existing profile entry with student data
+            const existingIndex = combinedUsers.findIndex(u => u.id === student.user_id);
+            if (existingIndex !== -1) {
+              const enrollment = student.student_enrollments?.[0];
+              combinedUsers[existingIndex].current_class = enrollment?.classes ? 
+                `${enrollment.classes.grade} ${enrollment.classes.name}` : '-';
+              combinedUsers[existingIndex].student_id = student.id;
+              combinedUsers[existingIndex].student_status = student.status;
+              combinedUsers[existingIndex].nis = student.nis;
+            }
+            return;
+          }
 
-          // If student has user_id but no roles, add default 'siswa' role
-          if (student.user_id && roles.length === 0) {
-            roles.push('siswa');
+          // Add students without profiles
+          const enrollment = student.student_enrollments?.[0];
+          const roles: AppRole[] = [];
+
+          // If student has user_id, check for roles
+          if (student.user_id) {
+            const studentRoles = (userRoles || [])
+              .filter(ur => ur.user_id === student.user_id)
+              .map(ur => ur.role as AppRole);
+            roles.push(...studentRoles);
           }
 
           combinedUsers.push({
@@ -120,37 +138,18 @@ export const useUserManagement = () => {
         });
       }
 
-      // Remove duplicates based on ID
-      const uniqueUsers = combinedUsers.reduce((acc, current) => {
-        const existing = acc.find(item => item.id === current.id);
-        if (!existing) {
-          acc.push(current);
-        } else {
-          // Merge roles if duplicate found
-          const mergedRoles = [...new Set([...existing.roles, ...current.roles])];
-          existing.roles = mergedRoles;
-          
-          // Keep the more complete data
-          if (current.user_type === 'staff' && existing.user_type === 'student') {
-            existing.user_type = 'staff';
-            existing.nip = current.nip;
-          }
-        }
-        return acc;
-      }, [] as AllUserData[]);
-
-      console.log('Combined users before filtering:', uniqueUsers.length);
+      console.log('Combined users before filtering:', combinedUsers.length);
 
       // Filter based on user role
-      let filteredUsers = uniqueUsers;
+      let filteredUsers = combinedUsers;
       if (hasRole('siswa')) {
         // Students can only see their own data
-        filteredUsers = uniqueUsers.filter(userData => 
+        filteredUsers = combinedUsers.filter(userData => 
           userData.user_type === 'student' && userData.id === user?.id
         );
       } else if (hasRole('wali_kelas') || hasRole('guru_bk')) {
         // Wali kelas and guru BK can see students and some staff
-        filteredUsers = uniqueUsers.filter(userData => 
+        filteredUsers = combinedUsers.filter(userData => 
           userData.user_type === 'student' || 
           (userData.user_type === 'staff' && 
            (userData.roles.includes('wali_kelas') || userData.roles.includes('guru_bk')))
@@ -217,7 +216,8 @@ export const useUserManagement = () => {
         .insert({
           user_id: profile.id,
           role: 'siswa',
-          assigned_by: user.id
+          assigned_by: user.id,
+          is_active: true
         });
 
       if (roleError) throw roleError;

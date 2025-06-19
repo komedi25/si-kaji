@@ -58,7 +58,7 @@ export const useUserRoles = () => {
         const { data: studentData } = await supabase
           .from('students')
           .select('user_id')
-          .eq('id', selectedUser.id)
+          .eq('id', selectedUser.student_id || selectedUser.id)
           .single();
         
         if (studentData?.user_id) {
@@ -71,7 +71,8 @@ export const useUserRoles = () => {
         .insert({
           user_id: targetUserId,
           role: newRole as any,
-          assigned_by: user?.id
+          assigned_by: user?.id,
+          is_active: true
         });
 
       if (error) throw error;
@@ -105,7 +106,7 @@ export const useUserRoles = () => {
         const { data: studentData } = await supabase
           .from('students')
           .select('user_id')
-          .eq('id', userData.id)
+          .eq('id', userData.student_id || userData.id)
           .single();
         
         if (studentData?.user_id) {
