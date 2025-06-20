@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -330,6 +331,11 @@ export const SelfAttendanceWithRefresh = () => {
           .single();
 
         if (violationType) {
+          // Fix the arithmetic operation by converting time strings to Date objects and then to numbers
+          const currentTimeMs = new Date(`1970-01-01T${currentTime}`).getTime();
+          const checkInEndMs = new Date(`1970-01-01T${schedule.check_in_end}`).getTime();
+          const lateMinutes = Math.ceil((currentTimeMs - checkInEndMs) / 60000);
+
           await supabase
             .from('student_violations')
             .insert({
@@ -341,7 +347,7 @@ export const SelfAttendanceWithRefresh = () => {
               status: 'active'
             });
           violationCreated = true;
-          lateMessage = `Anda terlambat ${Math.ceil((new Date(`1970-01-01T${currentTime}`) - new Date(`1970-01-01T${schedule.check_in_end}`)) / 60000)} menit`;
+          lateMessage = `Anda terlambat ${lateMinutes} menit`;
         }
       }
 
@@ -732,7 +738,7 @@ export const SelfAttendanceWithRefresh = () => {
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <span>Check In: {todayAttendance.check_in_time}</span>
                 {schedule && todayAttendance.check_in_time > schedule.check_in_end && (
-                  <AlertTriangle className="h-4 w-4 text-red-500" title="Terlambat" />
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
                 )}
               </div>
             )}
