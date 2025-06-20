@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -48,162 +47,129 @@ export const EditStudentDataDialog = ({
   useEffect(() => {
     if (open && studentData) {
       console.log('Dialog opened with student data:', studentData);
-      
-      // Determine the actual student ID more reliably
-      let studentId = null;
-      
-      if (studentData.user_type === 'student') {
-        // Priority order: student_id first, then fallback to id if it looks like a student record
-        if (studentData.student_id) {
-          studentId = studentData.student_id;
-          console.log('Using student_id from studentData:', studentId);
-        } else if (studentData.id && !studentData.has_user_account) {
-          // If no user account and we have an id, it's likely the student record id
-          studentId = studentData.id;
-          console.log('Using id as student record ID (no user account):', studentId);
-        } else if (studentData.nis) {
-          // Fallback: find student by NIS
-          console.log('Will search by NIS:', studentData.nis);
-          fetchStudentByNIS(studentData.nis);
-          return;
-        }
-      }
-      
-      if (studentId) {
-        setActualStudentId(studentId);
-        fetchStudentDetails(studentId);
-      } else {
-        console.error('Could not determine student ID from:', studentData);
-        toast({
-          title: "Error",
-          description: "Tidak dapat menentukan ID siswa dari data yang dipilih",
-          variant: "destructive"
-        });
-      }
-      
+      findAndLoadStudentData();
       fetchClasses();
     }
   }, [open, studentData]);
 
-  const fetchStudentByNIS = async (nis: string) => {
-    console.log('Searching student by NIS:', nis);
+  const findAndLoadStudentData = async () => {
+    console.log('Starting findAndLoadStudentData with:', studentData);
     
     try {
-      const { data: students, error } = await supabase
-        .from('students')
-        .select('id, full_name, nis')
-        .eq('nis', nis);
+      let studentRecord = null;
 
-      if (error) {
-        console.error('Error searching student by NIS:', error);
-        throw error;
+      // Strategy 1: If we have student_id from the userData, use it directly
+      if (studentData.student_id) {
+        console.log('Strategy 1: Using student_id:', studentData.student_id);
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', studentData.student_id)
+          .maybeSingle();
+
+        if (!error && data) {
+          studentRecord = data;
+          setActualStudentId(data.id);
+          console.log('Found student by student_id:', data);
+        }
       }
 
-      console.log('Students found by NIS:', students);
+      // Strategy 2: If no student_id but we have NIS, search by NIS
+      if (!studentRecord && studentData.nis) {
+        console.log('Strategy 2: Searching by NIS:', studentData.nis);
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('nis', studentData.nis)
+          .maybeSingle();
 
-      if (!students || students.length === 0) {
+        if (!error && data) {
+          studentRecord = data;
+          setActualStudentId(data.id);
+          console.log('Found student by NIS:', data);
+        }
+      }
+
+      // Strategy 3: If user has account and no student record found, search by user_id
+      if (!studentRecord && studentData.has_user_account && studentData.id) {
+        console.log('Strategy 3: Searching by user_id:', studentData.id);
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('user_id', studentData.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          studentRecord = data;
+          setActualStudentId(data.id);
+          console.log('Found student by user_id:', data);
+        }
+      }
+
+      // Strategy 4: Search by full name as last resort
+      if (!studentRecord && studentData.full_name) {
+        console.log('Strategy 4: Searching by full_name:', studentData.full_name);
+        const { data, error } = await supabase
+          .from('students')
+          .select('*')
+          .eq('full_name', studentData.full_name)
+          .maybeSingle();
+
+        if (!error && data) {
+          studentRecord = data;
+          setActualStudentId(data.id);
+          console.log('Found student by full_name:', data);
+        }
+      }
+
+      if (!studentRecord) {
+        console.error('No student record found using any strategy');
         toast({
-          title: "Error",
-          description: "Siswa dengan NIS tersebut tidak ditemukan",
+          title: "Data Tidak Ditemukan",
+          description: "Data siswa tidak ditemukan di database. Pastikan data siswa sudah ada sebelum membuat akun pengguna.",
           variant: "destructive"
         });
         return;
       }
 
-      if (students.length > 1) {
-        console.warn('Multiple students found with same NIS:', students);
-        // Use the first one but warn user
-        toast({
-          title: "Peringatan",
-          description: "Ditemukan beberapa siswa dengan NIS yang sama, menggunakan data pertama",
-          variant: "destructive"
-        });
-      }
-
-      const student = students[0];
-      setActualStudentId(student.id);
-      fetchStudentDetails(student.id);
-    } catch (error) {
-      console.error('Error in fetchStudentByNIS:', error);
-      toast({
-        title: "Error",
-        description: "Gagal mencari data siswa: " + (error as Error).message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchStudentDetails = async (studentId: string) => {
-    if (!studentId) {
-      console.error('No student ID provided to fetchStudentDetails');
-      return;
-    }
-
-    console.log('Fetching student details for student_id:', studentId);
-    
-    try {
-      // Use maybeSingle() instead of single() to avoid the "multiple rows" error
-      const { data: student, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', studentId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching student:', error);
-        throw error;
-      }
-
-      if (!student) {
-        console.error('No student found with ID:', studentId);
-        toast({
-          title: "Error",
-          description: "Data siswa tidak ditemukan",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Student data fetched successfully:', student);
-
+      // Load the student data into form
+      console.log('Loading student data into form:', studentRecord);
       setFormData({
-        full_name: student.full_name || '',
-        nis: student.nis || '',
-        nisn: student.nisn || '',
-        phone: student.phone || '',
-        address: student.address || '',
-        birth_place: student.birth_place || '',
-        birth_date: student.birth_date || '',
-        gender: (student.gender as 'L' | 'P') || 'L',
-        religion: student.religion || '',
-        parent_name: student.parent_name || '',
-        parent_phone: student.parent_phone || '',
-        parent_address: student.parent_address || '',
-        status: (student.status as 'active' | 'graduated' | 'transferred' | 'dropped') || 'active'
+        full_name: studentRecord.full_name || '',
+        nis: studentRecord.nis || '',
+        nisn: studentRecord.nisn || '',
+        phone: studentRecord.phone || '',
+        address: studentRecord.address || '',
+        birth_place: studentRecord.birth_place || '',
+        birth_date: studentRecord.birth_date || '',
+        gender: (studentRecord.gender as 'L' | 'P') || 'L',
+        religion: studentRecord.religion || '',
+        parent_name: studentRecord.parent_name || '',
+        parent_phone: studentRecord.parent_phone || '',
+        parent_address: studentRecord.parent_address || '',
+        status: (studentRecord.status as 'active' | 'graduated' | 'transferred' | 'dropped') || 'active'
       });
 
-      // Get current class enrollment - also use maybeSingle()
+      // Get current class enrollment
       const { data: enrollment, error: enrollmentError } = await supabase
         .from('student_enrollments')
         .select('class_id')
-        .eq('student_id', student.id)
+        .eq('student_id', studentRecord.id)
         .eq('status', 'active')
         .maybeSingle();
 
-      if (enrollmentError) {
-        console.error('Error fetching enrollment:', enrollmentError);
-        // Don't throw here, enrollment is optional
-      } else if (enrollment) {
+      if (!enrollmentError && enrollment) {
         console.log('Current enrollment found:', enrollment);
         setSelectedClassId(enrollment.class_id);
       } else {
         console.log('No active enrollment found for student');
       }
+
     } catch (error) {
-      console.error('Error fetching student details:', error);
+      console.error('Error in findAndLoadStudentData:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat detail siswa: " + (error as Error).message,
+        description: "Gagal memuat data siswa: " + (error as Error).message,
         variant: "destructive"
       });
     }
@@ -232,7 +198,7 @@ export const EditStudentDataDialog = ({
     if (!actualStudentId) {
       toast({
         title: "Error",
-        description: "ID siswa tidak ditemukan",
+        description: "ID siswa tidak ditemukan. Pastikan data siswa valid.",
         variant: "destructive"
       });
       return;
@@ -270,7 +236,7 @@ export const EditStudentDataDialog = ({
 
       console.log('Student data updated successfully');
 
-      // Update profile if exists (check if student has user account)
+      // Update profile if student has user account
       if (studentData.has_user_account && studentData.id) {
         console.log('Updating profile for user ID:', studentData.id);
         
@@ -286,7 +252,6 @@ export const EditStudentDataDialog = ({
 
         if (profileError) {
           console.error('Error updating profile:', profileError);
-          // Don't throw here, profile update is optional
           console.log('Profile update failed, but continuing...');
         } else {
           console.log('Profile updated successfully');
@@ -316,7 +281,6 @@ export const EditStudentDataDialog = ({
 
         if (enrollmentError) {
           console.error('Error updating enrollment:', enrollmentError);
-          // Don't throw here, enrollment update is optional
           console.log('Enrollment update failed, but continuing...');
         } else {
           console.log('Class enrollment updated successfully');
@@ -351,8 +315,13 @@ export const EditStudentDataDialog = ({
             Perbarui informasi data siswa {studentData.full_name}
             <br />
             <span className="text-xs text-gray-500">
-              Student ID: {actualStudentId || 'Belum ditemukan'}
+              Student ID: {actualStudentId || 'Mencari data...'}
             </span>
+            {!actualStudentId && (
+              <div className="text-xs text-orange-600 mt-1">
+                ⚠️ Jika data tidak ditemukan, pastikan data siswa sudah ada di sistem sebelum membuat akun pengguna
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
