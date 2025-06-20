@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -217,7 +216,7 @@ export const ScheduleManager = () => {
     setIsDialogOpen(true);
   };
 
-  // Handle delete - FIXED
+  // Handle delete - IMPROVED WITH BETTER ERROR HANDLING
   const handleDelete = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
 
@@ -225,18 +224,50 @@ export const ScheduleManager = () => {
     console.log('Attempting to delete schedule with ID:', id);
 
     try {
-      const { error, data } = await supabase
+      // First, verify the record exists
+      const { data: existingRecord, error: checkError } = await supabase
         .from('attendance_schedules')
-        .delete()
+        .select('id, name')
         .eq('id', id)
-        .select(); // Add select to see what was deleted
+        .single();
 
-      if (error) {
-        console.error('Delete error:', error);
-        throw error;
+      if (checkError) {
+        console.error('Error checking record existence:', checkError);
+        throw new Error('Gagal memverifikasi data yang akan dihapus: ' + checkError.message);
       }
 
-      console.log('Delete result:', data);
+      if (!existingRecord) {
+        console.log('Record not found, may have been already deleted');
+        // Update local state anyway
+        setSchedules(prevSchedules => 
+          prevSchedules.filter(schedule => schedule.id !== id)
+        );
+        toast({
+          title: "Info",
+          description: "Data sudah tidak ada di database"
+        });
+        return;
+      }
+
+      console.log('Found record to delete:', existingRecord);
+
+      // Proceed with deletion
+      const { error: deleteError, count } = await supabase
+        .from('attendance_schedules')
+        .delete({ count: 'exact' })
+        .eq('id', id);
+
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw new Error('Gagal menghapus jadwal: ' + deleteError.message);
+      }
+
+      console.log('Delete operation completed. Rows affected:', count);
+
+      if (count === 0) {
+        console.warn('No rows were deleted');
+        throw new Error('Tidak ada data yang dihapus. Mungkin data sudah tidak ada.');
+      }
 
       // Update local state immediately
       setSchedules(prevSchedules => 
@@ -245,13 +276,16 @@ export const ScheduleManager = () => {
 
       toast({
         title: "Berhasil",
-        description: "Jadwal berhasil dihapus"
+        description: `Jadwal "${existingRecord.name}" berhasil dihapus`
       });
 
-      // Fetch fresh data to ensure consistency
-      await fetchData();
+      // Verify deletion and refresh data
+      setTimeout(async () => {
+        await fetchData();
+      }, 500);
+
     } catch (error: any) {
-      console.error('Error deleting schedule:', error);
+      console.error('Error in handleDelete:', error);
       toast({
         title: "Error",
         description: error.message || "Gagal menghapus jadwal",
