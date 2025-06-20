@@ -46,13 +46,24 @@ export const EditStudentDataDialog = ({
 
   useEffect(() => {
     if (open && studentData) {
+      console.log('Dialog opened with student data:', studentData);
       fetchStudentDetails();
       fetchClasses();
     }
   }, [open, studentData]);
 
   const fetchStudentDetails = async () => {
-    if (!studentData.student_id) return;
+    console.log('Fetching student details for student_id:', studentData.student_id);
+    
+    if (!studentData.student_id) {
+      console.error('No student_id found');
+      toast({
+        title: "Error",
+        description: "ID siswa tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
       const { data: student, error } = await supabase
@@ -61,7 +72,12 @@ export const EditStudentDataDialog = ({
         .eq('id', studentData.student_id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching student:', error);
+        throw error;
+      }
+
+      console.log('Student data fetched:', student);
 
       if (student) {
         setFormData({
@@ -81,14 +97,17 @@ export const EditStudentDataDialog = ({
         });
 
         // Get current class enrollment
-        const { data: enrollment } = await supabase
+        const { data: enrollment, error: enrollmentError } = await supabase
           .from('student_enrollments')
           .select('class_id')
           .eq('student_id', student.id)
           .eq('status', 'active')
           .single();
 
-        if (enrollment) {
+        if (enrollmentError) {
+          console.log('No active enrollment found or error:', enrollmentError);
+        } else if (enrollment) {
+          console.log('Current enrollment:', enrollment);
           setSelectedClassId(enrollment.class_id);
         }
       }
@@ -96,7 +115,7 @@ export const EditStudentDataDialog = ({
       console.error('Error fetching student details:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat detail siswa",
+        description: "Gagal memuat detail siswa: " + (error as Error).message,
         variant: "destructive"
       });
     }
@@ -120,10 +139,21 @@ export const EditStudentDataDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentData.student_id) return;
+    console.log('Form submitted with data:', formData);
+    
+    if (!studentData.student_id) {
+      toast({
+        title: "Error",
+        description: "ID siswa tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('Updating student with ID:', studentData.student_id);
+      
       // Update student data
       const { error: studentError } = await supabase
         .from('students')
@@ -145,10 +175,17 @@ export const EditStudentDataDialog = ({
         })
         .eq('id', studentData.student_id);
 
-      if (studentError) throw studentError;
+      if (studentError) {
+        console.error('Error updating student:', studentError);
+        throw studentError;
+      }
+
+      console.log('Student data updated successfully');
 
       // Update profile if exists
       if (studentData.has_user_account && studentData.id) {
+        console.log('Updating profile for user ID:', studentData.id);
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
@@ -159,11 +196,18 @@ export const EditStudentDataDialog = ({
           })
           .eq('id', studentData.id);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Error updating profile:', profileError);
+          throw profileError;
+        }
+        
+        console.log('Profile updated successfully');
       }
 
       // Update class enrollment if changed
       if (selectedClassId) {
+        console.log('Updating class enrollment to:', selectedClassId);
+        
         // Deactivate current enrollment
         await supabase
           .from('student_enrollments')
@@ -181,7 +225,12 @@ export const EditStudentDataDialog = ({
             enrollment_date: new Date().toISOString().split('T')[0]
           });
 
-        if (enrollmentError) throw enrollmentError;
+        if (enrollmentError) {
+          console.error('Error updating enrollment:', enrollmentError);
+          throw enrollmentError;
+        }
+        
+        console.log('Class enrollment updated successfully');
       }
 
       toast({
@@ -375,7 +424,7 @@ export const EditStudentDataDialog = ({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Batal
             </Button>
             <Button type="submit" disabled={loading}>

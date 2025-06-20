@@ -304,16 +304,19 @@ export const SelfAttendanceWithRefresh = () => {
 
       const now = new Date();
       const currentTime = format(now, 'HH:mm:ss');
-      const endOfSchoolTime = '17:15:00';
+      const earlyDepartureTime = '15:15:00';
+      const lateDepartureTime = '17:15:00';
 
-      // Check if leaving before 17:15 (potential violation)
+      // Check for violations
       let violationCreated = false;
-      if (currentTime < endOfSchoolTime) {
-        // Create early departure violation
+      let violationMessage = '';
+
+      if (currentTime < earlyDepartureTime) {
+        // Create early departure violation (before 15:15)
         const { data: violationType } = await supabase
           .from('violation_types')
           .select('id')
-          .eq('name', 'Pulang Sebelum Waktunya')
+          .eq('name', 'Pulang Terlalu Awal')
           .eq('is_active', true)
           .single();
 
@@ -324,11 +327,35 @@ export const SelfAttendanceWithRefresh = () => {
               student_id: studentId,
               violation_type_id: violationType.id,
               violation_date: format(now, 'yyyy-MM-dd'),
-              description: `Pulang sebelum jam 17:15 (pulang jam ${currentTime})`,
+              description: `Pulang terlalu awal sebelum jam 15:15 (pulang jam ${currentTime})`,
+              point_deduction: 15,
+              status: 'active'
+            });
+          violationCreated = true;
+          violationMessage = 'Pelanggaran: Pulang terlalu awal (sebelum 15:15)';
+        }
+      } else if (currentTime > lateDepartureTime) {
+        // Create late departure violation (after 17:15)
+        const { data: violationType } = await supabase
+          .from('violation_types')
+          .select('id')
+          .eq('name', 'Pulang Terlalu Malam')
+          .eq('is_active', true)
+          .single();
+
+        if (violationType) {
+          await supabase
+            .from('student_violations')
+            .insert({
+              student_id: studentId,
+              violation_type_id: violationType.id,
+              violation_date: format(now, 'yyyy-MM-dd'),
+              description: `Pulang terlalu malam setelah jam 17:15 (pulang jam ${currentTime})`,
               point_deduction: 10,
               status: 'active'
             });
           violationCreated = true;
+          violationMessage = 'Pelanggaran: Pulang terlalu malam (setelah 17:15)';
         }
       }
 
@@ -338,7 +365,8 @@ export const SelfAttendanceWithRefresh = () => {
           check_out_time: currentTime,
           check_out_latitude: latitude,
           check_out_longitude: longitude,
-          notes: violationCreated ? 'Pulang sebelum jam 17:15' : 'Pulang sesuai jadwal'
+          violation_created: violationCreated,
+          notes: violationCreated ? violationMessage : 'Pulang sesuai jadwal'
         })
         .eq('id', todayAttendance.id);
 
@@ -357,7 +385,7 @@ export const SelfAttendanceWithRefresh = () => {
       if (violationCreated) {
         toast({
           title: "Presensi Pulang Berhasil",
-          description: "Peringatan: Anda pulang sebelum jam 17:15. Pelanggaran telah dicatat.",
+          description: violationMessage,
           variant: "destructive"
         });
       } else {
@@ -427,14 +455,18 @@ export const SelfAttendanceWithRefresh = () => {
     }
 
     if (todayAttendance.violation_created) {
-      return <Badge variant="destructive">Terlambat</Badge>;
+      return <Badge variant="destructive">Ada Pelanggaran</Badge>;
     }
 
     if (todayAttendance.check_out_time) {
       const checkOutTime = todayAttendance.check_out_time;
-      const endOfSchoolTime = '17:15:00';
-      if (checkOutTime < endOfSchoolTime) {
-        return <Badge variant="destructive">Pulang Lebih Awal</Badge>;
+      const earlyTime = '15:15:00';
+      const lateTime = '17:15:00';
+      
+      if (checkOutTime < earlyTime) {
+        return <Badge variant="destructive">Pulang Terlalu Awal</Badge>;
+      } else if (checkOutTime > lateTime) {
+        return <Badge variant="destructive">Pulang Terlalu Malam</Badge>;
       }
       return <Badge variant="default">Selesai</Badge>;
     }
@@ -495,7 +527,8 @@ export const SelfAttendanceWithRefresh = () => {
             <div className="text-xs space-y-1">
               <div>Check In: {schedule.check_in_start} - {schedule.check_in_end}</div>
               <div className="text-gray-600">Check Out: Kapan saja (di luar sekolah)</div>
-              <div className="text-red-600">Batas Pulang: 17:15 WIB</div>
+              <div className="text-red-600">Waktu Normal: 15:15 - 17:15 WIB</div>
+              <div className="text-orange-600">Pelanggaran: &lt; 15:15 atau &gt; 17:15</div>
             </div>
           </div>
         )}
@@ -517,7 +550,7 @@ export const SelfAttendanceWithRefresh = () => {
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-blue-500" />
                 <span>Check Out: {todayAttendance.check_out_time}</span>
-                {todayAttendance.check_out_time < '17:15:00' && (
+                {(todayAttendance.check_out_time < '15:15:00' || todayAttendance.check_out_time > '17:15:00') && (
                   <AlertTriangle className="h-4 w-4 text-red-500" />
                 )}
               </div>
@@ -554,7 +587,8 @@ export const SelfAttendanceWithRefresh = () => {
             <div>• Check In: Harus di dalam area sekolah</div>
             <div>• Check Out: Harus di luar area sekolah</div>
             <div>• Siswa dianggap hadir meski hanya check in</div>
-            <div>• Pulang sebelum jam 17:15 akan dicatat sebagai pelanggaran</div>
+            <div>• Waktu pulang normal: 15:15 - 17:15 WIB</div>
+            <div>• Pelanggaran: Pulang &lt; 15:15 atau &gt; 17:15</div>
           </div>
         </div>
 
