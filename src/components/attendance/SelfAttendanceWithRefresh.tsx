@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +37,13 @@ interface SelfAttendance {
   violation_created: boolean;
 }
 
+interface LocationReading {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: number;
+}
+
 export const SelfAttendanceWithRefresh = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -50,6 +56,8 @@ export const SelfAttendanceWithRefresh = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [studentId, setStudentId] = useState<string | null>(null);
   const [isWithinSchool, setIsWithinSchool] = useState<boolean | null>(null);
+  const [locationReadings, setLocationReadings] = useState<LocationReading[]>([]);
+  const [stabilizedPosition, setStabilizedPosition] = useState<{lat: number, lng: number} | null>(null);
 
   // Update current time every second
   useEffect(() => {
@@ -195,14 +203,60 @@ export const SelfAttendanceWithRefresh = () => {
     fetchTodayAttendance();
   }, [studentId]);
 
+  // Stabilize coordinates using multiple readings
+  const stabilizeCoordinates = (newReading: LocationReading) => {
+    const maxReadings = 5;
+    const maxAge = 30000; // 30 seconds
+    const now = Date.now();
+    
+    // Add new reading
+    const updatedReadings = [...locationReadings, newReading].filter(
+      reading => now - reading.timestamp <= maxAge
+    ).slice(-maxReadings);
+    
+    setLocationReadings(updatedReadings);
+    
+    if (updatedReadings.length === 0) return null;
+    
+    // Filter out readings with poor accuracy (> 20 meters)
+    const goodReadings = updatedReadings.filter(reading => reading.accuracy <= 20);
+    const readingsToUse = goodReadings.length > 0 ? goodReadings : updatedReadings.slice(-2);
+    
+    // Calculate weighted average based on accuracy (better accuracy = higher weight)
+    let totalWeight = 0;
+    let weightedLat = 0;
+    let weightedLng = 0;
+    
+    readingsToUse.forEach(reading => {
+      const weight = 1 / Math.max(reading.accuracy, 1); // Better accuracy = higher weight
+      totalWeight += weight;
+      weightedLat += reading.latitude * weight;
+      weightedLng += reading.longitude * weight;
+    });
+    
+    const stabilized = {
+      lat: weightedLat / totalWeight,
+      lng: weightedLng / totalWeight
+    };
+    
+    console.log('📍 Coordinate stabilization:', {
+      rawReadings: updatedReadings.length,
+      goodReadings: goodReadings.length,
+      stabilized,
+      accuracy: newReading.accuracy
+    });
+    
+    return stabilized;
+  };
+
   // Check location status when position changes
   useEffect(() => {
-    if (position && locations.length > 0) {
-      const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
+    if (stabilizedPosition && locations.length > 0) {
+      const withinSchool = isWithinLocation(stabilizedPosition.lat, stabilizedPosition.lng);
       setIsWithinSchool(withinSchool !== null);
-      console.log('📍 Location check:', withinSchool ? 'Inside school' : 'Outside school');
+      console.log('📍 Location check with stabilized position:', withinSchool ? 'Inside school' : 'Outside school');
     }
-  }, [position, locations]);
+  }, [stabilizedPosition, locations]);
 
   const refreshLocation = () => {
     setRefreshingLocation(true);
@@ -220,14 +274,26 @@ export const SelfAttendanceWithRefresh = () => {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        console.log('📍 Location updated:', position.coords.latitude, position.coords.longitude);
+        console.log('📍 Raw location:', position.coords.latitude, position.coords.longitude, 'accuracy:', position.coords.accuracy);
         setPosition(position);
-        const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
-        setIsWithinSchool(withinSchool !== null);
+        
+        const newReading: LocationReading = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy || 999,
+          timestamp: Date.now()
+        };
+        
+        const stabilized = stabilizeCoordinates(newReading);
+        if (stabilized) {
+          setStabilizedPosition(stabilized);
+          console.log('📍 Stabilized position updated:', stabilized);
+        }
+        
         setRefreshingLocation(false);
         toast({
           title: "Berhasil",
-          description: "Lokasi berhasil diperbarui",
+          description: `Lokasi diperbarui (akurasi: ${Math.round(position.coords.accuracy || 0)}m)`,
         });
       },
       (error) => {
@@ -241,7 +307,7 @@ export const SelfAttendanceWithRefresh = () => {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 0
       }
     );
@@ -256,9 +322,21 @@ export const SelfAttendanceWithRefresh = () => {
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('📍 Getting current location for attendance:', position.coords.latitude, position.coords.longitude);
           setPosition(position);
-          const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
-          setIsWithinSchool(withinSchool !== null);
+          
+          const newReading: LocationReading = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy || 999,
+            timestamp: Date.now()
+          };
+          
+          const stabilized = stabilizeCoordinates(newReading);
+          if (stabilized) {
+            setStabilizedPosition(stabilized);
+          }
+          
           resolve(position);
         },
         (error) => {
@@ -266,8 +344,8 @@ export const SelfAttendanceWithRefresh = () => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000
+          timeout: 15000,
+          maximumAge: 0
         }
       );
     });
@@ -287,6 +365,7 @@ export const SelfAttendanceWithRefresh = () => {
   const isWithinLocation = (lat: number, lng: number): AttendanceLocation | null => {
     for (const location of locations) {
       const distance = calculateDistance(lat, lng, location.latitude, location.longitude);
+      console.log(`📏 Distance to ${location.name}: ${Math.round(distance)}m (limit: ${location.radius_meters}m)`);
       if (distance <= location.radius_meters) {
         return location;
       }
@@ -300,10 +379,10 @@ export const SelfAttendanceWithRefresh = () => {
     setLoading(true);
     try {
       const position = await getCurrentLocation();
-      const { latitude, longitude } = position.coords;
+      const coords = stabilizedPosition || { lat: position.coords.latitude, lng: position.coords.longitude };
       
       // Check if within school area - REQUIRED for check in
-      const location = isWithinLocation(latitude, longitude);
+      const location = isWithinLocation(coords.lat, coords.lng);
       if (!location) {
         toast({
           title: "Lokasi Tidak Valid",
@@ -357,8 +436,8 @@ export const SelfAttendanceWithRefresh = () => {
           student_id: studentId,
           attendance_date: today,
           check_in_time: currentTime,
-          check_in_latitude: latitude,
-          check_in_longitude: longitude,
+          check_in_latitude: coords.lat,
+          check_in_longitude: coords.lng,
           check_in_location_id: location.id,
           status: 'present',
           violation_created: violationCreated,
@@ -407,10 +486,10 @@ export const SelfAttendanceWithRefresh = () => {
     setLoading(true);
     try {
       const position = await getCurrentLocation();
-      const { latitude, longitude } = position.coords;
+      const coords = stabilizedPosition || { lat: position.coords.latitude, lng: position.coords.longitude };
       
       // Check if OUTSIDE school area - REQUIRED for check out
-      const location = isWithinLocation(latitude, longitude);
+      const location = isWithinLocation(coords.lat, coords.lng);
       if (location) {
         toast({
           title: "Lokasi Tidak Valid",
@@ -481,8 +560,8 @@ export const SelfAttendanceWithRefresh = () => {
         .from('student_self_attendances')
         .update({
           check_out_time: currentTime,
-          check_out_latitude: latitude,
-          check_out_longitude: longitude,
+          check_out_latitude: coords.lat,
+          check_out_longitude: coords.lng,
           violation_created: violationCreated,
           notes: violationCreated ? violationMessage : 'Pulang sesuai jadwal'
         })
@@ -529,7 +608,8 @@ export const SelfAttendanceWithRefresh = () => {
       schedule: !!schedule,
       alreadyCheckedIn: !!todayAttendance?.check_in_time,
       isWithinSchool,
-      studentId: !!studentId
+      studentId: !!studentId,
+      stabilizedPosition: !!stabilizedPosition
     });
     
     if (!schedule || !studentId) {
@@ -636,6 +716,8 @@ export const SelfAttendanceWithRefresh = () => {
     locationsCount: locations.length,
     todayAttendance,
     isWithinSchool,
+    stabilizedPosition,
+    locationReadings: locationReadings.length,
     canCheckIn: canCheckIn(),
     canCheckOut: canCheckOut(),
     currentDayOfWeek: new Date().getDay()
@@ -688,7 +770,7 @@ export const SelfAttendanceWithRefresh = () => {
           </div>
         </div>
 
-        {/* Location Status */}
+        {/* Enhanced Location Status */}
         <div className="bg-gray-50 p-3 rounded-lg">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Status Lokasi:</span>
@@ -706,9 +788,21 @@ export const SelfAttendanceWithRefresh = () => {
             <locationStatus.icon className="h-4 w-4" />
             <span className="text-sm font-medium">{locationStatus.text}</span>
           </div>
-          {position && (
+          {stabilizedPosition && (
             <div className="text-xs text-gray-500 mt-1">
-              Koordinat: {position.coords.latitude.toFixed(6)}, {position.coords.longitude.toFixed(6)}
+              Koordinat Stabil: {stabilizedPosition.lat.toFixed(6)}, {stabilizedPosition.lng.toFixed(6)}
+              <br />
+              Pembacaan GPS: {locationReadings.length}/5
+              {position && (
+                <span className="text-blue-600"> | Akurasi: {Math.round(position.coords.accuracy || 0)}m</span>
+              )}
+            </div>
+          )}
+          {position && !stabilizedPosition && (
+            <div className="text-xs text-gray-500 mt-1">
+              Koordinat Raw: {position.coords.latitude.toFixed(6)}, {position.coords.longitude.toFixed(6)}
+              <br />
+              Menunggu stabilisasi lokasi...
             </div>
           )}
         </div>
@@ -776,14 +870,16 @@ export const SelfAttendanceWithRefresh = () => {
           </Button>
         </div>
 
-        {/* Info Box */}
+        {/* Enhanced Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="text-xs space-y-1">
-            <div className="font-medium text-blue-800">Aturan Presensi Baru:</div>
+            <div className="font-medium text-blue-800">Aturan Presensi & Stabilisasi GPS:</div>
             <div>• Check In: Kapan saja jika di dalam area sekolah</div>
             <div>• Check Out: Harus di luar area sekolah</div>
             <div>• Terlambat: Otomatis tercatat jika check in setelah jam normal</div>
             <div>• Pelanggaran pulang: &lt; 15:15 atau &gt; 17:15</div>
+            <div className="text-green-700 font-medium mt-2">• Koordinat distabilkan dari 5 pembacaan GPS terbaru</div>
+            <div className="text-green-700">• Sistem menggunakan weighted average berdasarkan akurasi</div>
           </div>
         </div>
 
@@ -801,6 +897,7 @@ export const SelfAttendanceWithRefresh = () => {
         {/* Debug info untuk troubleshooting */}
         <div className="text-xs text-gray-400 border-t pt-2">
           <div>Debug: Day={new Date().getDay()}, Schedule={!!schedule}, Student={!!studentId}, Locations={locations.length}</div>
+          <div>GPS: Raw={!!position}, Stabilized={!!stabilizedPosition}, Readings={locationReadings.length}</div>
         </div>
       </CardContent>
     </Card>
