@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,33 +16,43 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Fetching all users data...');
       
-      // Fetch all profiles dengan informasi role
+      // First, get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles!inner (
-            role,
-            is_active
-          )
-        `)
-        .eq('user_roles.is_active', true)
+        .select('*')
         .order('full_name');
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
       }
 
-      console.log('Profiles with roles fetched:', profiles?.length || 0);
+      console.log('Profiles fetched:', profiles?.length || 0);
 
-      // Process profiles menjadi AllUserData
+      // Get all user roles separately
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .eq('is_active', true);
+
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
+        throw rolesError;
+      }
+
+      console.log('User roles fetched:', userRoles?.length || 0);
+
+      // Process profiles into AllUserData
       const combinedUsers: AllUserData[] = [];
 
       if (profiles && Array.isArray(profiles)) {
         for (const profile of profiles) {
-          const roles = profile.user_roles?.map(ur => ur.role as AppRole) || [];
+          // Find roles for this user
+          const roles = userRoles?.filter(ur => ur.user_id === profile.id)?.map(ur => ur.role as AppRole) || [];
           
-          // Hanya ambil user yang memiliki role siswa untuk data siswa
+          // Skip users without any roles
+          if (roles.length === 0) continue;
+
           const isStudent = roles.includes('siswa');
           
           let currentClass = '';
@@ -51,7 +60,7 @@ export const useUserManagement = () => {
           let studentStatus = 'active';
 
           if (isStudent) {
-            // Cari data siswa dan kelas untuk user ini
+            // Get student data and current class
             const { data: studentData } = await supabase
               .from('students')
               .select(`
@@ -81,14 +90,14 @@ export const useUserManagement = () => {
           combinedUsers.push({
             id: profile.id,
             full_name: profile.full_name,
-            email: null, // Akan diambil dari auth jika diperlukan
+            email: null, // Will be fetched from auth if needed
             nip: profile.nip,
             nis: profile.nis,
             phone: profile.phone,
             user_type: isStudent ? 'student' : 'staff',
             roles,
             current_class: currentClass || undefined,
-            has_user_account: true, // Semua profile sudah pasti punya akun
+            has_user_account: true, // All profiles have accounts by definition
             created_at: profile.created_at || new Date().toISOString(),
             student_id: studentId || undefined,
             student_status: isStudent ? studentStatus : undefined

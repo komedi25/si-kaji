@@ -56,7 +56,7 @@ export const EditStudentDataDialog = ({
     console.log('Loading student data for user:', studentData);
     
     try {
-      // Ambil data dari profiles dulu (data utama)
+      // Set basic data from profile
       setFormData({
         full_name: studentData.full_name || '',
         nis: studentData.nis || '',
@@ -73,43 +73,39 @@ export const EditStudentDataDialog = ({
         status: 'active'
       });
 
-      // Cek apakah sudah ada data lengkap di tabel students
-      if (studentData.student_id) {
-        const { data: studentRecord } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', studentData.student_id)
-          .maybeSingle();
+      // Try to find existing student record
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('*')
+        .eq('user_id', studentData.id)
+        .maybeSingle();
 
-        if (studentRecord) {
-          console.log('Found existing student record:', studentRecord);
-          setExistingStudentRecord(studentRecord);
-          
-          // Update form dengan data lengkap dari students
-          setFormData({
-            full_name: studentRecord.full_name || studentData.full_name || '',
-            nis: studentRecord.nis || studentData.nis || '',
-            nisn: studentRecord.nisn || '',
-            phone: studentRecord.phone || studentData.phone || '',
-            address: studentRecord.address || '',
-            birth_place: studentRecord.birth_place || '',
-            birth_date: studentRecord.birth_date || '',
-            gender: studentRecord.gender || 'L',
-            religion: studentRecord.religion || '',
-            parent_name: studentRecord.parent_name || '',
-            parent_phone: studentRecord.parent_phone || '',
-            parent_address: studentRecord.parent_address || '',
-            status: studentRecord.status || 'active'
-          });
-        }
-      }
+      if (studentRecord) {
+        console.log('Found existing student record:', studentRecord);
+        setExistingStudentRecord(studentRecord);
+        
+        // Update form with detailed data
+        setFormData({
+          full_name: studentRecord.full_name || studentData.full_name || '',
+          nis: studentRecord.nis || studentData.nis || '',
+          nisn: studentRecord.nisn || '',
+          phone: studentRecord.phone || studentData.phone || '',
+          address: studentRecord.address || '',
+          birth_place: studentRecord.birth_place || '',
+          birth_date: studentRecord.birth_date || '',
+          gender: (studentRecord.gender as 'L' | 'P') || 'L',
+          religion: studentRecord.religion || '',
+          parent_name: studentRecord.parent_name || '',
+          parent_phone: studentRecord.parent_phone || '',
+          parent_address: studentRecord.parent_address || '',
+          status: (studentRecord.status as 'active' | 'graduated' | 'transferred' | 'dropped') || 'active'
+        });
 
-      // Get current class enrollment
-      if (studentData.student_id) {
+        // Get current class enrollment
         const { data: enrollment } = await supabase
           .from('student_enrollments')
           .select('class_id')
-          .eq('student_id', studentData.student_id)
+          .eq('student_id', studentRecord.id)
           .eq('status', 'active')
           .maybeSingle();
 
@@ -150,7 +146,7 @@ export const EditStudentDataDialog = ({
 
     setLoading(true);
     try {
-      // Update data di profiles terlebih dahulu
+      // Update profile data
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -166,7 +162,7 @@ export const EditStudentDataDialog = ({
         throw profileError;
       }
 
-      // Jika sudah ada record di students, update. Jika belum, buat baru
+      // Update or create student record
       if (existingStudentRecord) {
         // Update existing student record
         const { error: studentError } = await supabase
@@ -190,6 +186,30 @@ export const EditStudentDataDialog = ({
           .eq('id', existingStudentRecord.id);
 
         if (studentError) throw studentError;
+
+        // Update class enrollment if changed
+        if (selectedClassId) {
+          // Deactivate current enrollment
+          await supabase
+            .from('student_enrollments')
+            .update({ status: 'inactive' })
+            .eq('student_id', existingStudentRecord.id)
+            .eq('status', 'active');
+
+          // Create new enrollment
+          const { error: enrollmentError } = await supabase
+            .from('student_enrollments')
+            .insert({
+              student_id: existingStudentRecord.id,
+              class_id: selectedClassId,
+              status: 'active',
+              enrollment_date: new Date().toISOString().split('T')[0]
+            });
+
+          if (enrollmentError) {
+            console.error('Error updating enrollment:', enrollmentError);
+          }
+        }
       } else {
         // Create new student record
         const { data: newStudent, error: createError } = await supabase
@@ -230,30 +250,6 @@ export const EditStudentDataDialog = ({
           if (enrollmentError) {
             console.error('Error creating enrollment:', enrollmentError);
           }
-        }
-      }
-
-      // Update class enrollment if changed
-      if (selectedClassId && existingStudentRecord) {
-        // Deactivate current enrollment
-        await supabase
-          .from('student_enrollments')
-          .update({ status: 'inactive' })
-          .eq('student_id', existingStudentRecord.id)
-          .eq('status', 'active');
-
-        // Create new enrollment
-        const { error: enrollmentError } = await supabase
-          .from('student_enrollments')
-          .insert({
-            student_id: existingStudentRecord.id,
-            class_id: selectedClassId,
-            status: 'active',
-            enrollment_date: new Date().toISOString().split('T')[0]
-          });
-
-        if (enrollmentError) {
-          console.error('Error updating enrollment:', enrollmentError);
         }
       }
 
