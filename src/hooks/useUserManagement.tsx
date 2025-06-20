@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AppRole } from '@/types/auth';
-import { AllUserData, ProfileData, StudentData, UserRoleData } from '@/types/user';
+import { AllUserData } from '@/types/user';
 
 export const useUserManagement = () => {
   const { user, hasRole } = useAuth();
@@ -17,128 +17,86 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Fetching all users data...');
       
-      // Fetch all profiles
+      // Fetch all profiles dengan informasi role
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          user_roles!inner (
+            role,
+            is_active
+          )
+        `)
+        .eq('user_roles.is_active', true)
         .order('full_name');
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
 
-      console.log('Profiles fetched:', profiles?.length || 0);
+      console.log('Profiles with roles fetched:', profiles?.length || 0);
 
-      // Fetch all students with class information
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select(`
-          *,
-          student_enrollments!inner (
-            classes (
-              name,
-              grade
-            )
-          )
-        `)
-        .order('full_name');
-
-      if (studentsError) {
-        console.error('Error fetching students:', studentsError);
-      }
-
-      console.log('Students fetched:', students?.length || 0);
-
-      // Fetch all user roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('is_active', true);
-
-      if (rolesError) {
-        console.error('Error fetching user roles:', rolesError);
-      }
-
-      console.log('User roles fetched:', userRoles?.length || 0);
-
-      // Combine all data
+      // Process profiles menjadi AllUserData
       const combinedUsers: AllUserData[] = [];
-      const userIdSet = new Set<string>();
 
-      // Add all profiles (both staff and students who have profiles)
       if (profiles && Array.isArray(profiles)) {
-        profiles.forEach((profile: ProfileData) => {
-          const roles = (userRoles || [])
-            .filter(ur => ur.user_id === profile.id)
-            .map(ur => ur.role as AppRole);
+        for (const profile of profiles) {
+          const roles = profile.user_roles?.map(ur => ur.role as AppRole) || [];
+          
+          // Hanya ambil user yang memiliki role siswa untuk data siswa
+          const isStudent = roles.includes('siswa');
+          
+          let currentClass = '';
+          let studentId = '';
+          let studentStatus = 'active';
+
+          if (isStudent) {
+            // Cari data siswa dan kelas untuk user ini
+            const { data: studentData } = await supabase
+              .from('students')
+              .select(`
+                id,
+                status,
+                student_enrollments!inner (
+                  classes (
+                    name,
+                    grade
+                  )
+                )
+              `)
+              .eq('user_id', profile.id)
+              .eq('student_enrollments.status', 'active')
+              .maybeSingle();
+
+            if (studentData) {
+              studentId = studentData.id;
+              studentStatus = studentData.status;
+              const enrollment = studentData.student_enrollments?.[0];
+              if (enrollment?.classes) {
+                currentClass = `${enrollment.classes.grade} ${enrollment.classes.name}`;
+              }
+            }
+          }
 
           combinedUsers.push({
             id: profile.id,
             full_name: profile.full_name,
-            email: null,
+            email: null, // Akan diambil dari auth jika diperlukan
             nip: profile.nip,
             nis: profile.nis,
             phone: profile.phone,
-            user_type: profile.nip ? 'staff' : 'student',
+            user_type: isStudent ? 'student' : 'staff',
             roles,
-            has_user_account: true,
-            created_at: profile.created_at || new Date().toISOString()
+            current_class: currentClass || undefined,
+            has_user_account: true, // Semua profile sudah pasti punya akun
+            created_at: profile.created_at || new Date().toISOString(),
+            student_id: studentId || undefined,
+            student_status: isStudent ? studentStatus : undefined
           });
-
-          userIdSet.add(profile.id);
-        });
+        }
       }
 
-      // Add students who don't have profiles yet
-      if (students && Array.isArray(students)) {
-        students.forEach((student: StudentData) => {
-          // Skip if this student already has a profile
-          if (student.user_id && userIdSet.has(student.user_id)) {
-            // Update existing profile entry with student data
-            const existingIndex = combinedUsers.findIndex(u => u.id === student.user_id);
-            if (existingIndex !== -1) {
-              const enrollment = student.student_enrollments?.[0];
-              combinedUsers[existingIndex].current_class = enrollment?.classes ? 
-                `${enrollment.classes.grade} ${enrollment.classes.name}` : '-';
-              combinedUsers[existingIndex].student_id = student.id;
-              combinedUsers[existingIndex].student_status = student.status;
-              combinedUsers[existingIndex].nis = student.nis;
-            }
-            return;
-          }
-
-          // Add students without profiles
-          const enrollment = student.student_enrollments?.[0];
-          const roles: AppRole[] = [];
-
-          // If student has user_id, check for roles
-          if (student.user_id) {
-            const studentRoles = (userRoles || [])
-              .filter(ur => ur.user_id === student.user_id)
-              .map(ur => ur.role as AppRole);
-            roles.push(...studentRoles);
-          }
-
-          combinedUsers.push({
-            id: student.user_id || student.id,
-            full_name: student.full_name,
-            email: null,
-            nip: null,
-            nis: student.nis,
-            phone: student.phone,
-            user_type: 'student',
-            roles,
-            current_class: enrollment?.classes ? 
-              `${enrollment.classes.grade} ${enrollment.classes.name}` : '-',
-            has_user_account: !!student.user_id,
-            created_at: student.created_at,
-            student_id: student.id,
-            student_status: student.status
-          });
-        });
-      }
-
-      console.log('Combined users before filtering:', combinedUsers.length);
+      console.log('Combined users:', combinedUsers.length);
 
       // Filter based on user role
       let filteredUsers = combinedUsers;
@@ -202,13 +160,20 @@ export const useUserManagement = () => {
 
       if (profileError) throw profileError;
 
-      // Update student with user_id
-      const { error: updateError } = await supabase
+      // Create basic student record
+      const { data: studentRecord, error: studentError } = await supabase
         .from('students')
-        .update({ user_id: profile.id })
-        .eq('id', studentData.student_id || studentData.id);
+        .insert({
+          user_id: profile.id,
+          full_name: studentData.full_name,
+          nis: studentData.nis,
+          gender: 'L', // Default, bisa diubah nanti
+          status: 'active'
+        })
+        .select()
+        .single();
 
-      if (updateError) throw updateError;
+      if (studentError) throw studentError;
 
       // Add siswa role
       const { error: roleError } = await supabase
@@ -264,44 +229,36 @@ export const useUserManagement = () => {
   const handleDeleteUser = async (userToDelete: AllUserData) => {
     try {
       if (userToDelete.user_type === 'student') {
-        // For students, delete from students table
-        const studentId = userToDelete.student_id || userToDelete.id;
-        
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('user_id')
-          .eq('id', studentId)
-          .single();
-
-        if (studentData?.user_id) {
-          // Delete user roles
+        // For students, delete related records first
+        if (userToDelete.student_id) {
+          // Delete student enrollments
           await supabase
-            .from('user_roles')
+            .from('student_enrollments')
             .delete()
-            .eq('user_id', studentData.user_id);
+            .eq('student_id', userToDelete.student_id);
 
-          // Delete profile
+          // Delete student record
           await supabase
-            .from('profiles')
+            .from('students')
             .delete()
-            .eq('id', studentData.user_id);
+            .eq('id', userToDelete.student_id);
         }
 
-        // Delete student enrollments
+        // Delete user roles
         await supabase
-          .from('student_enrollments')
+          .from('user_roles')
           .delete()
-          .eq('student_id', studentId);
+          .eq('user_id', userToDelete.id);
 
-        // Delete student record
+        // Delete profile
         const { error } = await supabase
-          .from('students')
+          .from('profiles')
           .delete()
-          .eq('id', studentId);
+          .eq('id', userToDelete.id);
 
         if (error) throw error;
       } else {
-        // For staff, delete from profiles table
+        // For staff, delete user roles then profile
         await supabase
           .from('user_roles')
           .delete()

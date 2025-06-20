@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -42,131 +43,83 @@ export const EditStudentDataDialog = ({
   });
   const [classes, setClasses] = useState<Array<{ id: string; name: string; grade: number }>>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
-  const [actualStudentId, setActualStudentId] = useState<string | null>(null);
+  const [existingStudentRecord, setExistingStudentRecord] = useState<any>(null);
 
   useEffect(() => {
     if (open && studentData) {
-      console.log('Dialog opened with student data:', studentData);
-      findAndLoadStudentData();
+      loadStudentData();
       fetchClasses();
     }
   }, [open, studentData]);
 
-  const findAndLoadStudentData = async () => {
-    console.log('Starting findAndLoadStudentData with:', studentData);
+  const loadStudentData = async () => {
+    console.log('Loading student data for user:', studentData);
     
     try {
-      let studentRecord = null;
+      // Ambil data dari profiles dulu (data utama)
+      setFormData({
+        full_name: studentData.full_name || '',
+        nis: studentData.nis || '',
+        nisn: '',
+        phone: studentData.phone || '',
+        address: '',
+        birth_place: '',
+        birth_date: '',
+        gender: 'L',
+        religion: '',
+        parent_name: '',
+        parent_phone: '',
+        parent_address: '',
+        status: 'active'
+      });
 
-      // Strategy 1: If we have student_id from the userData, use it directly
+      // Cek apakah sudah ada data lengkap di tabel students
       if (studentData.student_id) {
-        console.log('Strategy 1: Using student_id:', studentData.student_id);
-        const { data, error } = await supabase
+        const { data: studentRecord } = await supabase
           .from('students')
           .select('*')
           .eq('id', studentData.student_id)
           .maybeSingle();
 
-        if (!error && data) {
-          studentRecord = data;
-          setActualStudentId(data.id);
-          console.log('Found student by student_id:', data);
+        if (studentRecord) {
+          console.log('Found existing student record:', studentRecord);
+          setExistingStudentRecord(studentRecord);
+          
+          // Update form dengan data lengkap dari students
+          setFormData({
+            full_name: studentRecord.full_name || studentData.full_name || '',
+            nis: studentRecord.nis || studentData.nis || '',
+            nisn: studentRecord.nisn || '',
+            phone: studentRecord.phone || studentData.phone || '',
+            address: studentRecord.address || '',
+            birth_place: studentRecord.birth_place || '',
+            birth_date: studentRecord.birth_date || '',
+            gender: studentRecord.gender || 'L',
+            religion: studentRecord.religion || '',
+            parent_name: studentRecord.parent_name || '',
+            parent_phone: studentRecord.parent_phone || '',
+            parent_address: studentRecord.parent_address || '',
+            status: studentRecord.status || 'active'
+          });
         }
       }
-
-      // Strategy 2: If no student_id but we have NIS, search by NIS
-      if (!studentRecord && studentData.nis) {
-        console.log('Strategy 2: Searching by NIS:', studentData.nis);
-        const { data, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('nis', studentData.nis)
-          .maybeSingle();
-
-        if (!error && data) {
-          studentRecord = data;
-          setActualStudentId(data.id);
-          console.log('Found student by NIS:', data);
-        }
-      }
-
-      // Strategy 3: If user has account and no student record found, search by user_id
-      if (!studentRecord && studentData.has_user_account && studentData.id) {
-        console.log('Strategy 3: Searching by user_id:', studentData.id);
-        const { data, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('user_id', studentData.id)
-          .maybeSingle();
-
-        if (!error && data) {
-          studentRecord = data;
-          setActualStudentId(data.id);
-          console.log('Found student by user_id:', data);
-        }
-      }
-
-      // Strategy 4: Search by full name as last resort
-      if (!studentRecord && studentData.full_name) {
-        console.log('Strategy 4: Searching by full_name:', studentData.full_name);
-        const { data, error } = await supabase
-          .from('students')
-          .select('*')
-          .eq('full_name', studentData.full_name)
-          .maybeSingle();
-
-        if (!error && data) {
-          studentRecord = data;
-          setActualStudentId(data.id);
-          console.log('Found student by full_name:', data);
-        }
-      }
-
-      if (!studentRecord) {
-        console.error('No student record found using any strategy');
-        toast({
-          title: "Data Tidak Ditemukan",
-          description: "Data siswa tidak ditemukan di database. Pastikan data siswa sudah ada sebelum membuat akun pengguna.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Load the student data into form
-      console.log('Loading student data into form:', studentRecord);
-      setFormData({
-        full_name: studentRecord.full_name || '',
-        nis: studentRecord.nis || '',
-        nisn: studentRecord.nisn || '',
-        phone: studentRecord.phone || '',
-        address: studentRecord.address || '',
-        birth_place: studentRecord.birth_place || '',
-        birth_date: studentRecord.birth_date || '',
-        gender: (studentRecord.gender as 'L' | 'P') || 'L',
-        religion: studentRecord.religion || '',
-        parent_name: studentRecord.parent_name || '',
-        parent_phone: studentRecord.parent_phone || '',
-        parent_address: studentRecord.parent_address || '',
-        status: (studentRecord.status as 'active' | 'graduated' | 'transferred' | 'dropped') || 'active'
-      });
 
       // Get current class enrollment
-      const { data: enrollment, error: enrollmentError } = await supabase
-        .from('student_enrollments')
-        .select('class_id')
-        .eq('student_id', studentRecord.id)
-        .eq('status', 'active')
-        .maybeSingle();
+      if (studentData.student_id) {
+        const { data: enrollment } = await supabase
+          .from('student_enrollments')
+          .select('class_id')
+          .eq('student_id', studentData.student_id)
+          .eq('status', 'active')
+          .maybeSingle();
 
-      if (!enrollmentError && enrollment) {
-        console.log('Current enrollment found:', enrollment);
-        setSelectedClassId(enrollment.class_id);
-      } else {
-        console.log('No active enrollment found for student');
+        if (enrollment) {
+          setSelectedClassId(enrollment.class_id);
+        }
       }
 
     } catch (error) {
-      console.error('Error in findAndLoadStudentData:', error);
+      console.error('Error loading student data:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data siswa: " + (error as Error).message,
@@ -194,86 +147,106 @@ export const EditStudentDataDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted with data:', formData);
-    
-    if (!actualStudentId) {
-      toast({
-        title: "Error",
-        description: "ID siswa tidak ditemukan. Pastikan data siswa valid.",
-        variant: "destructive"
-      });
-      return;
-    }
 
     setLoading(true);
     try {
-      console.log('Updating student with ID:', actualStudentId);
-      
-      // Update student data
-      const { error: studentError } = await supabase
-        .from('students')
+      // Update data di profiles terlebih dahulu
+      const { error: profileError } = await supabase
+        .from('profiles')
         .update({
           full_name: formData.full_name,
           nis: formData.nis,
-          nisn: formData.nisn || null,
           phone: formData.phone || null,
-          address: formData.address || null,
-          birth_place: formData.birth_place || null,
-          birth_date: formData.birth_date || null,
-          gender: formData.gender,
-          religion: formData.religion || null,
-          parent_name: formData.parent_name || null,
-          parent_phone: formData.parent_phone || null,
-          parent_address: formData.parent_address || null,
-          status: formData.status,
           updated_at: new Date().toISOString()
         })
-        .eq('id', actualStudentId);
+        .eq('id', studentData.id);
 
-      if (studentError) {
-        console.error('Error updating student:', studentError);
-        throw studentError;
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        throw profileError;
       }
 
-      console.log('Student data updated successfully');
-
-      // Update profile if student has user account
-      if (studentData.has_user_account && studentData.id) {
-        console.log('Updating profile for user ID:', studentData.id);
-        
-        const { error: profileError } = await supabase
-          .from('profiles')
+      // Jika sudah ada record di students, update. Jika belum, buat baru
+      if (existingStudentRecord) {
+        // Update existing student record
+        const { error: studentError } = await supabase
+          .from('students')
           .update({
             full_name: formData.full_name,
             nis: formData.nis,
+            nisn: formData.nisn || null,
             phone: formData.phone || null,
+            address: formData.address || null,
+            birth_place: formData.birth_place || null,
+            birth_date: formData.birth_date || null,
+            gender: formData.gender,
+            religion: formData.religion || null,
+            parent_name: formData.parent_name || null,
+            parent_phone: formData.parent_phone || null,
+            parent_address: formData.parent_address || null,
+            status: formData.status,
             updated_at: new Date().toISOString()
           })
-          .eq('id', studentData.id);
+          .eq('id', existingStudentRecord.id);
 
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-          console.log('Profile update failed, but continuing...');
-        } else {
-          console.log('Profile updated successfully');
+        if (studentError) throw studentError;
+      } else {
+        // Create new student record
+        const { data: newStudent, error: createError } = await supabase
+          .from('students')
+          .insert({
+            user_id: studentData.id,
+            full_name: formData.full_name,
+            nis: formData.nis,
+            nisn: formData.nisn || null,
+            phone: formData.phone || null,
+            address: formData.address || null,
+            birth_place: formData.birth_place || null,
+            birth_date: formData.birth_date || null,
+            gender: formData.gender,
+            religion: formData.religion || null,
+            parent_name: formData.parent_name || null,
+            parent_phone: formData.parent_phone || null,
+            parent_address: formData.parent_address || null,
+            status: formData.status,
+            admission_date: new Date().toISOString().split('T')[0]
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        // Create enrollment if class is selected
+        if (selectedClassId && newStudent) {
+          const { error: enrollmentError } = await supabase
+            .from('student_enrollments')
+            .insert({
+              student_id: newStudent.id,
+              class_id: selectedClassId,
+              status: 'active',
+              enrollment_date: new Date().toISOString().split('T')[0]
+            });
+
+          if (enrollmentError) {
+            console.error('Error creating enrollment:', enrollmentError);
+          }
         }
       }
 
       // Update class enrollment if changed
-      if (selectedClassId) {
-        console.log('Updating class enrollment to:', selectedClassId);
-        
+      if (selectedClassId && existingStudentRecord) {
         // Deactivate current enrollment
         await supabase
           .from('student_enrollments')
           .update({ status: 'inactive' })
-          .eq('student_id', actualStudentId)
+          .eq('student_id', existingStudentRecord.id)
           .eq('status', 'active');
 
         // Create new enrollment
         const { error: enrollmentError } = await supabase
           .from('student_enrollments')
           .insert({
-            student_id: actualStudentId,
+            student_id: existingStudentRecord.id,
             class_id: selectedClassId,
             status: 'active',
             enrollment_date: new Date().toISOString().split('T')[0]
@@ -281,9 +254,6 @@ export const EditStudentDataDialog = ({
 
         if (enrollmentError) {
           console.error('Error updating enrollment:', enrollmentError);
-          console.log('Enrollment update failed, but continuing...');
-        } else {
-          console.log('Class enrollment updated successfully');
         }
       }
 
@@ -315,13 +285,8 @@ export const EditStudentDataDialog = ({
             Perbarui informasi data siswa {studentData.full_name}
             <br />
             <span className="text-xs text-gray-500">
-              Student ID: {actualStudentId || 'Mencari data...'}
+              Status: {existingStudentRecord ? 'Data lengkap tersedia' : 'Perlu melengkapi data'}
             </span>
-            {!actualStudentId && (
-              <div className="text-xs text-orange-600 mt-1">
-                ⚠️ Jika data tidak ditemukan, pastikan data siswa sudah ada di sistem sebelum membuat akun pengguna
-              </div>
-            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -490,7 +455,7 @@ export const EditStudentDataDialog = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading || !actualStudentId}>
+            <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Simpan Perubahan
             </Button>
