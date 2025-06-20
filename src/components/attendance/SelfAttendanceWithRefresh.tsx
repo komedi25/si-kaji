@@ -25,6 +25,7 @@ interface AttendanceSchedule {
   check_out_start: string;
   check_out_end: string;
   late_threshold_minutes: number;
+  day_of_week: number;
 }
 
 interface SelfAttendance {
@@ -60,14 +61,31 @@ export const SelfAttendanceWithRefresh = () => {
     const fetchStudentId = async () => {
       if (!user?.id) return;
       
-      const { data } = await supabase
+      console.log('🔍 Fetching student ID for user:', user.id);
+      
+      const { data, error } = await supabase
         .from('students')
         .select('id')
         .eq('user_id', user.id)
         .single();
       
-      if (data) {
+      if (error) {
+        console.error('❌ Error fetching student ID:', error);
+        toast({
+          title: "Error",
+          description: "Gagal memuat data siswa: " + error.message,
+          variant: "destructive"
+        });
+      } else if (data) {
+        console.log('✅ Student ID found:', data.id);
         setStudentId(data.id);
+      } else {
+        console.log('⚠️ No student record found for user');
+        toast({
+          title: "Warning",
+          description: "Data siswa tidak ditemukan untuk akun ini",
+          variant: "destructive"
+        });
       }
     };
 
@@ -77,27 +95,70 @@ export const SelfAttendanceWithRefresh = () => {
   // Fetch locations and schedule
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch active locations
-      const { data: locationsData } = await supabase
-        .from('attendance_locations')
-        .select('*')
-        .eq('is_active', true);
+      console.log('🔍 Fetching attendance data...');
+      
+      try {
+        // Fetch active locations
+        const { data: locationsData, error: locationsError } = await supabase
+          .from('attendance_locations')
+          .select('*')
+          .eq('is_active', true);
 
-      if (locationsData) {
-        setLocations(locationsData);
-      }
+        if (locationsError) {
+          console.error('❌ Error fetching locations:', locationsError);
+          toast({
+            title: "Error",
+            description: "Gagal memuat lokasi presensi: " + locationsError.message,
+            variant: "destructive"
+          });
+        } else {
+          console.log('📍 Locations fetched:', locationsData?.length || 0, 'locations');
+          setLocations(locationsData || []);
+        }
 
-      // Fetch today's schedule
-      const today = new Date().getDay();
-      const { data: scheduleData } = await supabase
-        .from('attendance_schedules')
-        .select('*')
-        .eq('day_of_week', today)
-        .eq('is_active', true)
-        .single();
+        // Fetch today's schedule
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        console.log('📅 Today is:', format(today, 'EEEE', { locale: id }), 'Day of week:', dayOfWeek);
+        
+        const { data: scheduleData, error: scheduleError } = await supabase
+          .from('attendance_schedules')
+          .select('*')
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_active', true);
 
-      if (scheduleData) {
-        setSchedule(scheduleData);
+        if (scheduleError) {
+          console.error('❌ Error fetching schedule:', scheduleError);
+          toast({
+            title: "Error",
+            description: "Gagal memuat jadwal presensi: " + scheduleError.message,
+            variant: "destructive"
+          });
+        } else {
+          console.log('📋 Schedule query result:', scheduleData?.length || 0, 'schedules found');
+          if (scheduleData && scheduleData.length > 0) {
+            const selectedSchedule = scheduleData[0];
+            console.log('✅ Schedule found:', selectedSchedule);
+            setSchedule(selectedSchedule);
+          } else {
+            console.log('⚠️ No active schedule found for today (day_of_week:', dayOfWeek, ')');
+            setSchedule(null);
+            
+            // Show helpful message
+            toast({
+              title: "Info",
+              description: `Tidak ada jadwal presensi untuk hari ${format(today, 'EEEE', { locale: id })}`,
+              variant: "default"
+            });
+          }
+        }
+      } catch (error) {
+        console.error('💥 Unexpected error fetching data:', error);
+        toast({
+          title: "Error",
+          description: "Terjadi kesalahan saat memuat data",
+          variant: "destructive"
+        });
       }
     };
 
@@ -110,15 +171,23 @@ export const SelfAttendanceWithRefresh = () => {
       if (!studentId) return;
 
       const today = format(new Date(), 'yyyy-MM-dd');
-      const { data } = await supabase
+      console.log('🔍 Fetching attendance for student:', studentId, 'date:', today);
+      
+      const { data, error } = await supabase
         .from('student_self_attendances')
         .select('*')
         .eq('student_id', studentId)
         .eq('attendance_date', today)
-        .single();
+        .maybeSingle();
 
-      if (data) {
+      if (error) {
+        console.error('❌ Error fetching today attendance:', error);
+      } else if (data) {
+        console.log('✅ Today attendance found:', data);
         setTodayAttendance(data);
+      } else {
+        console.log('ℹ️ No attendance record found for today');
+        setTodayAttendance(null);
       }
     };
 
@@ -130,11 +199,13 @@ export const SelfAttendanceWithRefresh = () => {
     if (position && locations.length > 0) {
       const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
       setIsWithinSchool(withinSchool !== null);
+      console.log('📍 Location check:', withinSchool ? 'Inside school' : 'Outside school');
     }
   }, [position, locations]);
 
   const refreshLocation = () => {
     setRefreshingLocation(true);
+    console.log('🔄 Refreshing location...');
     
     if (!navigator.geolocation) {
       toast({
@@ -148,6 +219,7 @@ export const SelfAttendanceWithRefresh = () => {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        console.log('📍 Location updated:', position.coords.latitude, position.coords.longitude);
         setPosition(position);
         const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
         setIsWithinSchool(withinSchool !== null);
@@ -158,6 +230,7 @@ export const SelfAttendanceWithRefresh = () => {
         });
       },
       (error) => {
+        console.error('❌ Location error:', error);
         setRefreshingLocation(false);
         toast({
           title: "Error",
@@ -172,6 +245,8 @@ export const SelfAttendanceWithRefresh = () => {
       }
     );
   };
+
+  // ... keep existing code (getCurrentLocation, calculateDistance, isWithinLocation functions)
 
   const getCurrentLocation = () => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -252,7 +327,7 @@ export const SelfAttendanceWithRefresh = () => {
           check_in_latitude: latitude,
           check_in_longitude: longitude,
           check_in_location_id: location.id,
-          status: 'present' // Siswa dianggap hadir meskipun hanya check in
+          status: 'present'
         });
 
       if (error) throw error;
@@ -406,10 +481,41 @@ export const SelfAttendanceWithRefresh = () => {
   };
 
   const canCheckIn = () => {
-    if (!schedule || todayAttendance?.check_in_time || isWithinSchool === false) return false;
+    console.log('🤔 Checking if can check in:', {
+      schedule: !!schedule,
+      alreadyCheckedIn: !!todayAttendance?.check_in_time,
+      isWithinSchool,
+      studentId: !!studentId
+    });
+    
+    if (!schedule || !studentId) {
+      console.log('❌ Cannot check in: No schedule or student ID');
+      return false;
+    }
+    
+    if (todayAttendance?.check_in_time) {
+      console.log('❌ Cannot check in: Already checked in');
+      return false;
+    }
+    
+    if (isWithinSchool === false) {
+      console.log('❌ Cannot check in: Outside school area');
+      return false;
+    }
     
     const now = format(currentTime, 'HH:mm:ss');
-    return now >= schedule.check_in_start && now <= schedule.check_in_end && isWithinSchool === true;
+    const canCheck = now >= schedule.check_in_start && now <= schedule.check_in_end && isWithinSchool === true;
+    
+    console.log('📝 Check in time validation:', {
+      currentTime: now,
+      startTime: schedule.check_in_start,
+      endTime: schedule.check_in_end,
+      isWithinTime: now >= schedule.check_in_start && now <= schedule.check_in_end,
+      isWithinSchool,
+      finalResult: canCheck
+    });
+    
+    return canCheck;
   };
 
   const canCheckOut = () => {
@@ -420,10 +526,11 @@ export const SelfAttendanceWithRefresh = () => {
   };
 
   const getCheckInButtonText = () => {
+    if (!studentId) return "Data Siswa Tidak Ditemukan";
+    if (!schedule) return "Tidak Ada Jadwal Hari Ini";
     if (todayAttendance?.check_in_time) return "Sudah Check In";
     if (isWithinSchool === null) return "Memuat Lokasi...";
     if (isWithinSchool === false) return "Harus di Dalam Sekolah";
-    if (!schedule) return "Tidak Ada Jadwal";
     
     const now = format(currentTime, 'HH:mm:ss');
     if (now < schedule.check_in_start) return `Belum Waktunya (${schedule.check_in_start})`;
@@ -478,6 +585,21 @@ export const SelfAttendanceWithRefresh = () => {
     return <Badge variant="secondary">Belum Presensi</Badge>;
   };
 
+  // Debug widget state
+  console.log('🔍 Widget Debug State:', {
+    hasUser: !!user,
+    studentId,
+    hasSchedule: !!schedule,
+    scheduleData: schedule,
+    hasLocations: locations.length > 0,
+    locationsCount: locations.length,
+    todayAttendance,
+    isWithinSchool,
+    canCheckIn: canCheckIn(),
+    canCheckOut: canCheckOut(),
+    currentDayOfWeek: new Date().getDay()
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -487,6 +609,35 @@ export const SelfAttendanceWithRefresh = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Debug Info - Show if no schedule */}
+        {!schedule && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-yellow-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Tidak Ada Jadwal Aktif</span>
+            </div>
+            <div className="text-sm text-yellow-600 mt-1">
+              Hari: {format(currentTime, 'EEEE', { locale: id })} (Day: {currentTime.getDay()})
+              <br />
+              Tidak ditemukan jadwal presensi untuk hari ini. Hubungi admin untuk menambahkan jadwal.
+            </div>
+          </div>
+        )}
+
+        {!studentId && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Data Siswa Tidak Ditemukan</span>
+            </div>
+            <div className="text-sm text-red-600 mt-1">
+              User ID: {user?.id || 'Tidak ada'}
+              <br />
+              Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
+            </div>
+          </div>
+        )}
+
         <div className="text-center">
           <div className="text-2xl font-bold">
             {format(currentTime, 'HH:mm:ss')}
@@ -523,7 +674,7 @@ export const SelfAttendanceWithRefresh = () => {
 
         {schedule && (
           <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="text-sm font-medium mb-2">Jadwal Hari Ini:</div>
+            <div className="text-sm font-medium mb-2">Jadwal Hari Ini: {schedule.name}</div>
             <div className="text-xs space-y-1">
               <div>Check In: {schedule.check_in_start} - {schedule.check_in_end}</div>
               <div className="text-gray-600">Check Out: Kapan saja (di luar sekolah)</div>
@@ -602,6 +753,11 @@ export const SelfAttendanceWithRefresh = () => {
             ))}
           </div>
         )}
+
+        {/* Debug info untuk troubleshooting */}
+        <div className="text-xs text-gray-400 border-t pt-2">
+          <div>Debug: Day={new Date().getDay()}, Schedule={!!schedule}, Student={!!studentId}, Locations={locations.length}</div>
+        </div>
       </CardContent>
     </Card>
   );
