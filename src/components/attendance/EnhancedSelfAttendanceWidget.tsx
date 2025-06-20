@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,14 +69,21 @@ export const EnhancedSelfAttendanceWidget = () => {
     const fetchStudentId = async () => {
       if (!user?.id) return;
       
-      const { data } = await supabase
+      console.log('Fetching student ID for user:', user.id);
+      
+      const { data, error } = await supabase
         .from('students')
         .select('id')
         .eq('user_id', user.id)
         .single();
       
-      if (data) {
+      if (error) {
+        console.error('Error fetching student ID:', error);
+      } else if (data) {
+        console.log('Student ID found:', data.id);
         setStudentId(data.id);
+      } else {
+        console.log('No student record found for user');
       }
     };
 
@@ -85,27 +93,52 @@ export const EnhancedSelfAttendanceWidget = () => {
   // Fetch locations and schedule
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch active locations
-      const { data: locationsData } = await supabase
-        .from('attendance_locations')
-        .select('*')
-        .eq('is_active', true);
+      try {
+        // Fetch active locations
+        const { data: locationsData, error: locationsError } = await supabase
+          .from('attendance_locations')
+          .select('*')
+          .eq('is_active', true);
 
-      if (locationsData) {
-        setLocations(locationsData);
-      }
+        if (locationsError) {
+          console.error('Error fetching locations:', locationsError);
+        } else {
+          console.log('Locations fetched:', locationsData);
+          setLocations(locationsData || []);
+        }
 
-      // Fetch today's schedule
-      const today = new Date().getDay();
-      const { data: scheduleData } = await supabase
-        .from('attendance_schedules')
-        .select('*')
-        .eq('day_of_week', today)
-        .eq('is_active', true)
-        .single();
+        // Fetch today's schedule - fix day matching
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        console.log('Today is day:', dayOfWeek, 'Date:', today.toDateString());
+        
+        const { data: scheduleData, error: scheduleError } = await supabase
+          .from('attendance_schedules')
+          .select('*')
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-      if (scheduleData) {
-        setSchedule(scheduleData);
+        if (scheduleError) {
+          console.error('Error fetching schedule:', scheduleError);
+          toast({
+            title: "Error",
+            description: "Gagal memuat jadwal presensi: " + scheduleError.message,
+            variant: "destructive"
+          });
+        } else {
+          console.log('Schedule query result:', scheduleData);
+          if (scheduleData && scheduleData.length > 0) {
+            setSchedule(scheduleData[0]);
+            console.log('Active schedule found:', scheduleData[0]);
+          } else {
+            console.log('No active schedule found for today');
+            setSchedule(null);
+          }
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching data:', error);
       }
     };
 
@@ -118,15 +151,23 @@ export const EnhancedSelfAttendanceWidget = () => {
       if (!studentId) return;
 
       const today = format(new Date(), 'yyyy-MM-dd');
-      const { data } = await supabase
+      console.log('Fetching attendance for student:', studentId, 'date:', today);
+      
+      const { data, error } = await supabase
         .from('student_self_attendances')
         .select('*')
         .eq('student_id', studentId)
         .eq('attendance_date', today)
         .single();
 
-      if (data) {
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching today attendance:', error);
+      } else if (data) {
+        console.log('Today attendance found:', data);
         setTodayAttendance(data);
+      } else {
+        console.log('No attendance record found for today');
+        setTodayAttendance(null);
       }
     };
 
@@ -204,7 +245,14 @@ export const EnhancedSelfAttendanceWidget = () => {
   };
 
   const handleCheckIn = async () => {
-    if (!studentId || !schedule) return;
+    if (!studentId || !schedule) {
+      toast({
+        title: "Error",
+        description: "Data siswa atau jadwal tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const rateLimitCheck = attendanceSecurityManager.checkRateLimit();
     if (!rateLimitCheck.allowed) {
@@ -286,7 +334,14 @@ export const EnhancedSelfAttendanceWidget = () => {
   };
 
   const handleCheckOut = async () => {
-    if (!studentId || !todayAttendance) return;
+    if (!studentId || !todayAttendance) {
+      toast({
+        title: "Error",
+        description: "Data siswa atau presensi hari ini tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const rateLimitCheck = attendanceSecurityManager.checkRateLimit();
     if (!rateLimitCheck.allowed) {
@@ -367,14 +422,18 @@ export const EnhancedSelfAttendanceWidget = () => {
     if (!schedule || todayAttendance?.check_in_time) return false;
     
     const now = format(currentTime, 'HH:mm:ss');
-    return now >= schedule.check_in_start && now <= schedule.check_in_end;
+    const result = now >= schedule.check_in_start && now <= schedule.check_in_end;
+    console.log('canCheckIn check:', { now, start: schedule.check_in_start, end: schedule.check_in_end, result });
+    return result;
   };
 
   const canCheckOut = () => {
     if (!schedule || !todayAttendance?.check_in_time || todayAttendance?.check_out_time) return false;
     
     const now = format(currentTime, 'HH:mm:ss');
-    return now >= schedule.check_out_start && now <= schedule.check_out_end;
+    const result = now >= schedule.check_out_start && now <= schedule.check_out_end;
+    console.log('canCheckOut check:', { now, start: schedule.check_out_start, end: schedule.check_out_end, result });
+    return result;
   };
 
   const isLate = () => {
@@ -411,6 +470,16 @@ export const EnhancedSelfAttendanceWidget = () => {
     return { level: 'Rendah', color: 'text-red-600' };
   };
 
+  // Debug information
+  console.log('Widget state:', { 
+    schedule, 
+    studentId, 
+    todayAttendance, 
+    currentTime: format(currentTime, 'HH:mm:ss'),
+    canCheckIn: canCheckIn(),
+    canCheckOut: canCheckOut()
+  });
+
   return (
     <div className="space-y-4">
       <Card>
@@ -423,6 +492,35 @@ export const EnhancedSelfAttendanceWidget = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Debug Info */}
+          {!schedule && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-yellow-700">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">Tidak Ada Jadwal Aktif</span>
+              </div>
+              <div className="text-sm text-yellow-600 mt-1">
+                Hari: {format(currentTime, 'EEEE', { locale: id })} (Day: {currentTime.getDay()})
+                <br />
+                Tidak ditemukan jadwal presensi untuk hari ini. Hubungi admin untuk menambahkan jadwal.
+              </div>
+            </div>
+          )}
+
+          {!studentId && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">Data Siswa Tidak Ditemukan</span>
+              </div>
+              <div className="text-sm text-red-600 mt-1">
+                User ID: {user?.id || 'Tidak ada'}
+                <br />
+                Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
+              </div>
+            </div>
+          )}
+
           {/* Security warnings */}
           {securityWarnings.length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -462,7 +560,7 @@ export const EnhancedSelfAttendanceWidget = () => {
 
           {schedule && (
             <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm font-medium mb-2">Jadwal Hari Ini:</div>
+              <div className="text-sm font-medium mb-2">Jadwal Hari Ini: {schedule.name}</div>
               <div className="text-xs space-y-1">
                 <div>Check In: {schedule.check_in_start} - {schedule.check_in_end}</div>
                 <div>Check Out: {schedule.check_out_start} - {schedule.check_out_end}</div>
@@ -496,9 +594,9 @@ export const EnhancedSelfAttendanceWidget = () => {
           <div className="space-y-2">
             <Button
               onClick={handleCheckIn}
-              disabled={!canCheckIn() || loading}
+              disabled={!canCheckIn() || loading || !studentId || !schedule}
               className="w-full"
-              variant={canCheckIn() ? "default" : "secondary"}
+              variant={canCheckIn() && studentId && schedule ? "default" : "secondary"}
             >
               <MapPin className="h-4 w-4 mr-2" />
               {loading ? "Memproses..." : "Check In Enhanced"}
@@ -506,9 +604,9 @@ export const EnhancedSelfAttendanceWidget = () => {
             
             <Button
               onClick={handleCheckOut}
-              disabled={!canCheckOut() || loading}
+              disabled={!canCheckOut() || loading || !studentId}
               className="w-full"
-              variant={canCheckOut() ? "default" : "secondary"}
+              variant={canCheckOut() && studentId ? "default" : "secondary"}
             >
               <MapPin className="h-4 w-4 mr-2" />
               {loading ? "Memproses..." : "Check Out Enhanced"}

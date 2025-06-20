@@ -43,20 +43,38 @@ export const EditStudentDataDialog = ({
   });
   const [classes, setClasses] = useState<Array<{ id: string; name: string; grade: number }>>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [actualStudentId, setActualStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && studentData) {
       console.log('Dialog opened with student data:', studentData);
-      fetchStudentDetails();
+      
+      // First, determine the actual student ID
+      let studentId = null;
+      
+      if (studentData.user_type === 'student') {
+        // If it's a student record, use student_id if available, otherwise id
+        studentId = studentData.student_id || studentData.id;
+        console.log('Student type - using student_id:', studentId);
+      } else {
+        console.error('Not a student record:', studentData);
+        toast({
+          title: "Error",
+          description: "Data yang dipilih bukan data siswa",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setActualStudentId(studentId);
+      fetchStudentDetails(studentId);
       fetchClasses();
     }
   }, [open, studentData]);
 
-  const fetchStudentDetails = async () => {
-    console.log('Fetching student details for student_id:', studentData.student_id);
-    
-    if (!studentData.student_id) {
-      console.error('No student_id found');
+  const fetchStudentDetails = async (studentId: string) => {
+    if (!studentId) {
+      console.error('No student ID provided');
       toast({
         title: "Error",
         description: "ID siswa tidak ditemukan",
@@ -65,11 +83,13 @@ export const EditStudentDataDialog = ({
       return;
     }
 
+    console.log('Fetching student details for student_id:', studentId);
+    
     try {
       const { data: student, error } = await supabase
         .from('students')
         .select('*')
-        .eq('id', studentData.student_id)
+        .eq('id', studentId)
         .single();
 
       if (error) {
@@ -104,8 +124,8 @@ export const EditStudentDataDialog = ({
           .eq('status', 'active')
           .single();
 
-        if (enrollmentError) {
-          console.log('No active enrollment found or error:', enrollmentError);
+        if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+          console.error('Error fetching enrollment:', enrollmentError);
         } else if (enrollment) {
           console.log('Current enrollment:', enrollment);
           setSelectedClassId(enrollment.class_id);
@@ -141,7 +161,7 @@ export const EditStudentDataDialog = ({
     e.preventDefault();
     console.log('Form submitted with data:', formData);
     
-    if (!studentData.student_id) {
+    if (!actualStudentId) {
       toast({
         title: "Error",
         description: "ID siswa tidak ditemukan",
@@ -152,7 +172,7 @@ export const EditStudentDataDialog = ({
 
     setLoading(true);
     try {
-      console.log('Updating student with ID:', studentData.student_id);
+      console.log('Updating student with ID:', actualStudentId);
       
       // Update student data
       const { error: studentError } = await supabase
@@ -173,7 +193,7 @@ export const EditStudentDataDialog = ({
           status: formData.status,
           updated_at: new Date().toISOString()
         })
-        .eq('id', studentData.student_id);
+        .eq('id', actualStudentId);
 
       if (studentError) {
         console.error('Error updating student:', studentError);
@@ -182,7 +202,7 @@ export const EditStudentDataDialog = ({
 
       console.log('Student data updated successfully');
 
-      // Update profile if exists
+      // Update profile if exists (check if student has user account)
       if (studentData.has_user_account && studentData.id) {
         console.log('Updating profile for user ID:', studentData.id);
         
@@ -198,10 +218,11 @@ export const EditStudentDataDialog = ({
 
         if (profileError) {
           console.error('Error updating profile:', profileError);
-          throw profileError;
+          // Don't throw here, profile update is optional
+          console.log('Profile update failed, but continuing...');
+        } else {
+          console.log('Profile updated successfully');
         }
-        
-        console.log('Profile updated successfully');
       }
 
       // Update class enrollment if changed
@@ -212,14 +233,14 @@ export const EditStudentDataDialog = ({
         await supabase
           .from('student_enrollments')
           .update({ status: 'inactive' })
-          .eq('student_id', studentData.student_id)
+          .eq('student_id', actualStudentId)
           .eq('status', 'active');
 
         // Create new enrollment
         const { error: enrollmentError } = await supabase
           .from('student_enrollments')
           .insert({
-            student_id: studentData.student_id,
+            student_id: actualStudentId,
             class_id: selectedClassId,
             status: 'active',
             enrollment_date: new Date().toISOString().split('T')[0]
@@ -227,10 +248,11 @@ export const EditStudentDataDialog = ({
 
         if (enrollmentError) {
           console.error('Error updating enrollment:', enrollmentError);
-          throw enrollmentError;
+          // Don't throw here, enrollment update is optional
+          console.log('Enrollment update failed, but continuing...');
+        } else {
+          console.log('Class enrollment updated successfully');
         }
-        
-        console.log('Class enrollment updated successfully');
       }
 
       toast({
@@ -259,6 +281,10 @@ export const EditStudentDataDialog = ({
           <DialogTitle>Edit Data Siswa</DialogTitle>
           <DialogDescription>
             Perbarui informasi data siswa {studentData.full_name}
+            <br />
+            <span className="text-xs text-gray-500">
+              Student ID: {actualStudentId || 'Belum ditemukan'}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -427,7 +453,7 @@ export const EditStudentDataDialog = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Batal
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !actualStudentId}>
               {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Simpan Perubahan
             </Button>
