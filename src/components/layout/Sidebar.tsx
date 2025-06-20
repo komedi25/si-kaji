@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,7 +58,12 @@ interface SidebarItem {
   children?: SidebarItem[];
 }
 
-export const Sidebar = () => {
+interface SidebarProps {
+  isMobile?: boolean;
+  onItemClick?: () => void;
+}
+
+export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { user, hasRole } = useAuth();
   const location = useLocation();
@@ -557,12 +563,25 @@ export const Sidebar = () => {
 
   const [expandedItems, setExpandedItems] = useState<string[]>(['Sistem & Pengaturan', 'Akademik']);
 
-  const toggleExpand = (title: string) => {
+  const toggleExpand = (title: string, e?: React.MouseEvent) => {
+    // Prevent event propagation to avoid closing mobile sidebar
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     setExpandedItems(prev => 
       prev.includes(title) 
         ? prev.filter(item => item !== title)
         : [...prev, title]
     );
+  };
+
+  const handleItemClick = (href: string) => {
+    // Only close mobile sidebar when clicking actual links (not parent items with children)
+    if (isMobile && onItemClick && href !== '#') {
+      onItemClick();
+    }
   };
 
   const renderMenuItem = (item: SidebarItem, level: number = 0) => {
@@ -582,7 +601,7 @@ export const Sidebar = () => {
       return (
         <div key={item.title}>
           <button
-            onClick={() => toggleExpand(item.title)}
+            onClick={(e) => toggleExpand(item.title, e)}
             className={cn(
               "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors w-full text-left",
               level > 0 && "ml-4",
@@ -616,6 +635,7 @@ export const Sidebar = () => {
       <Link
         key={item.href}
         to={item.href}
+        onClick={() => handleItemClick(item.href)}
         className={cn(
           "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
           level > 0 && "ml-4",
@@ -652,14 +672,16 @@ export const Sidebar = () => {
             Navigasi
           </h2>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-auto"
-        >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="ml-auto"
+          >
+            {isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
 
       {/* Navigation Items */}
