@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,7 +63,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Get student ID from user
+  // Get student ID from user - FIXED
   useEffect(() => {
     const fetchStudentId = async () => {
       if (!user?.id) return;
@@ -75,7 +74,7 @@ export const EnhancedSelfAttendanceWidget = () => {
         .from('students')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
       
       if (error) {
         console.error('Error fetching student ID:', error);
@@ -90,7 +89,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     fetchStudentId();
   }, [user]);
 
-  // Fetch locations and schedule
+  // Fetch locations and schedule - IMPROVED
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -107,7 +106,7 @@ export const EnhancedSelfAttendanceWidget = () => {
           setLocations(locationsData || []);
         }
 
-        // Fetch today's schedule - fix day matching
+        // Fetch today's schedule - fix day matching - FIXED
         const today = new Date();
         const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
         console.log('Today is day:', dayOfWeek, 'Date:', today.toDateString());
@@ -118,7 +117,7 @@ export const EnhancedSelfAttendanceWidget = () => {
           .eq('day_of_week', dayOfWeek)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
-          .limit(1);
+          .maybeSingle(); // Changed from .limit(1) to .maybeSingle()
 
         if (scheduleError) {
           console.error('Error fetching schedule:', scheduleError);
@@ -127,15 +126,12 @@ export const EnhancedSelfAttendanceWidget = () => {
             description: "Gagal memuat jadwal presensi: " + scheduleError.message,
             variant: "destructive"
           });
+        } else if (scheduleData) {
+          setSchedule(scheduleData);
+          console.log('Active schedule found:', scheduleData);
         } else {
-          console.log('Schedule query result:', scheduleData);
-          if (scheduleData && scheduleData.length > 0) {
-            setSchedule(scheduleData[0]);
-            console.log('Active schedule found:', scheduleData[0]);
-          } else {
-            console.log('No active schedule found for today');
-            setSchedule(null);
-          }
+          console.log('No active schedule found for today');
+          setSchedule(null);
         }
       } catch (error) {
         console.error('Unexpected error fetching data:', error);
@@ -145,7 +141,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     fetchData();
   }, []);
 
-  // Fetch today's attendance
+  // Fetch today's attendance - FIXED
   useEffect(() => {
     const fetchTodayAttendance = async () => {
       if (!studentId) return;
@@ -158,9 +154,9 @@ export const EnhancedSelfAttendanceWidget = () => {
         .select('*')
         .eq('student_id', studentId)
         .eq('attendance_date', today)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching today attendance:', error);
       } else if (data) {
         console.log('Today attendance found:', data);
@@ -312,7 +308,7 @@ export const EnhancedSelfAttendanceWidget = () => {
         .select('*')
         .eq('student_id', studentId)
         .eq('attendance_date', today)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       if (updatedData) {
         setTodayAttendance(updatedData);
@@ -387,7 +383,7 @@ export const EnhancedSelfAttendanceWidget = () => {
         .from('student_self_attendances')
         .select('*')
         .eq('id', todayAttendance.id)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       if (updatedData) {
         setTodayAttendance(updatedData);

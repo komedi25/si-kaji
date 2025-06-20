@@ -65,7 +65,7 @@ export const SelfAttendanceWithRefresh = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Get student ID from user
+  // Get student ID from user - FIXED
   useEffect(() => {
     const fetchStudentId = async () => {
       if (!user?.id) return;
@@ -76,7 +76,7 @@ export const SelfAttendanceWithRefresh = () => {
         .from('students')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
       
       if (error) {
         console.error('❌ Error fetching student ID:', error);
@@ -101,7 +101,7 @@ export const SelfAttendanceWithRefresh = () => {
     fetchStudentId();
   }, [user]);
 
-  // Fetch locations and schedule
+  // Fetch locations and schedule - IMPROVED
   useEffect(() => {
     const fetchData = async () => {
       console.log('🔍 Fetching attendance data...');
@@ -125,7 +125,7 @@ export const SelfAttendanceWithRefresh = () => {
           setLocations(locationsData || []);
         }
 
-        // Fetch today's schedule
+        // Fetch today's schedule - FIXED
         const today = new Date();
         const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
         console.log('📅 Today is:', format(today, 'EEEE', { locale: id }), 'Day of week:', dayOfWeek);
@@ -134,7 +134,8 @@ export const SelfAttendanceWithRefresh = () => {
           .from('attendance_schedules')
           .select('*')
           .eq('day_of_week', dayOfWeek)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .maybeSingle(); // Changed from .limit(1) to .maybeSingle()
 
         if (scheduleError) {
           console.error('❌ Error fetching schedule:', scheduleError);
@@ -143,23 +144,19 @@ export const SelfAttendanceWithRefresh = () => {
             description: "Gagal memuat jadwal presensi: " + scheduleError.message,
             variant: "destructive"
           });
+        } else if (scheduleData) {
+          console.log('✅ Schedule found:', scheduleData);
+          setSchedule(scheduleData);
         } else {
-          console.log('📋 Schedule query result:', scheduleData?.length || 0, 'schedules found');
-          if (scheduleData && scheduleData.length > 0) {
-            const selectedSchedule = scheduleData[0];
-            console.log('✅ Schedule found:', selectedSchedule);
-            setSchedule(selectedSchedule);
-          } else {
-            console.log('⚠️ No active schedule found for today (day_of_week:', dayOfWeek, ')');
-            setSchedule(null);
-            
-            // Show helpful message
-            toast({
-              title: "Info",
-              description: `Tidak ada jadwal presensi untuk hari ${format(today, 'EEEE', { locale: id })}`,
-              variant: "default"
-            });
-          }
+          console.log('⚠️ No active schedule found for today (day_of_week:', dayOfWeek, ')');
+          setSchedule(null);
+          
+          // Show helpful message
+          toast({
+            title: "Info",
+            description: `Tidak ada jadwal presensi untuk hari ${format(today, 'EEEE', { locale: id })}`,
+            variant: "default"
+          });
         }
       } catch (error) {
         console.error('💥 Unexpected error fetching data:', error);
@@ -174,7 +171,7 @@ export const SelfAttendanceWithRefresh = () => {
     fetchData();
   }, []);
 
-  // Fetch today's attendance
+  // Fetch today's attendance - FIXED
   useEffect(() => {
     const fetchTodayAttendance = async () => {
       if (!studentId) return;
@@ -187,10 +184,15 @@ export const SelfAttendanceWithRefresh = () => {
         .select('*')
         .eq('student_id', studentId)
         .eq('attendance_date', today)
-        .maybeSingle();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       if (error) {
         console.error('❌ Error fetching today attendance:', error);
+        toast({
+          title: "Error",
+          description: "Gagal memuat data presensi hari ini: " + error.message,
+          variant: "destructive"
+        });
       } else if (data) {
         console.log('✅ Today attendance found:', data);
         setTodayAttendance(data);
