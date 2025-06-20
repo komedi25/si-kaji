@@ -246,8 +246,6 @@ export const SelfAttendanceWithRefresh = () => {
     );
   };
 
-  // ... keep existing code (getCurrentLocation, calculateDistance, isWithinLocation functions)
-
   const getCurrentLocation = () => {
     return new Promise<GeolocationPosition>((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -318,6 +316,35 @@ export const SelfAttendanceWithRefresh = () => {
       const today = format(now, 'yyyy-MM-dd');
       const currentTime = format(now, 'HH:mm:ss');
 
+      // Check for lateness - Create violation if late but still allow check in
+      let violationCreated = false;
+      let lateMessage = '';
+
+      if (currentTime > schedule.check_in_end) {
+        // Student is late - create violation but allow check in
+        const { data: violationType } = await supabase
+          .from('violation_types')
+          .select('id')
+          .eq('name', 'Terlambat')
+          .eq('is_active', true)
+          .single();
+
+        if (violationType) {
+          await supabase
+            .from('student_violations')
+            .insert({
+              student_id: studentId,
+              violation_type_id: violationType.id,
+              violation_date: today,
+              description: `Terlambat datang ke sekolah (hadir jam ${currentTime}, batas ${schedule.check_in_end})`,
+              point_deduction: 5,
+              status: 'active'
+            });
+          violationCreated = true;
+          lateMessage = `Anda terlambat ${Math.ceil((new Date(`1970-01-01T${currentTime}`) - new Date(`1970-01-01T${schedule.check_in_end}`)) / 60000)} menit`;
+        }
+      }
+
       const { error } = await supabase
         .from('student_self_attendances')
         .upsert({
@@ -327,7 +354,9 @@ export const SelfAttendanceWithRefresh = () => {
           check_in_latitude: latitude,
           check_in_longitude: longitude,
           check_in_location_id: location.id,
-          status: 'present'
+          status: 'present',
+          violation_created: violationCreated,
+          notes: violationCreated ? lateMessage : 'Hadir tepat waktu'
         });
 
       if (error) throw error;
@@ -343,10 +372,18 @@ export const SelfAttendanceWithRefresh = () => {
         setTodayAttendance(updatedData);
       }
 
-      toast({
-        title: "Berhasil Check In",
-        description: `Presensi datang berhasil di ${location.name}`,
-      });
+      if (violationCreated) {
+        toast({
+          title: "Check In Berhasil (Terlambat)",
+          description: lateMessage,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Berhasil Check In",
+          description: `Presensi datang berhasil di ${location.name}`,
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -480,6 +517,7 @@ export const SelfAttendanceWithRefresh = () => {
     }
   };
 
+  // Updated canCheckIn - no time restrictions, only location and student/schedule availability
   const canCheckIn = () => {
     console.log('🤔 Checking if can check in:', {
       schedule: !!schedule,
@@ -503,14 +541,10 @@ export const SelfAttendanceWithRefresh = () => {
       return false;
     }
     
-    const now = format(currentTime, 'HH:mm:ss');
-    const canCheck = now >= schedule.check_in_start && now <= schedule.check_in_end && isWithinSchool === true;
+    // No time restriction - allow check in anytime if within school
+    const canCheck = isWithinSchool === true;
     
-    console.log('📝 Check in time validation:', {
-      currentTime: now,
-      startTime: schedule.check_in_start,
-      endTime: schedule.check_in_end,
-      isWithinTime: now >= schedule.check_in_start && now <= schedule.check_in_end,
+    console.log('📝 Check in validation:', {
       isWithinSchool,
       finalResult: canCheck
     });
@@ -532,10 +566,7 @@ export const SelfAttendanceWithRefresh = () => {
     if (isWithinSchool === null) return "Memuat Lokasi...";
     if (isWithinSchool === false) return "Harus di Dalam Sekolah";
     
-    const now = format(currentTime, 'HH:mm:ss');
-    if (now < schedule.check_in_start) return `Belum Waktunya (${schedule.check_in_start})`;
-    if (now > schedule.check_in_end) return "Waktu Check In Habis";
-    
+    // No time restriction message
     return "Check In";
   };
 
@@ -579,6 +610,10 @@ export const SelfAttendanceWithRefresh = () => {
     }
 
     if (todayAttendance.check_in_time) {
+      // Check if late
+      if (schedule && todayAttendance.check_in_time > schedule.check_in_end) {
+        return <Badge variant="destructive">Hadir Terlambat</Badge>;
+      }
       return <Badge className="bg-green-100 text-green-800">Hadir</Badge>;
     }
 
@@ -676,10 +711,11 @@ export const SelfAttendanceWithRefresh = () => {
           <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-sm font-medium mb-2">Jadwal Hari Ini: {schedule.name}</div>
             <div className="text-xs space-y-1">
-              <div>Check In: {schedule.check_in_start} - {schedule.check_in_end}</div>
+              <div>Jam Masuk Normal: {schedule.check_in_start} - {schedule.check_in_end}</div>
+              <div className="text-blue-600">Check In: Kapan saja (di dalam sekolah)</div>
+              <div className="text-orange-600">Terlambat: Setelah jam {schedule.check_in_end}</div>
               <div className="text-gray-600">Check Out: Kapan saja (di luar sekolah)</div>
-              <div className="text-red-600">Waktu Normal: 15:15 - 17:15 WIB</div>
-              <div className="text-orange-600">Pelanggaran: &lt; 15:15 atau &gt; 17:15</div>
+              <div className="text-red-600">Waktu Normal Pulang: 15:15 - 17:15 WIB</div>
             </div>
           </div>
         )}
@@ -695,6 +731,9 @@ export const SelfAttendanceWithRefresh = () => {
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
                 <span>Check In: {todayAttendance.check_in_time}</span>
+                {schedule && todayAttendance.check_in_time > schedule.check_in_end && (
+                  <AlertTriangle className="h-4 w-4 text-red-500" title="Terlambat" />
+                )}
               </div>
             )}
             {todayAttendance.check_out_time && (
@@ -734,12 +773,11 @@ export const SelfAttendanceWithRefresh = () => {
         {/* Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
           <div className="text-xs space-y-1">
-            <div className="font-medium text-blue-800">Aturan Presensi:</div>
-            <div>• Check In: Harus di dalam area sekolah</div>
+            <div className="font-medium text-blue-800">Aturan Presensi Baru:</div>
+            <div>• Check In: Kapan saja jika di dalam area sekolah</div>
             <div>• Check Out: Harus di luar area sekolah</div>
-            <div>• Siswa dianggap hadir meski hanya check in</div>
-            <div>• Waktu pulang normal: 15:15 - 17:15 WIB</div>
-            <div>• Pelanggaran: Pulang &lt; 15:15 atau &gt; 17:15</div>
+            <div>• Terlambat: Otomatis tercatat jika check in setelah jam normal</div>
+            <div>• Pelanggaran pulang: &lt; 15:15 atau &gt; 17:15</div>
           </div>
         </div>
 
