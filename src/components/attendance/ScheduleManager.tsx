@@ -61,46 +61,57 @@ export const ScheduleManager = () => {
 
   // Fetch schedules and classes
   const fetchData = async () => {
-    // Fetch schedules
-    const { data: schedulesData, error: schedulesError } = await supabase
-      .from('attendance_schedules')
-      .select(`
-        *,
-        classes:class_id (
-          id,
-          name
-        )
-      `)
-      .order('day_of_week', { ascending: true });
+    try {
+      // Fetch schedules
+      const { data: schedulesData, error: schedulesError } = await supabase
+        .from('attendance_schedules')
+        .select(`
+          *,
+          classes:class_id (
+            id,
+            name
+          )
+        `)
+        .order('day_of_week', { ascending: true });
 
-    if (schedulesError) {
+      if (schedulesError) {
+        console.error('Error fetching schedules:', schedulesError);
+        toast({
+          title: "Error",
+          description: "Gagal memuat data jadwal: " + schedulesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setSchedules(schedulesData || []);
+
+      // Fetch classes
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (classesError) {
+        console.error('Error fetching classes:', classesError);
+        toast({
+          title: "Error",
+          description: "Gagal memuat data kelas: " + classesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setClasses(classesData || []);
+    } catch (error) {
+      console.error('Unexpected error:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data jadwal",
+        description: "Terjadi kesalahan tidak terduga",
         variant: "destructive"
       });
-      return;
     }
-
-    setSchedules(schedulesData || []);
-
-    // Fetch classes
-    const { data: classesData, error: classesError } = await supabase
-      .from('classes')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name');
-
-    if (classesError) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data kelas",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setClasses(classesData || []);
   };
 
   useEffect(() => {
@@ -125,6 +136,17 @@ export const ScheduleManager = () => {
   // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validasi form
+    if (!formData.name || !formData.day_of_week || !formData.check_in_start || !formData.check_in_end) {
+      toast({
+        title: "Error",
+        description: "Mohon lengkapi semua field yang wajib diisi",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -133,9 +155,9 @@ export const ScheduleManager = () => {
         day_of_week: parseInt(formData.day_of_week),
         check_in_start: formData.check_in_start,
         check_in_end: formData.check_in_end,
-        check_out_start: formData.check_out_start,
-        check_out_end: formData.check_out_end,
-        late_threshold_minutes: parseInt(formData.late_threshold_minutes),
+        check_out_start: formData.check_out_start || '15:15:00',
+        check_out_end: formData.check_out_end || '17:15:00',
+        late_threshold_minutes: parseInt(formData.late_threshold_minutes) || 15,
         class_id: formData.class_id || null
       };
 
@@ -166,11 +188,12 @@ export const ScheduleManager = () => {
 
       setIsDialogOpen(false);
       resetForm();
-      fetchData();
+      await fetchData();
     } catch (error: any) {
+      console.error('Error saving schedule:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Gagal menyimpan jadwal",
         variant: "destructive"
       });
     } finally {
@@ -211,11 +234,12 @@ export const ScheduleManager = () => {
         description: "Jadwal berhasil dihapus"
       });
 
-      fetchData();
+      await fetchData();
     } catch (error: any) {
+      console.error('Error deleting schedule:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Gagal menghapus jadwal",
         variant: "destructive"
       });
     }
@@ -236,11 +260,12 @@ export const ScheduleManager = () => {
         description: `Jadwal berhasil ${isActive ? 'diaktifkan' : 'dinonaktifkan'}`
       });
 
-      fetchData();
+      await fetchData();
     } catch (error: any) {
+      console.error('Error toggling schedule:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Gagal mengubah status jadwal",
         variant: "destructive"
       });
     }
@@ -269,7 +294,7 @@ export const ScheduleManager = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Nama Jadwal</Label>
+                  <Label htmlFor="name">Nama Jadwal *</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -280,7 +305,7 @@ export const ScheduleManager = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="day_of_week">Hari</Label>
+                  <Label htmlFor="day_of_week">Hari *</Label>
                   <Select
                     value={formData.day_of_week}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, day_of_week: value }))}
@@ -300,7 +325,7 @@ export const ScheduleManager = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="check_in_start">Mulai Check In</Label>
+                    <Label htmlFor="check_in_start">Mulai Check In *</Label>
                     <Input
                       id="check_in_start"
                       type="time"
@@ -310,7 +335,7 @@ export const ScheduleManager = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="check_in_end">Batas Check In</Label>
+                    <Label htmlFor="check_in_end">Batas Check In *</Label>
                     <Input
                       id="check_in_end"
                       type="time"
@@ -323,24 +348,26 @@ export const ScheduleManager = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="check_out_start">Mulai Check Out</Label>
+                    <Label htmlFor="check_out_start">Pulang Normal Mulai</Label>
                     <Input
                       id="check_out_start"
                       type="time"
                       value={formData.check_out_start}
                       onChange={(e) => setFormData(prev => ({ ...prev, check_out_start: e.target.value }))}
-                      required
+                      placeholder="15:15"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Default: 15:15</p>
                   </div>
                   <div>
-                    <Label htmlFor="check_out_end">Batas Check Out</Label>
+                    <Label htmlFor="check_out_end">Pulang Normal Sampai</Label>
                     <Input
                       id="check_out_end"
                       type="time"
                       value={formData.check_out_end}
                       onChange={(e) => setFormData(prev => ({ ...prev, check_out_end: e.target.value }))}
-                      required
+                      placeholder="17:15"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Default: 17:15</p>
                   </div>
                 </div>
 
@@ -352,7 +379,7 @@ export const ScheduleManager = () => {
                     value={formData.late_threshold_minutes}
                     onChange={(e) => setFormData(prev => ({ ...prev, late_threshold_minutes: e.target.value }))}
                     placeholder="15"
-                    required
+                    min="0"
                   />
                 </div>
 
@@ -374,6 +401,16 @@ export const ScheduleManager = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg text-sm">
+                  <div className="font-medium mb-1">Info Integrasi Presensi Mandiri:</div>
+                  <ul className="text-xs space-y-1">
+                    <li>• Jadwal ini akan otomatis digunakan oleh sistem presensi mandiri siswa</li>
+                    <li>• Check in: Siswa harus di dalam area sekolah</li>
+                    <li>• Check out: Siswa harus di luar area sekolah</li>
+                    <li>• Pelanggaran otomatis tercatat jika pulang &lt; 15:15 atau &gt; 17:15</li>
+                  </ul>
                 </div>
 
                 <div className="flex gap-2">
@@ -400,7 +437,7 @@ export const ScheduleManager = () => {
               <TableHead>Nama</TableHead>
               <TableHead>Hari</TableHead>
               <TableHead>Check In</TableHead>
-              <TableHead>Check Out</TableHead>
+              <TableHead>Pulang Normal</TableHead>
               <TableHead>Toleransi</TableHead>
               <TableHead>Kelas</TableHead>
               <TableHead>Status</TableHead>
@@ -408,57 +445,78 @@ export const ScheduleManager = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {schedules.map((schedule) => (
-              <TableRow key={schedule.id}>
-                <TableCell className="font-medium">{schedule.name}</TableCell>
-                <TableCell>{dayNames[schedule.day_of_week]}</TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {schedule.check_in_start} - {schedule.check_in_end}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {schedule.check_out_start} - {schedule.check_out_end}
-                  </div>
-                </TableCell>
-                <TableCell>{schedule.late_threshold_minutes} menit</TableCell>
-                <TableCell>
-                  {schedule.classes?.name || 'Semua Kelas'}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={schedule.is_active}
-                      onCheckedChange={(checked) => toggleActive(schedule.id, checked)}
-                    />
-                    <Badge variant={schedule.is_active ? "default" : "secondary"}>
-                      {schedule.is_active ? "Aktif" : "Nonaktif"}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(schedule)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(schedule.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {schedules.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  Belum ada jadwal presensi. Klik "Tambah Jadwal" untuk menambahkan jadwal baru.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              schedules.map((schedule) => (
+                <TableRow key={schedule.id}>
+                  <TableCell className="font-medium">{schedule.name}</TableCell>
+                  <TableCell>{dayNames[schedule.day_of_week]}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {schedule.check_in_start} - {schedule.check_in_end}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {schedule.check_out_start} - {schedule.check_out_end}
+                    </div>
+                  </TableCell>
+                  <TableCell>{schedule.late_threshold_minutes} menit</TableCell>
+                  <TableCell>
+                    {schedule.classes?.name || 'Semua Kelas'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={schedule.is_active}
+                        onCheckedChange={(checked) => toggleActive(schedule.id, checked)}
+                      />
+                      <Badge variant={schedule.is_active ? "default" : "secondary"}>
+                        {schedule.is_active ? "Aktif" : "Nonaktif"}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(schedule)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(schedule.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
+
+        {schedules.length > 0 && (
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="text-sm">
+              <div className="font-medium text-green-800 mb-2">✅ Status Integrasi Presensi Mandiri</div>
+              <div className="text-green-700 space-y-1">
+                <div>• Jadwal presensi telah terintegrasi penuh dengan sistem presensi mandiri siswa</div>
+                <div>• Siswa akan menggunakan jadwal aktif sesuai hari ini untuk validasi check in/out</div>
+                <div>• Sistem otomatis mencatat pelanggaran berdasarkan jadwal yang telah ditentukan</div>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
