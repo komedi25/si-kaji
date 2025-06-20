@@ -217,23 +217,38 @@ export const ScheduleManager = () => {
     setIsDialogOpen(true);
   };
 
-  // Handle delete
+  // Handle delete - FIXED
   const handleDelete = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
 
+    setLoading(true);
+    console.log('Attempting to delete schedule with ID:', id);
+
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('attendance_schedules')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select(); // Add select to see what was deleted
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+
+      console.log('Delete result:', data);
+
+      // Update local state immediately
+      setSchedules(prevSchedules => 
+        prevSchedules.filter(schedule => schedule.id !== id)
+      );
 
       toast({
         title: "Berhasil",
         description: "Jadwal berhasil dihapus"
       });
 
+      // Fetch fresh data to ensure consistency
       await fetchData();
     } catch (error: any) {
       console.error('Error deleting schedule:', error);
@@ -242,6 +257,8 @@ export const ScheduleManager = () => {
         description: error.message || "Gagal menghapus jadwal",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -487,6 +504,7 @@ export const ScheduleManager = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(schedule)}
+                        disabled={loading}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -494,6 +512,7 @@ export const ScheduleManager = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDelete(schedule.id)}
+                        disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
