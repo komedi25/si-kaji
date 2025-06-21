@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -266,7 +267,7 @@ export const CounselingManagement = () => {
         </TabsContent>
 
         <TabsContent value="schedule">
-          <CounselingForm onSuccess={() => refetch()} />
+          <CounselingForm />
         </TabsContent>
 
         <TabsContent value="history">
