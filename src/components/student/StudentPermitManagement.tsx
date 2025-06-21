@@ -316,7 +316,7 @@ export const StudentPermitManagement = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="permit_type">Jenis Permohonan</Label>
+                <Label htmlFor="permit_type">Jenis Permohonan *</Label>
                 <select
                   id="permit_type"
                   className="w-full p-2 border rounded-md"
@@ -335,7 +335,7 @@ export const StudentPermitManagement = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="start_date">Tanggal Mulai</Label>
+                  <Label htmlFor="start_date">Tanggal Mulai *</Label>
                   <Input
                     id="start_date"
                     type="date"
@@ -346,7 +346,7 @@ export const StudentPermitManagement = () => {
                 </div>
                 
                 <div>
-                  <Label htmlFor="end_date">Tanggal Selesai</Label>
+                  <Label htmlFor="end_date">Tanggal Selesai *</Label>
                   <Input
                     id="end_date"
                     type="date"
@@ -389,7 +389,7 @@ export const StudentPermitManagement = () => {
               )}
               
               <div>
-                <Label htmlFor="reason">Alasan/Tujuan</Label>
+                <Label htmlFor="reason">Alasan/Tujuan *</Label>
                 <Textarea
                   id="reason"
                   value={formData.reason}

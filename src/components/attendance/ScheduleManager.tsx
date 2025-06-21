@@ -485,41 +485,55 @@ export const ScheduleManager = () => {
                   Tambah Jadwal
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingSchedule ? 'Edit Jadwal' : 'Tambah Jadwal Baru'}
                   </DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nama Jadwal *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Contoh: Senin - Kamis"
-                      required
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="name">Nama Jadwal *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Contoh: Senin - Kamis"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <Label htmlFor="day_of_week">Hari *</Label>
-                    <Select
-                      value={formData.day_of_week}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, day_of_week: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih hari" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dayNames.map((day, index) => (
-                          <SelectItem key={index} value={index.toString()}>
-                            {day}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <Label htmlFor="day_of_week">Hari *</Label>
+                      <Select
+                        value={formData.day_of_week}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, day_of_week: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih hari" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dayNames.map((day, index) => (
+                            <SelectItem key={index} value={index.toString()}>
+                              {day}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="late_threshold">Toleransi Terlambat (menit)</Label>
+                      <Input
+                        id="late_threshold"
+                        type="number"
+                        value={formData.late_threshold_minutes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, late_threshold_minutes: e.target.value }))}
+                        placeholder="15"
+                        min="0"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -571,18 +585,6 @@ export const ScheduleManager = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="late_threshold">Batas Toleransi Terlambat (menit)</Label>
-                    <Input
-                      id="late_threshold"
-                      type="number"
-                      value={formData.late_threshold_minutes}
-                      onChange={(e) => setFormData(prev => ({ ...prev, late_threshold_minutes: e.target.value }))}
-                      placeholder="15"
-                      min="0"
-                    />
-                  </div>
-
-                  <div>
                     <Label htmlFor="class_id">Kelas (Opsional)</Label>
                     <Select
                       value={formData.class_id}
@@ -612,14 +614,15 @@ export const ScheduleManager = () => {
                     </ul>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit" disabled={loading}>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button type="submit" disabled={loading} className="flex-1">
                       {loading ? "Menyimpan..." : "Simpan"}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => setIsDialogOpen(false)}
+                      className="flex-1"
                     >
                       Batal
                     </Button>
@@ -630,82 +633,84 @@ export const ScheduleManager = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Hari</TableHead>
-                <TableHead>Check In</TableHead>
-                <TableHead>Pulang Normal</TableHead>
-                <TableHead>Toleransi</TableHead>
-                <TableHead>Kelas</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.length === 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    Belum ada jadwal presensi. {canManageSchedules() ? 'Klik "Tambah Jadwal" untuk menambahkan jadwal baru.' : 'Hubungi administrator untuk menambahkan jadwal.'}
-                  </TableCell>
+                  <TableHead className="min-w-[120px]">Nama</TableHead>
+                  <TableHead className="min-w-[80px]">Hari</TableHead>
+                  <TableHead className="min-w-[120px]">Check In</TableHead>
+                  <TableHead className="min-w-[120px]">Pulang Normal</TableHead>
+                  <TableHead className="min-w-[80px]">Toleransi</TableHead>
+                  <TableHead className="min-w-[100px]">Kelas</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[120px]">Aksi</TableHead>
                 </TableRow>
-              ) : (
-                schedules.map((schedule) => (
-                  <TableRow key={schedule.id}>
-                    <TableCell className="font-medium">{schedule.name}</TableCell>
-                    <TableCell>{dayNames[schedule.day_of_week]}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {schedule.check_in_start} - {schedule.check_in_end}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {schedule.check_out_start} - {schedule.check_out_end}
-                      </div>
-                    </TableCell>
-                    <TableCell>{schedule.late_threshold_minutes} menit</TableCell>
-                    <TableCell>
-                      {schedule.classes?.name || 'Semua Kelas'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={schedule.is_active}
-                          onCheckedChange={(checked) => toggleActive(schedule.id, checked)}
-                          disabled={!canManageSchedules()}
-                        />
-                        <Badge variant={schedule.is_active ? "default" : "secondary"}>
-                          {schedule.is_active ? "Aktif" : "Nonaktif"}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(schedule)}
-                          disabled={loading || !canManageSchedules()}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(schedule.id)}
-                          disabled={loading || !canManageSchedules()}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {schedules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      Belum ada jadwal presensi. {canManageSchedules() ? 'Klik "Tambah Jadwal" untuk menambahkan jadwal baru.' : 'Hubungi administrator untuk menambahkan jadwal.'}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  schedules.map((schedule) => (
+                    <TableRow key={schedule.id}>
+                      <TableCell className="font-medium">{schedule.name}</TableCell>
+                      <TableCell>{dayNames[schedule.day_of_week]}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {schedule.check_in_start} - {schedule.check_in_end}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {schedule.check_out_start} - {schedule.check_out_end}
+                        </div>
+                      </TableCell>
+                      <TableCell>{schedule.late_threshold_minutes} menit</TableCell>
+                      <TableCell>
+                        {schedule.classes?.name || 'Semua Kelas'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={schedule.is_active}
+                            onCheckedChange={(checked) => toggleActive(schedule.id, checked)}
+                            disabled={!canManageSchedules()}
+                          />
+                          <Badge variant={schedule.is_active ? "default" : "secondary"}>
+                            {schedule.is_active ? "Aktif" : "Nonaktif"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(schedule)}
+                            disabled={loading || !canManageSchedules()}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(schedule.id)}
+                            disabled={loading || !canManageSchedules()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {schedules.length > 0 && (
             <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
