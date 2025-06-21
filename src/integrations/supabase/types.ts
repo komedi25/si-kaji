@@ -2543,6 +2543,14 @@ export type Database = {
         }
         Returns: string
       }
+      debug_user_schedule_permissions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          user_roles: string[]
+          can_manage_schedules: boolean
+        }[]
+      }
       generate_case_number: {
         Args: Record<PropertyKey, never>
         Returns: string
