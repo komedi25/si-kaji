@@ -65,7 +65,7 @@ export const ScheduleManager = () => {
     check_out_start: '',
     check_out_end: '',
     late_threshold_minutes: '15',
-    class_id: ''
+    class_id: 'all'
   });
 
   // Check user permissions
@@ -178,7 +178,7 @@ export const ScheduleManager = () => {
       check_out_start: '',
       check_out_end: '',
       late_threshold_minutes: '15',
-      class_id: ''
+      class_id: 'all'
     });
     setEditingSchedule(null);
   };
@@ -217,7 +217,7 @@ export const ScheduleManager = () => {
         check_out_start: formData.check_out_start || '15:15:00',
         check_out_end: formData.check_out_end || '17:15:00',
         late_threshold_minutes: parseInt(formData.late_threshold_minutes) || 15,
-        class_id: formData.class_id || null
+        class_id: formData.class_id === 'all' ? null : formData.class_id
       };
 
       console.log('Attempting to save schedule:', data);
@@ -288,7 +288,7 @@ export const ScheduleManager = () => {
       check_out_start: schedule.check_out_start,
       check_out_end: schedule.check_out_end,
       late_threshold_minutes: schedule.late_threshold_minutes.toString(),
-      class_id: schedule.class_id || ''
+      class_id: schedule.class_id || 'all'
     });
     setIsDialogOpen(true);
   };
@@ -592,7 +592,7 @@ export const ScheduleManager = () => {
                         <SelectValue placeholder="Pilih kelas (kosongkan untuk semua kelas)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Semua Kelas</SelectItem>
+                        <SelectItem value="all">Semua Kelas</SelectItem>
                         {classes.map((cls) => (
                           <SelectItem key={cls.id} value={cls.id}>
                             {cls.name}
