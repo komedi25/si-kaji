@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { FileText, Plus, X } from 'lucide-react';
+import { FileText, Plus, X, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -30,6 +31,7 @@ export const StudentPermitManagement = () => {
   const { toast } = useToast();
   const [permits, setPermits] = useState<StudentPermit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -84,11 +86,6 @@ export const StudentPermitManagement = () => {
         setStudentId(data.id);
       } else {
         console.log('No student data found for user:', user.id);
-        toast({
-          title: "Info",
-          description: "Data siswa tidak ditemukan. Silakan hubungi administrator untuk menghubungkan akun Anda dengan data siswa.",
-          variant: "destructive"
-        });
         setLoading(false);
       }
     } catch (error) {
@@ -144,6 +141,28 @@ export const StudentPermitManagement = () => {
       return;
     }
 
+    // Validasi form
+    if (!formData.permit_type || !formData.reason || !formData.start_date || !formData.end_date) {
+      toast({
+        title: "Error",
+        description: "Harap lengkapi semua field yang wajib diisi",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validasi tanggal
+    const startDate = new Date(formData.start_date);
+    const endDate = new Date(formData.end_date);
+    if (endDate < startDate) {
+      toast({
+        title: "Error",
+        description: "Tanggal selesai tidak boleh lebih awal dari tanggal mulai",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Validasi khusus untuk kegiatan di luar jam pembelajaran
     if (formData.permit_type === 'kegiatan_luar') {
       if (!formData.start_time || !formData.end_time) {
@@ -167,17 +186,9 @@ export const StudentPermitManagement = () => {
       }
     }
 
+    setSubmitting(true);
     try {
-      const permitData: {
-        student_id: string;
-        permit_type: string;
-        reason: string;
-        start_date: string;
-        end_date: string;
-        status: string;
-        start_time?: string;
-        end_time?: string;
-      } = {
+      const permitData: any = {
         student_id: studentId,
         permit_type: formData.permit_type,
         reason: formData.reason,
@@ -205,6 +216,7 @@ export const StudentPermitManagement = () => {
         description: "Pengajuan izin berhasil disubmit"
       });
 
+      // Reset form
       setFormData({
         permit_type: '',
         reason: '',
@@ -222,6 +234,21 @@ export const StudentPermitManagement = () => {
         description: "Gagal mengajukan izin",
         variant: "destructive"
       });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case 'approved':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -234,7 +261,7 @@ export const StudentPermitManagement = () => {
     } as const;
 
     const labels = {
-      pending: 'Menunggu',
+      pending: 'Menunggu Persetujuan',
       approved: 'Disetujui',
       rejected: 'Ditolak',
       cancelled: 'Dibatalkan'
@@ -242,7 +269,8 @@ export const StudentPermitManagement = () => {
 
     return (
       <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {labels[status as keyof typeof labels] || status}
+        {getStatusIcon(status)}
+        <span className="ml-1">{labels[status as keyof typeof labels] || status}</span>
       </Badge>
     );
   };
@@ -258,10 +286,17 @@ export const StudentPermitManagement = () => {
     return labels[type as keyof typeof labels] || type;
   };
 
+  const canSubmitNewPermit = () => {
+    // Cek apakah ada permit yang masih pending
+    const pendingPermits = permits.filter(p => p.status === 'pending');
+    return pendingPermits.length < 3; // Batasi maksimal 3 pengajuan pending
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3">Memuat data...</span>
       </div>
     );
   }
@@ -296,12 +331,33 @@ export const StudentPermitManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Perizinan & Kegiatan</h2>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Ajukan Izin/Kegiatan
-        </Button>
+        <div>
+          <h2 className="text-xl font-semibold">Perizinan & Kegiatan</h2>
+          <p className="text-sm text-gray-600">
+            Ajukan izin atau kegiatan di luar jam pembelajaran dengan mudah
+          </p>
+        </div>
+        {canSubmitNewPermit() && (
+          <Button onClick={() => setShowForm(true)} disabled={showForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            Ajukan Izin/Kegiatan
+          </Button>
+        )}
       </div>
+
+      {!canSubmitNewPermit() && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              <p className="text-orange-700">
+                Anda memiliki terlalu banyak pengajuan yang sedang menunggu persetujuan. 
+                Harap tunggu hingga ada yang disetujui atau ditolak sebelum mengajukan yang baru.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {showForm && (
         <Card>
@@ -341,6 +397,7 @@ export const StudentPermitManagement = () => {
                     type="date"
                     value={formData.start_date}
                     onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
@@ -352,6 +409,7 @@ export const StudentPermitManagement = () => {
                     type="date"
                     value={formData.end_date}
                     onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    min={formData.start_date || new Date().toISOString().split('T')[0]}
                     required
                   />
                 </div>
@@ -394,7 +452,8 @@ export const StudentPermitManagement = () => {
                   id="reason"
                   value={formData.reason}
                   onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                  placeholder="Jelaskan alasan atau tujuan permohonan izin/kegiatan"
+                  placeholder="Jelaskan alasan atau tujuan permohonan izin/kegiatan dengan detail"
+                  rows={4}
                   required
                 />
               </div>
@@ -408,7 +467,9 @@ export const StudentPermitManagement = () => {
               )}
               
               <div className="flex gap-2">
-                <Button type="submit">Submit Permohonan</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? 'Menyimpan...' : 'Submit Permohonan'}
+                </Button>
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Batal
                 </Button>
@@ -421,35 +482,36 @@ export const StudentPermitManagement = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Riwayat Permohonan</h3>
         {permits.map((permit) => (
-          <Card key={permit.id}>
+          <Card key={permit.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  {getPermitTypeLabel(permit.permit_type)}
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                  <div>
+                    <h4 className="font-medium">{getPermitTypeLabel(permit.permit_type)}</h4>
+                    <p className="text-sm text-gray-500">
+                      Diajukan {format(new Date(permit.submitted_at), 'dd MMMM yyyy HH:mm', { locale: id })}
+                    </p>
+                  </div>
+                </div>
                 {getStatusBadge(permit.status)}
-              </CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <strong>Periode:</strong> {format(new Date(permit.start_date), 'dd/MM/yyyy')} - {format(new Date(permit.end_date), 'dd/MM/yyyy')}
                 </div>
-                <div>
-                  <strong>Diajukan:</strong> {format(new Date(permit.submitted_at), 'dd/MM/yyyy HH:mm', { locale: id })}
-                </div>
+                {permit.start_time && permit.end_time && (
+                  <div>
+                    <strong>Waktu:</strong> {permit.start_time} - {permit.end_time}
+                  </div>
+                )}
               </div>
-
-              {permit.start_time && permit.end_time && (
-                <div className="text-sm">
-                  <strong>Waktu:</strong> {permit.start_time} - {permit.end_time}
-                </div>
-              )}
               
               <div>
                 <strong>Alasan/Tujuan:</strong>
-                <div className="mt-1 text-sm text-gray-600">
+                <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
                   {permit.reason}
                 </div>
               </div>
@@ -457,7 +519,7 @@ export const StudentPermitManagement = () => {
               {permit.review_notes && (
                 <div>
                   <strong>Catatan Review:</strong>
-                  <div className="mt-1 text-sm text-gray-600">
+                  <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-2 rounded border">
                     {permit.review_notes}
                   </div>
                 </div>
@@ -470,7 +532,17 @@ export const StudentPermitManagement = () => {
       {permits.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Belum ada permohonan izin/kegiatan</p>
+            <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Belum Ada Permohonan</h3>
+            <p className="text-gray-500 mb-4">
+              Anda belum pernah mengajukan permohonan izin atau kegiatan.
+            </p>
+            {canSubmitNewPermit() && (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajukan Permohonan Pertama
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

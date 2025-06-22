@@ -984,6 +984,7 @@ export type Database = {
           location: string | null
           max_participants: number | null
           name: string
+          registration_open: boolean | null
           schedule_day: string | null
           schedule_time: string | null
           updated_at: string
@@ -997,6 +998,7 @@ export type Database = {
           location?: string | null
           max_participants?: number | null
           name: string
+          registration_open?: boolean | null
           schedule_day?: string | null
           schedule_time?: string | null
           updated_at?: string
@@ -1010,6 +1012,7 @@ export type Database = {
           location?: string | null
           max_participants?: number | null
           name?: string
+          registration_open?: boolean | null
           schedule_day?: string | null
           schedule_time?: string | null
           updated_at?: string
@@ -1029,6 +1032,7 @@ export type Database = {
           id: string
           journal_date: string
           learning_progress: string | null
+          period_type: string | null
           student_notes: string | null
           updated_at: string
         }
@@ -1044,6 +1048,7 @@ export type Database = {
           id?: string
           journal_date: string
           learning_progress?: string | null
+          period_type?: string | null
           student_notes?: string | null
           updated_at?: string
         }
@@ -1059,6 +1064,7 @@ export type Database = {
           id?: string
           journal_date?: string
           learning_progress?: string | null
+          period_type?: string | null
           student_notes?: string | null
           updated_at?: string
         }
@@ -2036,6 +2042,57 @@ export type Database = {
           },
           {
             foreignKeyName: "student_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_extracurricular_attendances: {
+        Row: {
+          attendance_date: string
+          created_at: string | null
+          extracurricular_id: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendance_date?: string
+          created_at?: string | null
+          extracurricular_id: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string | null
+          extracurricular_id?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_extracurricular_attendances_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_extracurricular_attendances_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

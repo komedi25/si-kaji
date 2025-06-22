@@ -8,17 +8,19 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { StudentSearchWithQR } from '@/components/common/StudentSearchWithQR';
+import { id } from 'date-fns/locale';
 
 interface ViolationType {
   id: string;
   name: string;
   category: string;
   point_deduction: number;
+  description?: string;
 }
 
 export const ViolationRecorder = () => {
@@ -26,6 +28,7 @@ export const ViolationRecorder = () => {
   const { toast } = useToast();
   const [violationTypes, setViolationTypes] = useState<ViolationType[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
     violation_type_id: '',
@@ -39,11 +42,13 @@ export const ViolationRecorder = () => {
 
   const fetchViolationTypes = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('violation_types')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setViolationTypes(data || []);
@@ -54,6 +59,8 @@ export const ViolationRecorder = () => {
         description: "Gagal memuat jenis pelanggaran",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,15 +75,42 @@ export const ViolationRecorder = () => {
       return;
     }
 
-    setLoading(true);
+    if (!formData.student_id || !formData.violation_type_id) {
+      toast({
+        title: "Data Tidak Lengkap",
+        description: "Harap pilih siswa dan jenis pelanggaran",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validasi tanggal tidak boleh di masa depan
+    const selectedDate = new Date(formData.violation_date);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    if (selectedDate > today) {
+      toast({
+        title: "Tanggal Tidak Valid",
+        description: "Tanggal pelanggaran tidak boleh di masa depan",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSubmitting(true);
     try {
+      // Get violation type details for point calculation
+      const selectedViolationType = violationTypes.find(vt => vt.id === formData.violation_type_id);
+      
       const { error } = await supabase
         .from('student_violations')
         .insert({
           student_id: formData.student_id,
           violation_type_id: formData.violation_type_id,
           violation_date: format(formData.violation_date, 'yyyy-MM-dd'),
-          description: formData.description,
+          description: formData.description || null,
+          point_deduction: selectedViolationType?.point_deduction || 0,
           reported_by: user?.id,
           status: 'active'
         });
@@ -85,7 +119,8 @@ export const ViolationRecorder = () => {
 
       toast({
         title: "Berhasil",
-        description: "Pelanggaran berhasil dicatat"
+        description: `Pelanggaran berhasil dicatat. Poin dikurangi: ${selectedViolationType?.point_deduction || 0}`,
+        variant: "default"
       });
 
       // Reset form
@@ -103,7 +138,33 @@ export const ViolationRecorder = () => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'ringan':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'sedang':
+        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      case 'berat':
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'ringan':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'sedang':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'berat':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -111,21 +172,33 @@ export const ViolationRecorder = () => {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p className="text-center text-gray-500">
-            Anda tidak memiliki akses untuk mencatat pelanggaran siswa
-          </p>
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 mx-auto text-orange-500" />
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Akses Terbatas</h3>
+              <p className="text-gray-500 mt-2">
+                Anda tidak memiliki akses untuk mencatat pelanggaran siswa. 
+                Fitur ini hanya tersedia untuk wali kelas, TPPK, dan administrator.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
+  const selectedViolationType = violationTypes.find(vt => vt.id === formData.violation_type_id);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Catat Pelanggaran Siswa</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          Catat Pelanggaran Siswa
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="student">Siswa *</Label>
             <StudentSearchWithQR
@@ -137,18 +210,47 @@ export const ViolationRecorder = () => {
 
           <div>
             <Label htmlFor="violation_type">Jenis Pelanggaran *</Label>
-            <Select value={formData.violation_type_id} onValueChange={(value) => setFormData(prev => ({ ...prev, violation_type_id: value }))}>
+            <Select 
+              value={formData.violation_type_id} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, violation_type_id: value }))}
+              disabled={loading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih jenis pelanggaran" />
+                <SelectValue placeholder={loading ? "Memuat jenis pelanggaran..." : "Pilih jenis pelanggaran"} />
               </SelectTrigger>
               <SelectContent>
                 {violationTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
-                    {type.name} - {type.category} (-{type.point_deduction} poin)
+                    <div className="flex items-center space-x-2">
+                      {getCategoryIcon(type.category)}
+                      <span>{type.name}</span>
+                      <span className="text-xs text-gray-500">
+                        ({type.category.toUpperCase()} - {type.point_deduction} poin)
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            
+            {selectedViolationType && (
+              <div className={`mt-2 p-3 rounded-lg border ${getCategoryColor(selectedViolationType.category)}`}>
+                <div className="flex items-center space-x-2 mb-1">
+                  {getCategoryIcon(selectedViolationType.category)}
+                  <span className="font-medium text-sm">
+                    {selectedViolationType.name} - Kategori {selectedViolationType.category.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm mb-1">
+                  <strong>Pengurangan Poin:</strong> {selectedViolationType.point_deduction} poin
+                </p>
+                {selectedViolationType.description && (
+                  <p className="text-sm">
+                    <strong>Deskripsi:</strong> {selectedViolationType.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -157,7 +259,7 @@ export const ViolationRecorder = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(formData.violation_date, 'dd MMMM yyyy')}
+                  {format(formData.violation_date, 'dd MMMM yyyy', { locale: id })}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -165,6 +267,7 @@ export const ViolationRecorder = () => {
                   mode="single"
                   selected={formData.violation_date}
                   onSelect={(date) => date && setFormData(prev => ({ ...prev, violation_date: date }))}
+                  disabled={(date) => date > new Date() || date < new Date('2020-01-01')}
                   initialFocus
                 />
               </PopoverContent>
@@ -172,17 +275,40 @@ export const ViolationRecorder = () => {
           </div>
 
           <div>
-            <Label htmlFor="description">Deskripsi</Label>
+            <Label htmlFor="description">Deskripsi Pelanggaran</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Deskripsi pelanggaran..."
+              placeholder="Jelaskan secara detail mengenai pelanggaran yang terjadi..."
+              rows={4}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Deskripsi detail akan membantu dalam penanganan dan tindak lanjut
+            </p>
           </div>
 
-          <Button type="submit" disabled={loading || !formData.student_id || !formData.violation_type_id} className="w-full">
-            {loading ? 'Menyimpan...' : 'Catat Pelanggaran'}
+          {formData.student_id && formData.violation_type_id && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+                <div className="text-sm text-orange-800">
+                  <p className="font-medium mb-1">Konfirmasi Pencatatan:</p>
+                  <p>
+                    Pelanggaran "{selectedViolationType?.name}" akan dicatat untuk siswa yang dipilih 
+                    dengan pengurangan {selectedViolationType?.point_deduction || 0} poin disiplin.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Button 
+            type="submit" 
+            disabled={submitting || !formData.student_id || !formData.violation_type_id} 
+            className="w-full"
+          >
+            {submitting ? 'Menyimpan...' : 'Catat Pelanggaran'}
           </Button>
         </form>
       </CardContent>
