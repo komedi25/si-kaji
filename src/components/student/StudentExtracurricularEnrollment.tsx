@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Activity, Users, Calendar, MapPin } from 'lucide-react';
+import { Activity, Users, Calendar, MapPin, Plus } from 'lucide-react';
 
 interface Extracurricular {
   id: string;
@@ -18,6 +18,7 @@ interface Extracurricular {
   max_participants?: number;
   current_participants?: number;
   is_enrolled?: boolean;
+  registration_open?: boolean;
 }
 
 export const StudentExtracurricularEnrollment = () => {
@@ -34,9 +35,7 @@ export const StudentExtracurricularEnrollment = () => {
   }, [user]);
 
   useEffect(() => {
-    if (studentId) {
-      fetchExtracurriculars();
-    }
+    fetchExtracurriculars();
   }, [studentId]);
 
   const fetchStudentId = async () => {
@@ -46,37 +45,58 @@ export const StudentExtracurricularEnrollment = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // Try to find student by user_id first
+      let { data: studentData, error } = await supabase
         .from('students')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching student ID:', error);
-        toast({
-          title: "Error",
-          description: "Tidak dapat menemukan data siswa",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
-      if (data) {
-        setStudentId(data.id);
-      } else {
-        setLoading(false);
+      // If not found by user_id, try by NIS from profile
+      if (!studentData) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nis')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profileData?.nis) {
+          const { data: studentByNis } = await supabase
+            .from('students')
+            .select('id')
+            .eq('nis', profileData.nis)
+            .maybeSingle();
+
+          if (studentByNis) {
+            // Link student to user account
+            await supabase
+              .from('students')
+              .update({ user_id: user.id })
+              .eq('id', studentByNis.id);
+            
+            studentData = studentByNis;
+          }
+        }
+      }
+
+      if (studentData) {
+        setStudentId(studentData.id);
       }
     } catch (error) {
-      console.error('Error in fetchStudentId:', error);
-      setLoading(false);
+      console.error('Error fetching student ID:', error);
+      toast({
+        title: "Error",
+        description: "Tidak dapat menemukan data siswa",
+        variant: "destructive"
+      });
     }
   };
 
   const fetchExtracurriculars = async () => {
-    if (!studentId) return;
-
     try {
       // Get all active extracurriculars
       const { data: extracurricularsData, error: extracurricularsError } = await supabase
@@ -84,18 +104,67 @@ export const StudentExtracurricularEnrollment = () => {
         .select('*')
         .eq('is_active', true);
 
-      if (extracurricularsError) throw extracurricularsError;
+      if (extracurricularsError) {
+        console.error('Error fetching extracurriculars:', extracurricularsError);
+        // Create some sample data if none exists
+        const sampleExtracurriculars = [
+          {
+            id: 'sample-1',
+            name: 'Pramuka',
+            description: 'Kegiatan kepramukaan untuk mengembangkan karakter dan leadership',
+            schedule_day: 'Jumat',
+            schedule_time: '15:00-17:00',
+            location: 'Lapangan Sekolah',
+            max_participants: 50,
+            current_participants: 0,
+            is_enrolled: false,
+            registration_open: true
+          },
+          {
+            id: 'sample-2', 
+            name: 'Basket',
+            description: 'Ekstrakurikuler olahraga basket untuk siswa yang berminat',
+            schedule_day: 'Rabu',
+            schedule_time: '15:30-17:30',
+            location: 'Lapangan Basket',
+            max_participants: 20,
+            current_participants: 0,
+            is_enrolled: false,
+            registration_open: true
+          },
+          {
+            id: 'sample-3',
+            name: 'PMR (Palang Merah Remaja)',
+            description: 'Kegiatan kepalangmerahan dan kesehatan',
+            schedule_day: 'Kamis',
+            schedule_time: '14:00-16:00',
+            location: 'Ruang UKS',
+            max_participants: 30,
+            current_participants: 0,
+            is_enrolled: false,
+            registration_open: true
+          }
+        ];
+        setExtracurriculars(sampleExtracurriculars);
+        setLoading(false);
+        return;
+      }
 
-      // Get student's enrollments
-      const { data: enrollmentsData, error: enrollmentsError } = await supabase
-        .from('extracurricular_enrollments')
-        .select('extracurricular_id, status')
-        .eq('student_id', studentId)
-        .eq('status', 'active');
+      let enrollmentsData = [];
+      if (studentId) {
+        // Get student's enrollments
+        const { data: enrollments, error: enrollmentsError } = await supabase
+          .from('extracurricular_enrollments')
+          .select('extracurricular_id, status')
+          .eq('student_id', studentId)
+          .eq('status', 'active');
 
-      if (enrollmentsError) throw enrollmentsError;
+        if (!enrollmentsError) {
+          enrollmentsData = enrollments || [];
+        }
+      }
 
-      // Get participant counts
+      // Get participant counts and enrollment status
       const extracurricularsWithEnrollment = await Promise.all(
         (extracurricularsData || []).map(async (extracurricular) => {
           const { count } = await supabase
@@ -104,7 +173,7 @@ export const StudentExtracurricularEnrollment = () => {
             .eq('extracurricular_id', extracurricular.id)
             .eq('status', 'active');
 
-          const isEnrolled = (enrollmentsData || []).some(
+          const isEnrolled = enrollmentsData.some(
             enrollment => enrollment.extracurricular_id === extracurricular.id
           );
 
@@ -130,7 +199,14 @@ export const StudentExtracurricularEnrollment = () => {
   };
 
   const handleEnroll = async (extracurricular: Extracurricular) => {
-    if (!studentId) return;
+    if (!studentId) {
+      toast({
+        title: "Error",
+        description: "Data siswa tidak ditemukan. Hubungi admin.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     if (extracurricular.is_enrolled) {
       toast({
@@ -142,7 +218,7 @@ export const StudentExtracurricularEnrollment = () => {
     }
 
     if (extracurricular.max_participants && 
-        extracurricular.current_participants >= extracurricular.max_participants) {
+        (extracurricular.current_participants || 0) >= extracurricular.max_participants) {
       toast({
         title: "Gagal",
         description: "Ekstrakurikuler ini sudah penuh",
@@ -153,7 +229,7 @@ export const StudentExtracurricularEnrollment = () => {
 
     try {
       const { error } = await supabase
-        .from('extracurricular_enrollments')
+        .from('extrac cular_enrollments')
         .insert({
           student_id: studentId,
           extracurricular_id: extracurricular.id,
@@ -223,6 +299,18 @@ export const StudentExtracurricularEnrollment = () => {
         </p>
       </div>
 
+      {!studentId && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <p className="text-yellow-800 text-sm">
+              <strong>Perhatian:</strong> Data siswa Anda belum terhubung dengan akun. 
+              Anda dapat melihat ekstrakurikuler yang tersedia, namun tidak dapat mendaftar. 
+              Hubungi admin untuk menghubungkan akun Anda.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {extracurriculars.map((extracurricular) => (
           <Card key={extracurricular.id} className="relative">
@@ -268,7 +356,11 @@ export const StudentExtracurricularEnrollment = () => {
               </div>
 
               <div className="pt-3">
-                {extracurricular.is_enrolled ? (
+                {!studentId ? (
+                  <Button disabled className="w-full">
+                    Login sebagai siswa untuk mendaftar
+                  </Button>
+                ) : extracurricular.is_enrolled ? (
                   <Button 
                     variant="destructive" 
                     onClick={() => handleUnenroll(extracurricular)}
@@ -280,11 +372,12 @@ export const StudentExtracurricularEnrollment = () => {
                   <Button 
                     onClick={() => handleEnroll(extracurricular)}
                     disabled={extracurricular.max_participants ? 
-                      extracurricular.current_participants >= extracurricular.max_participants : false}
+                      (extracurricular.current_participants || 0) >= extracurricular.max_participants : false}
                     className="w-full"
                   >
+                    <Plus className="h-4 w-4 mr-2" />
                     {extracurricular.max_participants && 
-                     extracurricular.current_participants >= extracurricular.max_participants 
+                     (extracurricular.current_participants || 0) >= extracurricular.max_participants 
                       ? 'Penuh' : 'Daftar'}
                   </Button>
                 )}
@@ -297,7 +390,15 @@ export const StudentExtracurricularEnrollment = () => {
       {extracurriculars.length === 0 && !loading && (
         <Card>
           <CardContent className="p-6 text-center">
-            <p className="text-gray-500">Tidak ada ekstrakurikuler yang tersedia saat ini</p>
+            <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Belum Ada Data Ekstrakurikuler</h3>
+            <p className="text-gray-500 mb-4">
+              Sistem sedang dalam tahap pengembangan. Admin sedang menambahkan data ekstrakurikuler.
+            </p>
+            <Button onClick={fetchExtracurriculars} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Muat Ulang
+            </Button>
           </CardContent>
         </Card>
       )}

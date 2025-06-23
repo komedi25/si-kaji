@@ -16,7 +16,7 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Fetching all users data...');
       
-      // First, get all profiles
+      // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -29,7 +29,7 @@ export const useUserManagement = () => {
 
       console.log('Profiles fetched:', profiles?.length || 0);
 
-      // Get all user roles separately
+      // Get all user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
@@ -39,8 +39,6 @@ export const useUserManagement = () => {
         console.error('Error fetching user roles:', rolesError);
         throw rolesError;
       }
-
-      console.log('User roles fetched:', userRoles?.length || 0);
 
       // Get all students data
       const { data: allStudents, error: studentsError } = await supabase

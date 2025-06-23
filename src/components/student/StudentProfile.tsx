@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Save, AlertCircle } from 'lucide-react';
+import { User, Save, AlertCircle, Mail } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface StudentData {
@@ -35,11 +35,12 @@ export const StudentProfile = () => {
   const [saving, setSaving] = useState(false);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id) {
       fetchStudentData();
+      setUserEmail(user.email || null);
     }
   }, [user]);
 
@@ -52,80 +53,59 @@ export const StudentProfile = () => {
     console.log('Fetching student data for user ID:', user.id);
     
     try {
-      // Debug: Check profile data first
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      console.log('Profile data:', profileData);
-      
-      // Check student data by user_id
-      const { data: studentByUserId, error: studentError } = await supabase
+      // First try to find student by user_id
+      let { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('Student data by user_id:', studentByUserId);
+      if (studentError && studentError.code !== 'PGRST116') {
+        throw studentError;
+      }
 
-      // If no student found by user_id, try to find by NIS from profile
-      let studentData = studentByUserId;
-      
-      if (!studentData && profileData?.nis) {
-        console.log('Trying to find student by NIS:', profileData.nis);
-        const { data: studentByNis, error: nisError } = await supabase
-          .from('students')
-          .select('*')
-          .eq('nis', profileData.nis)
+      // If not found by user_id, try to find by profile NIS and link them
+      if (!studentData) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('nis')
+          .eq('id', user.id)
           .maybeSingle();
 
-        console.log('Student data by NIS:', studentByNis);
-        studentData = studentByNis;
-
-        // If found student by NIS but user_id is null, link them
-        if (studentByNis && !studentByNis.user_id) {
-          console.log('Linking student record to user account');
-          const { error: updateError } = await supabase
+        if (profileData?.nis) {
+          console.log('Trying to find student by NIS:', profileData.nis);
+          const { data: studentByNis, error: nisError } = await supabase
             .from('students')
-            .update({ user_id: user.id })
-            .eq('id', studentByNis.id);
+            .select('*')
+            .eq('nis', profileData.nis)
+            .maybeSingle();
 
-          if (updateError) {
-            console.error('Error linking student to user:', updateError);
-          } else {
-            console.log('Successfully linked student to user account');
-            studentData = { ...studentByNis, user_id: user.id };
-            toast({
-              title: "Berhasil",
-              description: "Data siswa berhasil dihubungkan dengan akun Anda"
-            });
+          if (nisError && nisError.code !== 'PGRST116') {
+            throw nisError;
+          }
+
+          if (studentByNis) {
+            // Link student to user account
+            console.log('Linking student record to user account');
+            const { error: linkError } = await supabase
+              .from('students')
+              .update({ user_id: user.id })
+              .eq('id', studentByNis.id);
+
+            if (linkError) {
+              console.error('Error linking student to user:', linkError);
+            } else {
+              studentData = { ...studentByNis, user_id: user.id };
+              toast({
+                title: "Berhasil",
+                description: "Data siswa berhasil dihubungkan dengan akun Anda"
+              });
+            }
           }
         }
       }
 
-      // Set debug info
-      setDebugInfo({
-        userId: user.id,
-        userEmail: user.email,
-        userRoles: user.roles,
-        profileData,
-        studentByUserId,
-        finalStudentData: studentData
-      });
-
-      if (studentData) {
-        setStudentData(studentData);
-      } else {
-        console.log('No student data found for user:', user.id);
-        setStudentData(null);
-      }
-
-      if (studentError) {
-        console.error('Error fetching student data:', studentError);
-      }
-
+      setStudentData(studentData);
     } catch (error) {
       console.error('Error in fetchStudentData:', error);
       toast({
@@ -189,23 +169,10 @@ export const StudentProfile = () => {
           <AlertDescription>
             <strong>Data Siswa Tidak Ditemukan</strong><br/>
             User ID: {user?.id}<br/>
+            Email: {userEmail}<br/>
             Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
           </AlertDescription>
         </Alert>
-
-        {/* Debug Information - Only show in development */}
-        {process.env.NODE_ENV === 'development' && debugInfo && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Debug Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs bg-gray-100 p-4 rounded overflow-auto">
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
 
         <Card>
           <CardContent className="p-6 text-center">
@@ -221,7 +188,7 @@ export const StudentProfile = () => {
                 <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
                 <ul className="text-sm text-blue-700 space-y-1 text-left">
                   <li>• Hubungi bagian tata usaha sekolah</li>
-                  <li>• Berikan informasi akun Anda: {user?.email}</li>
+                  <li>• Berikan informasi akun Anda: {userEmail}</li>
                   <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
                   <li>• Atau pastikan NIS di profil Anda sudah benar</li>
                 </ul>
@@ -238,6 +205,22 @@ export const StudentProfile = () => {
 
   return (
     <div className="space-y-6">
+      {/* Email Information Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Informasi Akun
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <Label>Email</Label>
+            <Input value={userEmail || 'Tidak tersedia'} disabled />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -277,6 +260,7 @@ export const StudentProfile = () => {
                 value={studentData.phone || ''} 
                 disabled={!isEditing}
                 onChange={(e) => setStudentData({...studentData, phone: e.target.value})}
+                placeholder="Masukkan nomor telepon"
               />
             </div>
           </div>
@@ -287,6 +271,7 @@ export const StudentProfile = () => {
               value={studentData.address || ''} 
               disabled={!isEditing}
               onChange={(e) => setStudentData({...studentData, address: e.target.value})}
+              placeholder="Masukkan alamat lengkap"
             />
           </div>
         </CardContent>
@@ -304,6 +289,7 @@ export const StudentProfile = () => {
                 value={studentData.parent_name || ''} 
                 disabled={!isEditing}
                 onChange={(e) => setStudentData({...studentData, parent_name: e.target.value})}
+                placeholder="Masukkan nama orang tua/wali"
               />
             </div>
             <div>
@@ -312,6 +298,7 @@ export const StudentProfile = () => {
                 value={studentData.parent_phone || ''} 
                 disabled={!isEditing}
                 onChange={(e) => setStudentData({...studentData, parent_phone: e.target.value})}
+                placeholder="Masukkan nomor telepon orang tua"
               />
             </div>
           </div>
@@ -322,6 +309,7 @@ export const StudentProfile = () => {
               value={studentData.parent_address || ''} 
               disabled={!isEditing}
               onChange={(e) => setStudentData({...studentData, parent_address: e.target.value})}
+              placeholder="Masukkan alamat orang tua/wali"
             />
           </div>
         </CardContent>

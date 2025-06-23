@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { ClipboardList, Save } from 'lucide-react';
+import { ClipboardList, Save, Link } from 'lucide-react';
 
 export const StudentActivityProposalForm = () => {
   const { user } = useAuth();
@@ -25,7 +25,8 @@ export const StudentActivityProposalForm = () => {
     location: '',
     estimated_participants: '',
     budget_estimation: '',
-    organizer_name: ''
+    organizer_name: '',
+    document_link: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,7 +55,9 @@ export const StudentActivityProposalForm = () => {
           estimated_participants: formData.estimated_participants ? parseInt(formData.estimated_participants) : null,
           budget_estimation: formData.budget_estimation ? parseFloat(formData.budget_estimation) : null,
           organizer_name: formData.organizer_name,
-          status: 'draft'
+          status: 'draft',
+          organizer_id: user.id,
+          document_urls: formData.document_link ? [formData.document_link] : null
         });
 
       if (error) throw error;
@@ -76,7 +79,8 @@ export const StudentActivityProposalForm = () => {
         location: '',
         estimated_participants: '',
         budget_estimation: '',
-        organizer_name: ''
+        organizer_name: '',
+        document_link: ''
       });
     } catch (error) {
       console.error('Error saving proposal:', error);
@@ -101,7 +105,7 @@ export const StudentActivityProposalForm = () => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="title">Judul Kegiatan</Label>
+            <Label htmlFor="title">Judul Kegiatan *</Label>
             <Input
               id="title"
               value={formData.title}
@@ -112,7 +116,7 @@ export const StudentActivityProposalForm = () => {
           </div>
 
           <div>
-            <Label htmlFor="organizer_name">Nama Penyelenggara</Label>
+            <Label htmlFor="organizer_name">Nama Penyelenggara *</Label>
             <Input
               id="organizer_name"
               value={formData.organizer_name}
@@ -123,7 +127,7 @@ export const StudentActivityProposalForm = () => {
           </div>
 
           <div>
-            <Label htmlFor="activity_type">Jenis Kegiatan</Label>
+            <Label htmlFor="activity_type">Jenis Kegiatan *</Label>
             <select
               id="activity_type"
               className="w-full p-2 border rounded-md"
@@ -151,7 +155,7 @@ export const StudentActivityProposalForm = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="start_date">Tanggal Mulai</Label>
+              <Label htmlFor="start_date">Tanggal Mulai *</Label>
               <Input
                 id="start_date"
                 type="date"
@@ -161,7 +165,7 @@ export const StudentActivityProposalForm = () => {
               />
             </div>
             <div>
-              <Label htmlFor="end_date">Tanggal Selesai</Label>
+              <Label htmlFor="end_date">Tanggal Selesai *</Label>
               <Input
                 id="end_date"
                 type="date"
@@ -226,6 +230,23 @@ export const StudentActivityProposalForm = () => {
             </div>
           </div>
 
+          <div>
+            <Label htmlFor="document_link" className="flex items-center gap-2">
+              <Link className="h-4 w-4" />
+              Link Dokumen Google Drive (Opsional)
+            </Label>
+            <Input
+              id="document_link"
+              type="url"
+              value={formData.document_link}
+              onChange={(e) => setFormData({...formData, document_link: e.target.value})}
+              placeholder="https://drive.google.com/..."
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Masukkan link Google Drive yang berisi dokumen pendukung proposal (RAB, rundown, dll)
+            </p>
+          </div>
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-medium text-blue-800 mb-2">Catatan Penting:</h4>
             <ul className="text-sm text-blue-700 space-y-1">
@@ -233,6 +254,7 @@ export const StudentActivityProposalForm = () => {
               <li>• Setelah melengkapi semua dokumen, Anda dapat mengajukan untuk review</li>
               <li>• Proposal akan direview oleh koordinator dan wakil kepala sekolah</li>
               <li>• Pastikan semua informasi yang diisi sudah benar dan lengkap</li>
+              <li>• Link Google Drive harus dapat diakses oleh reviewer</li>
             </ul>
           </div>
 
