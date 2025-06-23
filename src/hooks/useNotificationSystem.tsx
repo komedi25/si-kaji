@@ -48,6 +48,7 @@ export function useNotificationSystem() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   // Get notification templates
   const { data: templates = [] } = useQuery({
@@ -97,18 +98,13 @@ export function useNotificationSystem() {
   });
 
   useEffect(() => {
-    if (!user?.id) return;
-
-    // Clean up any existing channel first
-    if (channelRef.current) {
-      console.log('Cleaning up existing useNotificationSystem channel');
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
+    if (!user?.id || isSubscribedRef.current || channelRef.current) {
+      return;
     }
 
     // Set up real-time subscription for notifications
     const channel = supabase
-      .channel(`notification-system-${user.id}`)
+      .channel(`notification-system-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -133,18 +129,24 @@ export function useNotificationSystem() {
             queryKey: ['notifications', user.id] 
           });
         }
-      )
-      .subscribe((status) => {
-        console.log('useNotificationSystem subscription status:', status);
-      });
+      );
 
     channelRef.current = channel;
+    isSubscribedRef.current = true;
+
+    channel.subscribe((status) => {
+      console.log('useNotificationSystem subscription status:', status);
+      if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+        isSubscribedRef.current = false;
+      }
+    });
 
     return () => {
       console.log('useNotificationSystem cleanup triggered');
-      if (channelRef.current) {
+      if (channelRef.current && isSubscribedRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
     };
   }, [user?.id, toast, queryClient]);

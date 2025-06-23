@@ -10,19 +10,17 @@ export const RealtimeUpdates = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   useEffect(() => {
-    // Clean up any existing channel first
-    if (channelRef.current) {
-      console.log('Cleaning up existing RealtimeUpdates channel');
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-      setIsConnected(false);
+    // Prevent multiple subscriptions
+    if (isSubscribedRef.current || channelRef.current) {
+      return;
     }
 
     // Set up realtime subscriptions for critical tables
     const channel = supabase
-      .channel('realtime-updates-dashboard')
+      .channel(`realtime-updates-dashboard-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -77,30 +75,38 @@ export const RealtimeUpdates = () => {
             variant: "destructive"
           });
         }
-      )
-      .subscribe((status) => {
-        console.log('RealtimeUpdates subscription status:', status);
-        setIsConnected(status === 'SUBSCRIBED');
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('RealtimeUpdates successfully connected');
-          toast({
-            title: "Koneksi Realtime Aktif",
-            description: "Sistem akan otomatis memperbarui data terbaru",
-          });
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('RealtimeUpdates connection error');
-          setIsConnected(false);
-        }
-      });
+      );
 
     channelRef.current = channel;
+    isSubscribedRef.current = true;
+
+    // Subscribe with proper error handling
+    channel.subscribe((status) => {
+      console.log('RealtimeUpdates subscription status:', status);
+      setIsConnected(status === 'SUBSCRIBED');
+      
+      if (status === 'SUBSCRIBED') {
+        console.log('RealtimeUpdates successfully connected');
+        toast({
+          title: "Koneksi Realtime Aktif",
+          description: "Sistem akan otomatis memperbarui data terbaru",
+        });
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('RealtimeUpdates connection error');
+        setIsConnected(false);
+        isSubscribedRef.current = false;
+      } else if (status === 'CLOSED') {
+        setIsConnected(false);
+        isSubscribedRef.current = false;
+      }
+    });
 
     return () => {
       console.log('RealtimeUpdates cleanup triggered');
-      if (channelRef.current) {
+      if (channelRef.current && isSubscribedRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
+        isSubscribedRef.current = false;
       }
       setIsConnected(false);
     };

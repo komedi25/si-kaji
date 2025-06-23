@@ -43,6 +43,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   const { sendNotificationFromTemplate } = useNotificationSystem();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const channelRef = useRef<any>(null);
+  const isSubscribedRef = useRef(false);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -81,16 +82,14 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     if (user) {
       fetchNotifications();
 
-      // Clean up any existing channel first
-      if (channelRef.current) {
-        console.log('Cleaning up existing useNotifications channel');
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      // Prevent multiple subscriptions
+      if (isSubscribedRef.current || channelRef.current) {
+        return;
       }
 
       // Subscribe to real-time notifications
       const channel = supabase
-        .channel(`use-notifications-${user.id}`)
+        .channel(`use-notifications-${user.id}-${Date.now()}`)
         .on(
           'postgres_changes',
           {
@@ -114,18 +113,24 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
               duration: 5000,
             });
           }
-        )
-        .subscribe((status) => {
-          console.log('useNotifications subscription status:', status);
-        });
+        );
 
       channelRef.current = channel;
+      isSubscribedRef.current = true;
+
+      channel.subscribe((status) => {
+        console.log('useNotifications subscription status:', status);
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          isSubscribedRef.current = false;
+        }
+      });
 
       return () => {
         console.log('useNotifications cleanup triggered');
-        if (channelRef.current) {
+        if (channelRef.current && isSubscribedRef.current) {
           supabase.removeChannel(channelRef.current);
           channelRef.current = null;
+          isSubscribedRef.current = false;
         }
       };
     }
