@@ -36,7 +36,7 @@ export const BulkUserManager = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async () => {
-      // First get profiles with their user roles
+      // Get profiles with basic info
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
@@ -57,14 +57,29 @@ export const BulkUserManager = () => {
       
       if (rolesError) throw rolesError;
 
-      // Get emails from auth.users
+      // Get emails from auth.users (this requires admin privileges)
       const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
-      if (authError) throw authError;
+      if (authError) {
+        console.warn('Could not fetch auth users (admin privileges required):', authError);
+        // Fallback: use profiles data without email
+        return (profilesData || []).map(profile => {
+          const userRoles = (rolesData || []).filter(role => role.user_id === profile.id);
+          
+          return {
+            ...profile,
+            email: 'N/A',
+            user_roles: userRoles.map(role => ({
+              role: role.role,
+              is_active: role.is_active
+            }))
+          };
+        }) as UserWithRoles[];
+      }
 
-      // Combine the data
-      return profilesData?.map(profile => {
-        const userRoles = rolesData?.filter(role => role.user_id === profile.id) || [];
+      // Combine the data when auth is available
+      return (profilesData || []).map(profile => {
+        const userRoles = (rolesData || []).filter(role => role.user_id === profile.id);
         const authUser = authUsers.users.find(user => user.id === profile.id);
         
         return {
@@ -83,17 +98,17 @@ export const BulkUserManager = () => {
     mutationFn: async ({ userIds, action, role }: { userIds: string[]; action: string; role?: AppRole }) => {
       if (action === 'activate_role' && role) {
         // Activate specific role for selected users
-        const updates = userIds.map(userId => ({
-          user_id: userId,
-          role: role as AppRole,
-          is_active: true
-        }));
-
-        const { error } = await supabase
-          .from('user_roles')
-          .upsert(updates, { onConflict: 'user_id,role' });
-        
-        if (error) throw error;
+        for (const userId of userIds) {
+          const { error } = await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: userId,
+              role: role,
+              is_active: true
+            }, { onConflict: 'user_id,role' });
+          
+          if (error) throw error;
+        }
 
       } else if (action === 'deactivate_role' && role) {
         // Deactivate specific role for selected users
