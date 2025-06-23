@@ -42,6 +42,17 @@ export const useUserManagement = () => {
 
       console.log('User roles fetched:', userRoles?.length || 0);
 
+      // Get all students data
+      const { data: allStudents, error: studentsError } = await supabase
+        .from('students')
+        .select('*');
+
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+      }
+
+      console.log('Students fetched:', allStudents?.length || 0);
+
       // Process profiles into AllUserData
       const combinedUsers: AllUserData[] = [];
 
@@ -60,29 +71,49 @@ export const useUserManagement = () => {
           let studentStatus = 'active';
 
           if (isStudent) {
-            // Get student data and current class
-            const { data: studentData } = await supabase
-              .from('students')
-              .select(`
-                id,
-                status,
-                student_enrollments!inner (
-                  classes (
-                    name,
-                    grade
-                  )
-                )
-              `)
-              .eq('user_id', profile.id)
-              .eq('student_enrollments.status', 'active')
-              .maybeSingle();
+            // Try to find student data by user_id first
+            let studentData = allStudents?.find(s => s.user_id === profile.id);
+            
+            // If not found by user_id, try by NIS if profile has NIS
+            if (!studentData && profile.nis) {
+              studentData = allStudents?.find(s => s.nis === profile.nis);
+              
+              // If found student by NIS but no user_id, automatically link them
+              if (studentData && !studentData.user_id) {
+                console.log(`Auto-linking student ${studentData.nis} to user ${profile.id}`);
+                
+                // Update student record to link with user
+                const { error: linkError } = await supabase
+                  .from('students')
+                  .update({ user_id: profile.id })
+                  .eq('id', studentData.id);
+
+                if (!linkError) {
+                  studentData.user_id = profile.id;
+                  console.log(`Successfully linked student ${studentData.nis} to user ${profile.id}`);
+                }
+              }
+            }
 
             if (studentData) {
               studentId = studentData.id;
               studentStatus = studentData.status;
-              const enrollment = studentData.student_enrollments?.[0];
-              if (enrollment?.classes) {
-                currentClass = `${enrollment.classes.grade} ${enrollment.classes.name}`;
+
+              // Get current class enrollment
+              const { data: enrollmentData } = await supabase
+                .from('student_enrollments')
+                .select(`
+                  classes (
+                    name,
+                    grade
+                  )
+                `)
+                .eq('student_id', studentData.id)
+                .eq('status', 'active')
+                .maybeSingle();
+
+              if (enrollmentData?.classes) {
+                currentClass = `${enrollmentData.classes.grade} ${enrollmentData.classes.name}`;
               }
             }
           }

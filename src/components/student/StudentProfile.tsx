@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Save } from 'lucide-react';
+import { User, Save, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface StudentData {
   id: string;
@@ -24,6 +25,7 @@ interface StudentData {
   parent_phone?: string;
   parent_address?: string;
   photo_url?: string;
+  user_id?: string;
 }
 
 export const StudentProfile = () => {
@@ -33,6 +35,7 @@ export const StudentProfile = () => {
   const [saving, setSaving] = useState(false);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -46,33 +49,85 @@ export const StudentProfile = () => {
       return;
     }
 
+    console.log('Fetching student data for user ID:', user.id);
+    
     try {
-      const { data, error } = await supabase
+      // Debug: Check profile data first
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      console.log('Profile data:', profileData);
+      
+      // Check student data by user_id
+      const { data: studentByUserId, error: studentError } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching student data:', error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data pribadi",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
+      console.log('Student data by user_id:', studentByUserId);
+
+      // If no student found by user_id, try to find by NIS from profile
+      let studentData = studentByUserId;
+      
+      if (!studentData && profileData?.nis) {
+        console.log('Trying to find student by NIS:', profileData.nis);
+        const { data: studentByNis, error: nisError } = await supabase
+          .from('students')
+          .select('*')
+          .eq('nis', profileData.nis)
+          .maybeSingle();
+
+        console.log('Student data by NIS:', studentByNis);
+        studentData = studentByNis;
+
+        // If found student by NIS but user_id is null, link them
+        if (studentByNis && !studentByNis.user_id) {
+          console.log('Linking student record to user account');
+          const { error: updateError } = await supabase
+            .from('students')
+            .update({ user_id: user.id })
+            .eq('id', studentByNis.id);
+
+          if (updateError) {
+            console.error('Error linking student to user:', updateError);
+          } else {
+            console.log('Successfully linked student to user account');
+            studentData = { ...studentByNis, user_id: user.id };
+            toast({
+              title: "Berhasil",
+              description: "Data siswa berhasil dihubungkan dengan akun Anda"
+            });
+          }
+        }
       }
 
-      if (data) {
-        setStudentData(data);
+      // Set debug info
+      setDebugInfo({
+        userId: user.id,
+        userEmail: user.email,
+        userRoles: user.roles,
+        profileData,
+        studentByUserId,
+        finalStudentData: studentData
+      });
+
+      if (studentData) {
+        setStudentData(studentData);
       } else {
-        // If no student data found, show message but don't show error
         console.log('No student data found for user:', user.id);
         setStudentData(null);
       }
+
+      if (studentError) {
+        console.error('Error fetching student data:', studentError);
+      }
+
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in fetchStudentData:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data pribadi",
@@ -128,27 +183,56 @@ export const StudentProfile = () => {
 
   if (!studentData) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <div className="space-y-4">
-            <div className="text-center">
-              <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">Data Siswa Belum Tersedia</h3>
-              <p className="text-gray-500 mt-2">
-                Data pribadi Anda belum terdaftar dalam sistem. Silakan hubungi administrator sekolah untuk mendaftarkan data Anda.
-              </p>
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Data Siswa Tidak Ditemukan</strong><br/>
+            User ID: {user?.id}<br/>
+            Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
+          </AlertDescription>
+        </Alert>
+
+        {/* Debug Information - Only show in development */}
+        {process.env.NODE_ENV === 'development' && debugInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Debug Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-xs bg-gray-100 p-4 rounded overflow-auto">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="space-y-4">
+              <div className="text-center">
+                <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900">Data Siswa Belum Tersedia</h3>
+                <p className="text-gray-500 mt-2">
+                  Data pribadi Anda belum terdaftar dalam sistem atau belum terhubung dengan akun ini.
+                </p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
+                <ul className="text-sm text-blue-700 space-y-1 text-left">
+                  <li>• Hubungi bagian tata usaha sekolah</li>
+                  <li>• Berikan informasi akun Anda: {user?.email}</li>
+                  <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
+                  <li>• Atau pastikan NIS di profil Anda sudah benar</li>
+                </ul>
+              </div>
+              <Button onClick={fetchStudentData} variant="outline">
+                Coba Lagi
+              </Button>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Hubungi bagian tata usaha sekolah</li>
-                <li>• Berikan informasi akun Anda: {user?.email}</li>
-                <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
