@@ -24,53 +24,68 @@ interface UserWithRoles {
   }>;
 }
 
+type AppRole = 'admin' | 'kepala_sekolah' | 'tppk' | 'arps' | 'p4gn' | 'koordinator_ekstrakurikuler' | 'wali_kelas' | 'guru_bk' | 'waka_kesiswaan' | 'pelatih_ekstrakurikuler' | 'siswa' | 'orang_tua' | 'penanggung_jawab_sarpras' | 'osis';
+
 export const BulkUserManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState('');
-  const [bulkRole, setBulkRole] = useState('');
+  const [bulkRole, setBulkRole] = useState<AppRole | ''>('');
 
   const { data: users, isLoading } = useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get profiles with their user roles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select(`
           id,
           full_name,
           nip,
           nis,
-          phone,
-          user_roles (
-            role,
-            is_active
-          )
+          phone
         `)
         .order('full_name');
       
-      if (error) throw error;
+      if (profilesError) throw profilesError;
+
+      // Get user roles separately
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role, is_active');
+      
+      if (rolesError) throw rolesError;
 
       // Get emails from auth.users
-      const userIds = data?.map(user => user.id) || [];
       const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) throw authError;
 
-      return data?.map(user => ({
-        ...user,
-        email: authUsers.users.find(authUser => authUser.id === user.id)?.email || 'N/A'
-      })) as UserWithRoles[];
+      // Combine the data
+      return profilesData?.map(profile => {
+        const userRoles = rolesData?.filter(role => role.user_id === profile.id) || [];
+        const authUser = authUsers.users.find(user => user.id === profile.id);
+        
+        return {
+          ...profile,
+          email: authUser?.email || 'N/A',
+          user_roles: userRoles.map(role => ({
+            role: role.role,
+            is_active: role.is_active
+          }))
+        };
+      }) as UserWithRoles[];
     }
   });
 
   const bulkUpdateMutation = useMutation({
-    mutationFn: async ({ userIds, action, role }: { userIds: string[]; action: string; role?: string }) => {
+    mutationFn: async ({ userIds, action, role }: { userIds: string[]; action: string; role?: AppRole }) => {
       if (action === 'activate_role' && role) {
         // Activate specific role for selected users
         const updates = userIds.map(userId => ({
           user_id: userId,
-          role: role,
+          role: role as AppRole,
           is_active: true
         }));
 
@@ -178,7 +193,7 @@ export const BulkUserManager = () => {
       bulkUpdateMutation.mutate({
         userIds: selectedUsers,
         action: bulkAction,
-        role: bulkRole || undefined
+        role: bulkRole as AppRole || undefined
       });
     }
   };
@@ -193,7 +208,7 @@ export const BulkUserManager = () => {
       ));
   };
 
-  const availableRoles = [
+  const availableRoles: AppRole[] = [
     'admin', 'kepala_sekolah', 'tppk', 'arps', 'p4gn', 
     'koordinator_ekstrakurikuler', 'wali_kelas', 'guru_bk', 
     'waka_kesiswaan', 'pelatih_ekstrakurikuler', 'siswa', 
@@ -238,14 +253,14 @@ export const BulkUserManager = () => {
             </Select>
 
             {(bulkAction === 'activate_role' || bulkAction === 'deactivate_role') && (
-              <Select value={bulkRole} onValueChange={setBulkRole}>
+              <Select value={bulkRole} onValueChange={(value: AppRole) => setBulkRole(value)}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Pilih role" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableRoles.map(role => (
                     <SelectItem key={role} value={role}>
-                      {role.replace('_', ' ')}
+                      {role.replace(/_/g, ' ')}
                     </SelectItem>
                   ))}
                 </SelectContent>
