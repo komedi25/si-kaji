@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,61 +35,66 @@ export const BulkUserManager = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['users-with-roles'],
     queryFn: async () => {
-      // Get profiles with basic info
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          nip,
-          nis,
-          phone
-        `)
-        .order('full_name');
-      
-      if (profilesError) throw profilesError;
+      try {
+        // Get profiles with basic info
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            full_name,
+            nip,
+            nis,
+            phone
+          `)
+          .order('full_name');
+        
+        if (profilesError) throw profilesError;
 
-      // Get user roles separately
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role, is_active');
-      
-      if (rolesError) throw rolesError;
+        // Get user roles separately
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role, is_active');
+        
+        if (rolesError) throw rolesError;
 
-      // Get emails from auth.users (this requires admin privileges)
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.warn('Could not fetch auth users (admin privileges required):', authError);
-        // Fallback: use profiles data without email
-        return (profilesData || []).map(profile => {
-          const userRoles = (rolesData || []).filter(role => role.user_id === profile.id);
+        const profiles = profilesData || [];
+        const roles = rolesData || [];
+
+        // Try to get emails from auth.users (this requires admin privileges)
+        let authUsers: any[] = [];
+        try {
+          const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers();
+          if (!authError && authUsersData) {
+            authUsers = authUsersData.users;
+          }
+        } catch (error) {
+          console.warn('Could not fetch auth users (admin privileges required):', error);
+        }
+
+        // Combine the data
+        const combinedUsers: UserWithRoles[] = profiles.map(profile => {
+          const userRoles = roles.filter(role => role.user_id === profile.id);
+          const authUser = authUsers.find(user => user.id === profile.id);
           
           return {
-            ...profile,
-            email: 'N/A',
+            id: profile.id,
+            full_name: profile.full_name,
+            nip: profile.nip,
+            nis: profile.nis,
+            phone: profile.phone,
+            email: authUser?.email || 'N/A',
             user_roles: userRoles.map(role => ({
               role: role.role,
               is_active: role.is_active
             }))
           };
-        }) as UserWithRoles[];
-      }
+        });
 
-      // Combine the data when auth is available
-      return (profilesData || []).map(profile => {
-        const userRoles = (rolesData || []).filter(role => role.user_id === profile.id);
-        const authUser = authUsers.users.find(user => user.id === profile.id);
-        
-        return {
-          ...profile,
-          email: authUser?.email || 'N/A',
-          user_roles: userRoles.map(role => ({
-            role: role.role,
-            is_active: role.is_active
-          }))
-        };
-      }) as UserWithRoles[];
+        return combinedUsers;
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
     }
   });
 
@@ -98,17 +102,17 @@ export const BulkUserManager = () => {
     mutationFn: async ({ userIds, action, role }: { userIds: string[]; action: string; role?: AppRole }) => {
       if (action === 'activate_role' && role) {
         // Activate specific role for selected users
-        for (const userId of userIds) {
-          const { error } = await supabase
-            .from('user_roles')
-            .upsert({
-              user_id: userId,
-              role: role,
-              is_active: true
-            }, { onConflict: 'user_id,role' });
-          
-          if (error) throw error;
-        }
+        const insertData = userIds.map(userId => ({
+          user_id: userId,
+          role: role as any,
+          is_active: true
+        }));
+
+        const { error } = await supabase
+          .from('user_roles')
+          .upsert(insertData, { onConflict: 'user_id,role' });
+        
+        if (error) throw error;
 
       } else if (action === 'deactivate_role' && role) {
         // Deactivate specific role for selected users
@@ -132,8 +136,22 @@ export const BulkUserManager = () => {
       } else if (action === 'delete_users') {
         // Delete selected users (this will cascade to user_roles)
         for (const userId of userIds) {
-          const { error } = await supabase.auth.admin.deleteUser(userId);
-          if (error) throw error;
+          try {
+            const { error } = await supabase.auth.admin.deleteUser(userId);
+            if (error) {
+              console.warn(`Could not delete user ${userId} from auth:`, error);
+            }
+          } catch (error) {
+            console.warn(`Could not delete user ${userId} from auth:`, error);
+          }
+          
+          // Also delete from profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', userId);
+          
+          if (profileError) throw profileError;
         }
       }
     },
