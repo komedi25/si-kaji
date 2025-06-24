@@ -71,6 +71,7 @@ export const useStudentData = () => {
         .maybeSingle();
 
       if (studentError && studentError.code !== 'PGRST116') {
+        console.error('Student lookup error:', studentError);
         throw studentError;
       }
 
@@ -160,23 +161,50 @@ export const useStudentData = () => {
         }
       }
 
-      // Method 5: Check if there are any students without user_id that match email pattern
-      if (user.email) {
-        console.log('Method 5: Checking for students without user_id...');
-        const { data: allUnlinkedStudents } = await supabase
-          .from('students')
-          .select('*')
-          .is('user_id', null);
+      // Method 5: Check all students without user_id and try email matching
+      console.log('Method 5: Checking for students without user_id...');
+      const { data: allStudents, error: allStudentsError } = await supabase
+        .from('students')
+        .select('*')
+        .is('user_id', null);
 
-        console.log('Unlinked students:', allUnlinkedStudents?.length || 0);
+      if (allStudentsError) {
+        console.error('Error fetching all students:', allStudentsError);
+      } else {
+        console.log('All unlinked students:', allStudents?.length || 0);
         
-        // If only one unlinked student exists, suggest linking
-        if (allUnlinkedStudents && allUnlinkedStudents.length === 1) {
-          console.log('Only one unlinked student found, consider auto-linking');
+        if (allStudents && allStudents.length > 0) {
+          // Try to find student by email pattern matching (if email contains name parts)
+          if (user.email) {
+            const emailPrefix = user.email.split('@')[0];
+            const matchingStudent = allStudents.find(student => 
+              student.full_name.toLowerCase().includes(emailPrefix.toLowerCase()) ||
+              emailPrefix.toLowerCase().includes(student.full_name.toLowerCase().split(' ')[0])
+            );
+            
+            if (matchingStudent) {
+              console.log('✓ Found student by email pattern:', matchingStudent);
+              const linked = await linkStudentToUser(matchingStudent.id, user.id);
+              
+              if (linked) {
+                studentData = { ...matchingStudent, user_id: user.id };
+                if (showToast) {
+                  toast({
+                    title: "Berhasil",
+                    description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan email"
+                  });
+                }
+                setStudentData(studentData);
+                setLoading(false);
+                return studentData;
+              }
+            }
+          }
         }
       }
 
       console.log('✗ No student data found with any method');
+      console.log('Available students without user_id:', allStudents?.map(s => ({ id: s.id, name: s.full_name, nis: s.nis })));
       setError('Student data not found');
       setStudentData(null);
       setLoading(false);

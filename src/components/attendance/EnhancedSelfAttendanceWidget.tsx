@@ -46,7 +46,7 @@ interface SelfAttendance {
 export const EnhancedSelfAttendanceWidget = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading: studentLoading } = useStudentData();
+  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [locations, setLocations] = useState<AttendanceLocation[]>([]);
@@ -267,6 +267,7 @@ export const EnhancedSelfAttendanceWidget = () => {
           student_id: studentData.id,
           attendance_date: today,
           check_in_time: currentTime,
+          check_out_time: null,
           check_in_latitude: latitude,
           check_in_longitude: longitude,
           check_in_location_id: location.id,
@@ -458,17 +459,48 @@ export const EnhancedSelfAttendanceWidget = () => {
     );
   }
 
-  if (!studentData) {
+  if (studentError || !studentData) {
     return (
       <Card>
-        <CardContent className="p-6 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto text-red-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Data Siswa Tidak Ditemukan</h3>
-          <p className="text-gray-500 mb-4">
-            Akun Anda belum terhubung dengan data siswa. Hubungi admin untuk menghubungkan akun.
-          </p>
-          <div className="text-xs text-gray-400">
-            User ID: {user?.id}
+        <CardContent className="p-6">
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Data Siswa Tidak Ditemukan</strong><br/>
+                User ID: {user?.id}<br/>
+                Email: {user?.email}<br/>
+                Error: {studentError}<br/><br/>
+                <strong>Debug Information:</strong><br/>
+                Sistem tidak dapat menemukan data siswa yang terhubung dengan akun Anda.
+              </AlertDescription>
+            </Alert>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-800 mb-2">Langkah Troubleshooting:</h4>
+              <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                <li>Pastikan data siswa sudah ada di database</li>
+                <li>Periksa apakah NIS di profil akun sesuai dengan NIS di data siswa</li>
+                <li>Periksa apakah nama di profil akun sesuai dengan nama di data siswa</li>
+                <li>Hubungi admin untuk menghubungkan akun secara manual</li>
+              </ol>
+              
+              <div className="mt-3 p-3 bg-white rounded border">
+                <h5 className="font-medium text-blue-800 text-xs mb-1">Info Debug:</h5>
+                <div className="text-xs text-blue-600 space-y-1">
+                  <div>User ID: {user?.id}</div>
+                  <div>Email: {user?.email}</div>
+                  <div>Student Error: {studentError}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={refetch} variant="outline" className="flex-1">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Coba Lagi
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
