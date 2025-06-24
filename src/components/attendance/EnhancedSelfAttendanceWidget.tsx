@@ -6,6 +6,7 @@ import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, Shield, Brain } fro
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useStudentData } from '@/hooks/useStudentData';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { attendanceSecurityManager } from './SecurityEnhancements';
@@ -45,13 +46,13 @@ interface SelfAttendance {
 export const EnhancedSelfAttendanceWidget = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { studentData, loading: studentLoading } = useStudentData();
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [locations, setLocations] = useState<AttendanceLocation[]>([]);
   const [schedule, setSchedule] = useState<AttendanceSchedule | null>(null);
   const [todayAttendance, setTodayAttendance] = useState<SelfAttendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [studentId, setStudentId] = useState<string | null>(null);
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
   const [geofenceValidation, setGeofenceValidation] = useState<GeofenceValidation | null>(null);
   const [patternAnalysis, setPatternAnalysis] = useState<AttendancePattern | null>(null);
@@ -63,33 +64,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Get student ID from user - FIXED
-  useEffect(() => {
-    const fetchStudentId = async () => {
-      if (!user?.id) return;
-      
-      console.log('Fetching student ID for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
-      
-      if (error) {
-        console.error('Error fetching student ID:', error);
-      } else if (data) {
-        console.log('Student ID found:', data.id);
-        setStudentId(data.id);
-      } else {
-        console.log('No student record found for user');
-      }
-    };
-
-    fetchStudentId();
-  }, [user]);
-
-  // Fetch locations and schedule - IMPROVED
+  // Fetch locations and schedule
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -106,9 +81,9 @@ export const EnhancedSelfAttendanceWidget = () => {
           setLocations(locationsData || []);
         }
 
-        // Fetch today's schedule - fix day matching - FIXED
+        // Fetch today's schedule
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayOfWeek = today.getDay();
         console.log('Today is day:', dayOfWeek, 'Date:', today.toDateString());
         
         const { data: scheduleData, error: scheduleError } = await supabase
@@ -117,7 +92,7 @@ export const EnhancedSelfAttendanceWidget = () => {
           .eq('day_of_week', dayOfWeek)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
-          .maybeSingle(); // Changed from .limit(1) to .maybeSingle()
+          .maybeSingle();
 
         if (scheduleError) {
           console.error('Error fetching schedule:', scheduleError);
@@ -141,20 +116,20 @@ export const EnhancedSelfAttendanceWidget = () => {
     fetchData();
   }, []);
 
-  // Fetch today's attendance - FIXED
+  // Fetch today's attendance
   useEffect(() => {
     const fetchTodayAttendance = async () => {
-      if (!studentId) return;
+      if (!studentData?.id) return;
 
       const today = format(new Date(), 'yyyy-MM-dd');
-      console.log('Fetching attendance for student:', studentId, 'date:', today);
+      console.log('Fetching attendance for student:', studentData.id, 'date:', today);
       
       const { data, error } = await supabase
         .from('student_self_attendances')
         .select('*')
-        .eq('student_id', studentId)
+        .eq('student_id', studentData.id)
         .eq('attendance_date', today)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching today attendance:', error);
@@ -168,7 +143,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     };
 
     fetchTodayAttendance();
-  }, [studentId]);
+  }, [studentData?.id]);
 
   // Enhanced location validation with multi-layer security
   const getCurrentLocation = () => {
@@ -222,7 +197,7 @@ export const EnhancedSelfAttendanceWidget = () => {
         },
         {
           enableHighAccuracy: true,
-          timeout: 15000, // Increased timeout for advanced validation
+          timeout: 15000,
           maximumAge: 30000
         }
       );
@@ -241,7 +216,7 @@ export const EnhancedSelfAttendanceWidget = () => {
   };
 
   const handleCheckIn = async () => {
-    if (!studentId || !schedule) {
+    if (!studentData?.id || !schedule) {
       toast({
         title: "Error",
         description: "Data siswa atau jadwal tidak ditemukan",
@@ -280,7 +255,6 @@ export const EnhancedSelfAttendanceWidget = () => {
       const currentTime = format(now, 'HH:mm:ss');
       const deviceFingerprint = attendanceSecurityManager.generateDeviceFingerprint();
 
-      // Store validation metadata
       const validationMetadata = {
         geofenceValidation: geofenceValidation,
         securityScore: geofenceValidation?.overall.score || 0,
@@ -290,7 +264,7 @@ export const EnhancedSelfAttendanceWidget = () => {
       const { error } = await supabase
         .from('student_self_attendances')
         .upsert({
-          student_id: studentId,
+          student_id: studentData.id,
           attendance_date: today,
           check_in_time: currentTime,
           check_in_latitude: latitude,
@@ -306,9 +280,9 @@ export const EnhancedSelfAttendanceWidget = () => {
       const { data: updatedData } = await supabase
         .from('student_self_attendances')
         .select('*')
-        .eq('student_id', studentId)
+        .eq('student_id', studentData.id)
         .eq('attendance_date', today)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (updatedData) {
         setTodayAttendance(updatedData);
@@ -330,7 +304,7 @@ export const EnhancedSelfAttendanceWidget = () => {
   };
 
   const handleCheckOut = async () => {
-    if (!studentId || !todayAttendance) {
+    if (!studentData?.id || !todayAttendance) {
       toast({
         title: "Error",
         description: "Data siswa atau presensi hari ini tidak ditemukan",
@@ -383,7 +357,7 @@ export const EnhancedSelfAttendanceWidget = () => {
         .from('student_self_attendances')
         .select('*')
         .eq('id', todayAttendance.id)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (updatedData) {
         setTodayAttendance(updatedData);
@@ -469,12 +443,37 @@ export const EnhancedSelfAttendanceWidget = () => {
   // Debug information
   console.log('Widget state:', { 
     schedule, 
-    studentId, 
+    studentId: studentData?.id, 
     todayAttendance, 
     currentTime: format(currentTime, 'HH:mm:ss'),
     canCheckIn: canCheckIn(),
     canCheckOut: canCheckOut()
   });
+
+  if (studentLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertTriangle className="h-12 w-12 mx-auto text-red-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Data Siswa Tidak Ditemukan</h3>
+          <p className="text-gray-500 mb-4">
+            Akun Anda belum terhubung dengan data siswa. Hubungi admin untuk menghubungkan akun.
+          </p>
+          <div className="text-xs text-gray-400">
+            User ID: {user?.id}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -499,20 +498,6 @@ export const EnhancedSelfAttendanceWidget = () => {
                 Hari: {format(currentTime, 'EEEE', { locale: id })} (Day: {currentTime.getDay()})
                 <br />
                 Tidak ditemukan jadwal presensi untuk hari ini. Hubungi admin untuk menambahkan jadwal.
-              </div>
-            </div>
-          )}
-
-          {!studentId && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="font-medium">Data Siswa Tidak Ditemukan</span>
-              </div>
-              <div className="text-sm text-red-600 mt-1">
-                User ID: {user?.id || 'Tidak ada'}
-                <br />
-                Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
               </div>
             </div>
           )}
@@ -590,9 +575,9 @@ export const EnhancedSelfAttendanceWidget = () => {
           <div className="space-y-2">
             <Button
               onClick={handleCheckIn}
-              disabled={!canCheckIn() || loading || !studentId || !schedule}
+              disabled={!canCheckIn() || loading || !studentData?.id || !schedule}
               className="w-full"
-              variant={canCheckIn() && studentId && schedule ? "default" : "secondary"}
+              variant={canCheckIn() && studentData?.id && schedule ? "default" : "secondary"}
             >
               <MapPin className="h-4 w-4 mr-2" />
               {loading ? "Memproses..." : "Check In Enhanced"}
@@ -600,9 +585,9 @@ export const EnhancedSelfAttendanceWidget = () => {
             
             <Button
               onClick={handleCheckOut}
-              disabled={!canCheckOut() || loading || !studentId}
+              disabled={!canCheckOut() || loading || !studentData?.id}
               className="w-full"
-              variant={canCheckOut() && studentId ? "default" : "secondary"}
+              variant={canCheckOut() && studentData?.id ? "default" : "secondary"}
             >
               <MapPin className="h-4 w-4 mr-2" />
               {loading ? "Memproses..." : "Check Out Enhanced"}
@@ -643,9 +628,9 @@ export const EnhancedSelfAttendanceWidget = () => {
         <div className="space-y-4">
           <AdvancedGeofencing onValidation={setGeofenceValidation} />
           
-          {studentId && (
+          {studentData?.id && (
             <MLPatternDetectorComponent 
-              studentId={studentId} 
+              studentId={studentData.id} 
               onPatternAnalyzed={setPatternAnalysis}
             />
           )}

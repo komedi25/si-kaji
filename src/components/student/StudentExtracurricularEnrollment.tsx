@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Activity, Users, Calendar, MapPin, Plus } from 'lucide-react';
+import { useStudentData } from '@/hooks/useStudentData';
+import { Activity, Users, Calendar, MapPin, Plus, AlertTriangle } from 'lucide-react';
 
 interface Extracurricular {
   id: string;
@@ -24,77 +25,13 @@ interface Extracurricular {
 export const StudentExtracurricularEnrollment = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { studentData, loading: studentLoading } = useStudentData();
   const [loading, setLoading] = useState(true);
   const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
-  const [studentId, setStudentId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user?.id) {
-      fetchStudentId();
-    }
-  }, [user]);
 
   useEffect(() => {
     fetchExtracurriculars();
-  }, [studentId]);
-
-  const fetchStudentId = async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Try to find student by user_id first
-      let { data: studentData, error } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      // If not found by user_id, try by NIS from profile
-      if (!studentData) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('nis')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileData?.nis) {
-          const { data: studentByNis } = await supabase
-            .from('students')
-            .select('id')
-            .eq('nis', profileData.nis)
-            .maybeSingle();
-
-          if (studentByNis) {
-            // Link student to user account
-            await supabase
-              .from('students')
-              .update({ user_id: user.id })
-              .eq('id', studentByNis.id);
-            
-            studentData = studentByNis;
-          }
-        }
-      }
-
-      if (studentData) {
-        setStudentId(studentData.id);
-      }
-    } catch (error) {
-      console.error('Error fetching student ID:', error);
-      toast({
-        title: "Error",
-        description: "Tidak dapat menemukan data siswa",
-        variant: "destructive"
-      });
-    }
-  };
+  }, [studentData?.id]);
 
   const fetchExtracurriculars = async () => {
     try {
@@ -151,12 +88,12 @@ export const StudentExtracurricularEnrollment = () => {
       }
 
       let enrollmentsData = [];
-      if (studentId) {
+      if (studentData?.id) {
         // Get student's enrollments
         const { data: enrollments, error: enrollmentsError } = await supabase
           .from('extracurricular_enrollments')
           .select('extracurricular_id, status')
-          .eq('student_id', studentId)
+          .eq('student_id', studentData.id)
           .eq('status', 'active');
 
         if (!enrollmentsError) {
@@ -199,7 +136,7 @@ export const StudentExtracurricularEnrollment = () => {
   };
 
   const handleEnroll = async (extracurricular: Extracurricular) => {
-    if (!studentId) {
+    if (!studentData?.id) {
       toast({
         title: "Error",
         description: "Data siswa tidak ditemukan. Hubungi admin.",
@@ -231,7 +168,7 @@ export const StudentExtracurricularEnrollment = () => {
       const { error } = await supabase
         .from('extracurricular_enrollments')
         .insert({
-          student_id: studentId,
+          student_id: studentData.id,
           extracurricular_id: extracurricular.id,
           status: 'active'
         });
@@ -255,13 +192,13 @@ export const StudentExtracurricularEnrollment = () => {
   };
 
   const handleUnenroll = async (extracurricular: Extracurricular) => {
-    if (!studentId) return;
+    if (!studentData?.id) return;
 
     try {
       const { error } = await supabase
         .from('extracurricular_enrollments')
         .update({ status: 'inactive' })
-        .eq('student_id', studentId)
+        .eq('student_id', studentData.id)
         .eq('extracurricular_id', extracurricular.id);
 
       if (error) throw error;
@@ -282,7 +219,7 @@ export const StudentExtracurricularEnrollment = () => {
     }
   };
 
-  if (loading) {
+  if (studentLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -299,11 +236,15 @@ export const StudentExtracurricularEnrollment = () => {
         </p>
       </div>
 
-      {!studentId && (
+      {!studentData?.id && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="p-4">
-            <p className="text-yellow-800 text-sm">
-              <strong>Perhatian:</strong> Data siswa Anda belum terhubung dengan akun. 
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertTriangle className="h-4 w-4" />
+              <strong>Perhatian:</strong>
+            </div>
+            <p className="text-yellow-800 text-sm mt-1">
+              Data siswa Anda belum terhubung dengan akun. 
               Anda dapat melihat ekstrakurikuler yang tersedia, namun tidak dapat mendaftar. 
               Hubungi admin untuk menghubungkan akun Anda.
             </p>
@@ -356,7 +297,7 @@ export const StudentExtracurricularEnrollment = () => {
               </div>
 
               <div className="pt-3">
-                {!studentId ? (
+                {!studentData?.id ? (
                   <Button disabled className="w-full">
                     Login sebagai siswa untuk mendaftar
                   </Button>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,150 +8,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Save, AlertCircle, Mail } from 'lucide-react';
+import { useStudentData } from '@/hooks/useStudentData';
+import { User, Save, AlertCircle, Mail, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface StudentData {
-  id: string;
-  nis: string;
-  full_name: string;
-  gender: string;
-  birth_place?: string;
-  birth_date?: string;
-  religion?: string;
-  address?: string;
-  phone?: string;
-  parent_name?: string;
-  parent_phone?: string;
-  parent_address?: string;
-  photo_url?: string;
-  user_id?: string;
-}
 
 export const StudentProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const { studentData, loading, error, refetch } = useStudentData();
   const [saving, setSaving] = useState(false);
-  const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    phone: '',
+    address: '',
+    parent_name: '',
+    parent_phone: '',
+    parent_address: ''
+  });
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchStudentData();
-      setUserEmail(user.email || null);
-    }
-  }, [user]);
-
-  const fetchStudentData = async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    console.log('Fetching student data for user ID:', user.id);
-    
-    try {
-      // First try to find student by user_id
-      let { data: studentData, error: studentError } = await supabase
-        .from('students')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (studentError && studentError.code !== 'PGRST116') {
-        throw studentError;
-      }
-
-      // If not found by user_id, try multiple approaches
-      if (!studentData) {
-        console.log('Student not found by user_id, trying alternative methods...');
-        
-        // Get profile data
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('nis, full_name')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        console.log('Profile data:', profileData);
-
-        if (profileData?.nis) {
-          // Try to find by NIS
-          const { data: studentByNis, error: nisError } = await supabase
-            .from('students')
-            .select('*')
-            .eq('nis', profileData.nis)
-            .maybeSingle();
-
-          if (!nisError && studentByNis) {
-            console.log('Found student by NIS, linking to user account...');
-            studentData = studentByNis;
-            
-            // Link student to user account
-            const { error: linkError } = await supabase
-              .from('students')
-              .update({ user_id: user.id })
-              .eq('id', studentByNis.id);
-
-            if (linkError) {
-              console.error('Error linking student to user:', linkError);
-            } else {
-              studentData = { ...studentByNis, user_id: user.id };
-              toast({
-                title: "Berhasil",
-                description: "Data siswa berhasil dihubungkan dengan akun Anda"
-              });
-            }
-          }
-        }
-
-        // If still not found, try by name match
-        if (!studentData && profileData?.full_name) {
-          console.log('Trying to find by name match...');
-          const { data: studentByName, error: nameError } = await supabase
-            .from('students')
-            .select('*')
-            .ilike('full_name', `%${profileData.full_name}%`)
-            .is('user_id', null)
-            .maybeSingle();
-
-          if (!nameError && studentByName) {
-            console.log('Found student by name, linking to user account...');
-            
-            // Link student to user account
-            const { error: linkError } = await supabase
-              .from('students')
-              .update({ user_id: user.id })
-              .eq('id', studentByName.id);
-
-            if (linkError) {
-              console.error('Error linking student to user:', linkError);
-            } else {
-              studentData = { ...studentByName, user_id: user.id };
-              toast({
-                title: "Berhasil",
-                description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan nama"
-              });
-            }
-          }
-        }
-      }
-
-      console.log('Final student data:', studentData);
-      setStudentData(studentData);
-    } catch (error) {
-      console.error('Error in fetchStudentData:', error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data pribadi",
-        variant: "destructive"
+  // Update form data when student data changes
+  React.useEffect(() => {
+    if (studentData) {
+      setFormData({
+        phone: studentData.phone || '',
+        address: studentData.address || '',
+        parent_name: studentData.parent_name || '',
+        parent_phone: studentData.parent_phone || '',
+        parent_address: studentData.parent_address || ''
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [studentData]);
 
   const handleSave = async () => {
     if (!studentData) return;
@@ -159,13 +46,7 @@ export const StudentProfile = () => {
     try {
       const { error } = await supabase
         .from('students')
-        .update({
-          phone: studentData.phone,
-          address: studentData.address,
-          parent_name: studentData.parent_name,
-          parent_phone: studentData.parent_phone,
-          parent_address: studentData.parent_address
-        })
+        .update(formData)
         .eq('id', studentData.id);
 
       if (error) throw error;
@@ -175,6 +56,7 @@ export const StudentProfile = () => {
         description: "Data pribadi berhasil diperbarui"
       });
       setIsEditing(false);
+      refetch(); // Refresh data
     } catch (error) {
       console.error('Error updating student data:', error);
       toast({
@@ -195,7 +77,7 @@ export const StudentProfile = () => {
     );
   }
 
-  if (!studentData) {
+  if (error || !studentData) {
     return (
       <div className="space-y-4">
         <Alert variant="destructive">
@@ -203,7 +85,8 @@ export const StudentProfile = () => {
           <AlertDescription>
             <strong>Data Siswa Tidak Ditemukan</strong><br/>
             User ID: {user?.id}<br/>
-            Email: {userEmail}<br/>
+            Email: {user?.email}<br/>
+            Error: {error}<br/>
             Sistem telah mencoba menghubungkan data siswa dengan berbagai metode namun tidak berhasil. Hubungi admin untuk memastikan data siswa Anda terdaftar dengan benar.
           </AlertDescription>
         </Alert>
@@ -219,15 +102,22 @@ export const StudentProfile = () => {
                 </p>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">Langkah Selanjutnya:</h4>
+                <h4 className="font-medium text-blue-800 mb-2">Informasi Debug:</h4>
+                <div className="text-sm text-blue-700 space-y-1 text-left">
+                  <div>User ID: {user?.id}</div>
+                  <div>Email: {user?.email}</div>
+                  <div>Error: {error}</div>
+                </div>
+                <h4 className="font-medium text-blue-800 mb-2 mt-4">Langkah Selanjutnya:</h4>
                 <ul className="text-sm text-blue-700 space-y-1 text-left">
                   <li>• Hubungi bagian tata usaha sekolah</li>
-                  <li>• Berikan informasi akun Anda: {userEmail}</li>
+                  <li>• Berikan informasi akun Anda: {user?.email}</li>
                   <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
                   <li>• Atau pastikan NIS dan nama di profil Anda sudah benar</li>
                 </ul>
               </div>
-              <Button onClick={fetchStudentData} variant="outline">
+              <Button onClick={refetch} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
                 Coba Lagi
               </Button>
             </div>
@@ -250,7 +140,7 @@ export const StudentProfile = () => {
         <CardContent>
           <div>
             <Label>Email</Label>
-            <Input value={userEmail || 'Tidak tersedia'} disabled />
+            <Input value={user?.email || 'Tidak tersedia'} disabled />
           </div>
         </CardContent>
       </Card>
@@ -291,9 +181,9 @@ export const StudentProfile = () => {
             <div>
               <Label>No. Telepon</Label>
               <Input 
-                value={studentData.phone || ''} 
+                value={formData.phone} 
                 disabled={!isEditing}
-                onChange={(e) => setStudentData({...studentData, phone: e.target.value})}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
                 placeholder="Masukkan nomor telepon"
               />
             </div>
@@ -302,9 +192,9 @@ export const StudentProfile = () => {
           <div>
             <Label>Alamat</Label>
             <Textarea 
-              value={studentData.address || ''} 
+              value={formData.address} 
               disabled={!isEditing}
-              onChange={(e) => setStudentData({...studentData, address: e.target.value})}
+              onChange={(e) => setFormData({...formData, address: e.target.value})}
               placeholder="Masukkan alamat lengkap"
             />
           </div>
@@ -320,18 +210,18 @@ export const StudentProfile = () => {
             <div>
               <Label>Nama Orang Tua / Wali</Label>
               <Input 
-                value={studentData.parent_name || ''} 
+                value={formData.parent_name} 
                 disabled={!isEditing}
-                onChange={(e) => setStudentData({...studentData, parent_name: e.target.value})}
+                onChange={(e) => setFormData({...formData, parent_name: e.target.value})}
                 placeholder="Masukkan nama orang tua/wali"
               />
             </div>
             <div>
               <Label>No. Telepon Orang Tua</Label>
               <Input 
-                value={studentData.parent_phone || ''} 
+                value={formData.parent_phone} 
                 disabled={!isEditing}
-                onChange={(e) => setStudentData({...studentData, parent_phone: e.target.value})}
+                onChange={(e) => setFormData({...formData, parent_phone: e.target.value})}
                 placeholder="Masukkan nomor telepon orang tua"
               />
             </div>
@@ -340,9 +230,9 @@ export const StudentProfile = () => {
           <div>
             <Label>Alamat Orang Tua</Label>
             <Textarea 
-              value={studentData.parent_address || ''} 
+              value={formData.parent_address} 
               disabled={!isEditing}
-              onChange={(e) => setStudentData({...studentData, parent_address: e.target.value})}
+              onChange={(e) => setFormData({...formData, parent_address: e.target.value})}
               placeholder="Masukkan alamat orang tua/wali"
             />
           </div>
@@ -364,7 +254,16 @@ export const StudentProfile = () => {
               variant="outline" 
               onClick={() => {
                 setIsEditing(false);
-                fetchStudentData();
+                // Reset form data
+                if (studentData) {
+                  setFormData({
+                    phone: studentData.phone || '',
+                    address: studentData.address || '',
+                    parent_name: studentData.parent_name || '',
+                    parent_phone: studentData.parent_phone || '',
+                    parent_address: studentData.parent_address || ''
+                  });
+                }
               }}
             >
               Batal
