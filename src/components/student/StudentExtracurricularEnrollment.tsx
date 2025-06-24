@@ -229,7 +229,7 @@ export const StudentExtracurricularEnrollment = () => {
 
     try {
       const { error } = await supabase
-        .from('extrac cular_enrollments')
+        .from('extracurricular_enrollments')
         .insert({
           student_id: studentId,
           extracurricular_id: extracurricular.id,
