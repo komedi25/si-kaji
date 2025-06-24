@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,29 +63,32 @@ export const StudentProfile = () => {
         throw studentError;
       }
 
-      // If not found by user_id, try to find by profile NIS and link them
+      // If not found by user_id, try multiple approaches
       if (!studentData) {
+        console.log('Student not found by user_id, trying alternative methods...');
+        
+        // Get profile data
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('nis')
+          .select('nis, full_name')
           .eq('id', user.id)
           .maybeSingle();
 
+        console.log('Profile data:', profileData);
+
         if (profileData?.nis) {
-          console.log('Trying to find student by NIS:', profileData.nis);
+          // Try to find by NIS
           const { data: studentByNis, error: nisError } = await supabase
             .from('students')
             .select('*')
             .eq('nis', profileData.nis)
             .maybeSingle();
 
-          if (nisError && nisError.code !== 'PGRST116') {
-            throw nisError;
-          }
-
-          if (studentByNis) {
+          if (!nisError && studentByNis) {
+            console.log('Found student by NIS, linking to user account...');
+            studentData = studentByNis;
+            
             // Link student to user account
-            console.log('Linking student record to user account');
             const { error: linkError } = await supabase
               .from('students')
               .update({ user_id: user.id })
@@ -103,8 +105,40 @@ export const StudentProfile = () => {
             }
           }
         }
+
+        // If still not found, try by name match
+        if (!studentData && profileData?.full_name) {
+          console.log('Trying to find by name match...');
+          const { data: studentByName, error: nameError } = await supabase
+            .from('students')
+            .select('*')
+            .ilike('full_name', `%${profileData.full_name}%`)
+            .is('user_id', null)
+            .maybeSingle();
+
+          if (!nameError && studentByName) {
+            console.log('Found student by name, linking to user account...');
+            
+            // Link student to user account
+            const { error: linkError } = await supabase
+              .from('students')
+              .update({ user_id: user.id })
+              .eq('id', studentByName.id);
+
+            if (linkError) {
+              console.error('Error linking student to user:', linkError);
+            } else {
+              studentData = { ...studentByName, user_id: user.id };
+              toast({
+                title: "Berhasil",
+                description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan nama"
+              });
+            }
+          }
+        }
       }
 
+      console.log('Final student data:', studentData);
       setStudentData(studentData);
     } catch (error) {
       console.error('Error in fetchStudentData:', error);
@@ -170,7 +204,7 @@ export const StudentProfile = () => {
             <strong>Data Siswa Tidak Ditemukan</strong><br/>
             User ID: {user?.id}<br/>
             Email: {userEmail}<br/>
-            Hubungi admin untuk memastikan akun Anda terhubung dengan data siswa.
+            Sistem telah mencoba menghubungkan data siswa dengan berbagai metode namun tidak berhasil. Hubungi admin untuk memastikan data siswa Anda terdaftar dengan benar.
           </AlertDescription>
         </Alert>
 
@@ -190,7 +224,7 @@ export const StudentProfile = () => {
                   <li>• Hubungi bagian tata usaha sekolah</li>
                   <li>• Berikan informasi akun Anda: {userEmail}</li>
                   <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
-                  <li>• Atau pastikan NIS di profil Anda sudah benar</li>
+                  <li>• Atau pastikan NIS dan nama di profil Anda sudah benar</li>
                 </ul>
               </div>
               <Button onClick={fetchStudentData} variant="outline">
