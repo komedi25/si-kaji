@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -473,26 +472,36 @@ export const EnhancedSelfAttendanceWidget = () => {
                 User ID: {user?.id}<br/>
                 Email: {user?.email}<br/>
                 Error: {studentError}<br/><br/>
-                <strong>Debug Information:</strong><br/>
-                Sistem tidak dapat menemukan data siswa yang terhubung dengan akun Anda.
+                <strong>Informasi Debug Lengkap:</strong><br/>
+                Sistem telah mencoba berbagai metode untuk menghubungkan akun Anda dengan data siswa namun tidak berhasil.
               </AlertDescription>
             </Alert>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-800 mb-2">Langkah Troubleshooting:</h4>
+              <h4 className="font-medium text-blue-800 mb-2">Kemungkinan Penyebab:</h4>
               <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                <li>Pastikan data siswa sudah ada di database</li>
-                <li>Periksa apakah NIS di profil akun sesuai dengan NIS di data siswa</li>
-                <li>Periksa apakah nama di profil akun sesuai dengan nama di data siswa</li>
-                <li>Hubungi admin untuk menghubungkan akun secara manual</li>
+                <li>Data siswa belum diinput ke database</li>
+                <li>NIS di profil akun tidak sesuai dengan NIS di database siswa</li>
+                <li>Nama di profil akun tidak sesuai dengan nama di database siswa</li>
+                <li>Tabel students tidak dapat diakses (masalah database)</li>
+                <li>User belum terhubung manual dengan data siswa</li>
+              </ol>
+              
+              <h4 className="font-medium text-blue-800 mb-2 mt-4">Solusi:</h4>
+              <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                <li>Hubungi admin sistem untuk memastikan data siswa sudah ada</li>
+                <li>Pastikan NIS dan nama di profil akun sudah benar</li>
+                <li>Minta admin untuk menghubungkan akun secara manual</li>
+                <li>Periksa koneksi database</li>
               </ol>
               
               <div className="mt-3 p-3 bg-white rounded border">
-                <h5 className="font-medium text-blue-800 text-xs mb-1">Info Debug:</h5>
+                <h5 className="font-medium text-blue-800 text-xs mb-1">Info untuk Admin:</h5>
                 <div className="text-xs text-blue-600 space-y-1">
                   <div>User ID: {user?.id}</div>
                   <div>Email: {user?.email}</div>
-                  <div>Student Error: {studentError}</div>
+                  <div>Error Detail: {studentError}</div>
+                  <div>Timestamp: {new Date().toISOString()}</div>
                 </div>
               </div>
             </div>

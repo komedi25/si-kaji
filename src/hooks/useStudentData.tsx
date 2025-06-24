@@ -31,6 +31,7 @@ export const useStudentData = () => {
 
   const linkStudentToUser = async (studentId: string, userId: string) => {
     try {
+      console.log(`Attempting to link student ${studentId} to user ${userId}`);
       const { error: linkError } = await supabase
         .from('students')
         .update({ user_id: userId })
@@ -40,6 +41,7 @@ export const useStudentData = () => {
         console.error('Error linking student to user:', linkError);
         return false;
       }
+      console.log(`Successfully linked student ${studentId} to user ${userId}`);
       return true;
     } catch (error) {
       console.error('Error in linkStudentToUser:', error);
@@ -49,41 +51,64 @@ export const useStudentData = () => {
 
   const fetchStudentData = async (showToast = false) => {
     if (!user?.id) {
+      console.log('No user ID available');
       setLoading(false);
       setError('User not authenticated');
       return null;
     }
 
-    console.log('=== DEBUGGING STUDENT DATA FETCH ===');
+    console.log('=== COMPREHENSIVE STUDENT DATA DEBUGGING ===');
     console.log('User ID:', user.id);
     console.log('User Email:', user.email);
-
+    
     try {
       setLoading(true);
       setError(null);
 
-      // Method 1: Direct lookup by user_id
-      console.log('Method 1: Looking up by user_id...');
-      let { data: studentData, error: studentError } = await supabase
+      // Step 1: Check if students table exists and has data
+      console.log('Step 1: Checking students table...');
+      const { data: allStudents, error: studentsError, count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact' });
+
+      if (studentsError) {
+        console.error('Error accessing students table:', studentsError);
+        setError(`Database error: ${studentsError.message}`);
+        setLoading(false);
+        return null;
+      }
+
+      console.log(`Found ${count} total students in database`);
+      console.log('Sample students:', allStudents?.slice(0, 3));
+
+      if (!allStudents || allStudents.length === 0) {
+        console.error('No students found in database');
+        setError('No student data exists in database');
+        setLoading(false);
+        return null;
+      }
+
+      // Step 2: Direct lookup by user_id
+      console.log('Step 2: Looking up by user_id...');
+      const { data: studentByUserId, error: userIdError } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (studentError && studentError.code !== 'PGRST116') {
-        console.error('Student lookup error:', studentError);
-        throw studentError;
+      if (userIdError && userIdError.code !== 'PGRST116') {
+        console.error('Error in user_id lookup:', userIdError);
       }
 
-      if (studentData) {
-        console.log('✓ Found student by user_id:', studentData);
-        setStudentData(studentData);
+      if (studentByUserId) {
+        console.log('✓ Found student by user_id:', studentByUserId);
+        setStudentData(studentByUserId);
         setLoading(false);
-        return studentData;
+        return studentByUserId;
       }
 
-      // Method 2: Get profile data and search by NIS/Name
-      console.log('Method 2: Looking up profile data...');
+      // Step 3: Check profiles table
+      console.log('Step 3: Checking profiles table...');
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -92,127 +117,142 @@ export const useStudentData = () => {
 
       if (profileError) {
         console.error('Profile error:', profileError);
+      } else {
+        console.log('Profile data:', profileData);
       }
 
-      console.log('Profile data:', profileData);
-
-      // Method 3: Search by NIS from profile
+      // Step 4: Search by NIS if available in profile
       if (profileData?.nis) {
-        console.log('Method 3: Searching by NIS:', profileData.nis);
+        console.log('Step 4: Searching by NIS from profile:', profileData.nis);
         const { data: studentByNis, error: nisError } = await supabase
           .from('students')
           .select('*')
           .eq('nis', profileData.nis)
           .maybeSingle();
 
-        if (!nisError && studentByNis) {
+        if (nisError) {
+          console.error('Error in NIS lookup:', nisError);
+        }
+
+        if (studentByNis) {
           console.log('✓ Found student by NIS:', studentByNis);
           
           // Auto-link if not already linked
           if (!studentByNis.user_id) {
             const linked = await linkStudentToUser(studentByNis.id, user.id);
             if (linked) {
-              studentData = { ...studentByNis, user_id: user.id };
+              const updatedStudent = { ...studentByNis, user_id: user.id };
+              setStudentData(updatedStudent);
               if (showToast) {
                 toast({
                   title: "Berhasil",
-                  description: "Data siswa berhasil dihubungkan dengan akun Anda"
+                  description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan NIS"
                 });
               }
+              setLoading(false);
+              return updatedStudent;
             }
           } else {
-            studentData = studentByNis;
+            setStudentData(studentByNis);
+            setLoading(false);
+            return studentByNis;
           }
-          
-          setStudentData(studentData);
-          setLoading(false);
-          return studentData;
         }
       }
 
-      // Method 4: Search by name similarity
+      // Step 5: Search by name similarity if available in profile
       if (profileData?.full_name) {
-        console.log('Method 4: Searching by name:', profileData.full_name);
+        console.log('Step 5: Searching by name similarity:', profileData.full_name);
         const { data: studentsByName, error: nameError } = await supabase
           .from('students')
           .select('*')
           .ilike('full_name', `%${profileData.full_name.trim()}%`)
           .is('user_id', null);
 
-        if (!nameError && studentsByName && studentsByName.length > 0) {
+        if (nameError) {
+          console.error('Error in name lookup:', nameError);
+        }
+
+        if (studentsByName && studentsByName.length > 0) {
           console.log('✓ Found students by name:', studentsByName);
           
-          // Take the first match (could be improved with better matching logic)
-          const studentByName = studentsByName[0];
-          const linked = await linkStudentToUser(studentByName.id, user.id);
+          // Take the best match
+          const bestMatch = studentsByName.find(s => 
+            s.full_name.toLowerCase() === profileData.full_name.toLowerCase()
+          ) || studentsByName[0];
           
+          const linked = await linkStudentToUser(bestMatch.id, user.id);
           if (linked) {
-            studentData = { ...studentByName, user_id: user.id };
+            const updatedStudent = { ...bestMatch, user_id: user.id };
+            setStudentData(updatedStudent);
             if (showToast) {
               toast({
                 title: "Berhasil",
                 description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan nama"
               });
             }
-            setStudentData(studentData);
             setLoading(false);
-            return studentData;
+            return updatedStudent;
           }
         }
       }
 
-      // Method 5: Check all students without user_id and try email matching
-      console.log('Method 5: Checking for students without user_id...');
-      const { data: allStudents, error: allStudentsError } = await supabase
-        .from('students')
-        .select('*')
-        .is('user_id', null);
-
-      if (allStudentsError) {
-        console.error('Error fetching all students:', allStudentsError);
-      } else {
-        console.log('All unlinked students:', allStudents?.length || 0);
+      // Step 6: Try email pattern matching
+      if (user.email) {
+        console.log('Step 6: Email pattern matching...');
+        const emailPrefix = user.email.split('@')[0].toLowerCase();
+        console.log('Email prefix:', emailPrefix);
         
-        if (allStudents && allStudents.length > 0) {
-          // Try to find student by email pattern matching (if email contains name parts)
-          if (user.email) {
-            const emailPrefix = user.email.split('@')[0];
-            const matchingStudent = allStudents.find(student => 
-              student.full_name.toLowerCase().includes(emailPrefix.toLowerCase()) ||
-              emailPrefix.toLowerCase().includes(student.full_name.toLowerCase().split(' ')[0])
-            );
-            
-            if (matchingStudent) {
-              console.log('✓ Found student by email pattern:', matchingStudent);
-              const linked = await linkStudentToUser(matchingStudent.id, user.id);
-              
-              if (linked) {
-                studentData = { ...matchingStudent, user_id: user.id };
-                if (showToast) {
-                  toast({
-                    title: "Berhasil",
-                    description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan email"
-                  });
-                }
-                setStudentData(studentData);
-                setLoading(false);
-                return studentData;
-              }
+        const unlinkedStudents = allStudents.filter(s => !s.user_id);
+        console.log(`Checking ${unlinkedStudents.length} unlinked students`);
+        
+        const matchingStudent = unlinkedStudents.find(student => {
+          const studentName = student.full_name.toLowerCase();
+          const studentNis = student.nis.toLowerCase();
+          
+          // Check if email contains student info or vice versa
+          return studentName.includes(emailPrefix) || 
+                 emailPrefix.includes(studentName.split(' ')[0]) ||
+                 emailPrefix.includes(studentNis) ||
+                 studentNis.includes(emailPrefix);
+        });
+        
+        if (matchingStudent) {
+          console.log('✓ Found student by email pattern:', matchingStudent);
+          const linked = await linkStudentToUser(matchingStudent.id, user.id);
+          if (linked) {
+            const updatedStudent = { ...matchingStudent, user_id: user.id };
+            setStudentData(updatedStudent);
+            if (showToast) {
+              toast({
+                title: "Berhasil",
+                description: "Data siswa berhasil dihubungkan dengan akun Anda berdasarkan email"
+              });
             }
+            setLoading(false);
+            return updatedStudent;
           }
         }
       }
 
+      // Final step: No matches found
       console.log('✗ No student data found with any method');
-      console.log('Available students without user_id:', allStudents?.map(s => ({ id: s.id, name: s.full_name, nis: s.nis })));
-      setError('Student data not found');
+      console.log('Debug info for admin:');
+      console.log('- User ID:', user.id);
+      console.log('- User Email:', user.email);
+      console.log('- Profile NIS:', profileData?.nis);
+      console.log('- Profile Name:', profileData?.full_name);
+      console.log('- Total students:', count);
+      console.log('- Unlinked students:', allStudents.filter(s => !s.user_id).length);
+      
+      setError(`Student data not found. Debug: Total students=${count}, User=${user.email}, Profile NIS=${profileData?.nis || 'none'}`);
       setStudentData(null);
       setLoading(false);
       return null;
 
     } catch (error) {
-      console.error('Error in fetchStudentData:', error);
-      setError(error instanceof Error ? error.message : 'Gagal memuat data siswa');
+      console.error('Critical error in fetchStudentData:', error);
+      setError(error instanceof Error ? error.message : 'Critical database error');
       setStudentData(null);
       setLoading(false);
       return null;
