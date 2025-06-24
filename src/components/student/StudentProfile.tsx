@@ -9,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentData } from '@/hooks/useStudentData';
-import { User, Save, AlertCircle, Mail, RefreshCw } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { User, Save, Mail } from 'lucide-react';
+import { StudentDataError } from './StudentDataError';
 
 export const StudentProfile = () => {
   const { user } = useAuth();
@@ -78,53 +78,7 @@ export const StudentProfile = () => {
   }
 
   if (error || !studentData) {
-    return (
-      <div className="space-y-4">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Data Siswa Tidak Ditemukan</strong><br/>
-            User ID: {user?.id}<br/>
-            Email: {user?.email}<br/>
-            Error: {error}<br/>
-            Sistem telah mencoba menghubungkan data siswa dengan berbagai metode namun tidak berhasil. Hubungi admin untuk memastikan data siswa Anda terdaftar dengan benar.
-          </AlertDescription>
-        </Alert>
-
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="space-y-4">
-              <div className="text-center">
-                <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">Data Siswa Belum Tersedia</h3>
-                <p className="text-gray-500 mt-2">
-                  Data pribadi Anda belum terdaftar dalam sistem atau belum terhubung dengan akun ini.
-                </p>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">Informasi Debug:</h4>
-                <div className="text-sm text-blue-700 space-y-1 text-left">
-                  <div>User ID: {user?.id}</div>
-                  <div>Email: {user?.email}</div>
-                  <div>Error: {error}</div>
-                </div>
-                <h4 className="font-medium text-blue-800 mb-2 mt-4">Langkah Selanjutnya:</h4>
-                <ul className="text-sm text-blue-700 space-y-1 text-left">
-                  <li>• Hubungi bagian tata usaha sekolah</li>
-                  <li>• Berikan informasi akun Anda: {user?.email}</li>
-                  <li>• Administrator akan menghubungkan data siswa dengan akun Anda</li>
-                  <li>• Atau pastikan NIS dan nama di profil Anda sudah benar</li>
-                </ul>
-              </div>
-              <Button onClick={refetch} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Coba Lagi
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <StudentDataError error={error || 'Unknown error'} onRetry={refetch} />;
   }
 
   return (
