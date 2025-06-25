@@ -269,7 +269,7 @@ export const EnhancedStudentPermitForm = () => {
                 onCheckedChange={(checked) => setFormData({...formData, is_after_hours: checked as boolean})}
               />
               <Label htmlFor="is_after_hours" className="text-sm">
-                Kegiatan ini berlangsung setelah jam sekolah (> 17:15)
+                Kegiatan ini berlangsung setelah jam sekolah (&gt; 17:15)
               </Label>
             </div>
           )}
@@ -306,7 +306,9 @@ export const EnhancedStudentPermitForm = () => {
               </div>
               <div className="text-sm text-orange-600 mt-1">
                 • Kegiatan ini berlangsung setelah pukul 17:15 WIB
+                <br />
                 • Diperlukan persetujuan khusus dan informasi kontak darurat
+                <br />
                 • Pastikan orang tua/wali mengetahui dan menyetujui kegiatan ini
               </div>
             </div>
