@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface SelfAttendance {
   check_out_time: string | null;
   status: string;
   violation_created: boolean;
+  notes?: string;
   device_fingerprint?: string;
 }
 
