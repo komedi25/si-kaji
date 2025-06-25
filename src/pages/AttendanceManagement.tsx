@@ -3,18 +3,15 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
 import { AttendanceReport } from '@/components/attendance/AttendanceReport';
-import { SelfAttendanceWithRefresh } from '@/components/attendance/SelfAttendanceWithRefresh';
+import { SimpleStudentAttendance } from '@/components/student/SimpleStudentAttendance';
 import { LocationManager } from '@/components/attendance/LocationManager';
 import { ScheduleManager } from '@/components/attendance/ScheduleManager';
-import { DatabaseDiagnostic } from '@/components/debug/DatabaseDiagnostic';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
 import { AppLayout } from '@/components/layout/AppLayout';
 
 const AttendanceManagement = () => {
   const location = useLocation();
   const { hasRole } = useAuth();
-  const { studentData, error: studentError } = useStudentData();
   
   // Determine the current tab from the path
   const getCurrentTab = () => {
@@ -32,24 +29,9 @@ const AttendanceManagement = () => {
   const renderContent = () => {
     switch (tab) {
       case 'self':
-        // Show diagnostic if there's a student data error
-        if (studentError && !studentData) {
-          return (
-            <div className="max-w-4xl mx-auto space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="font-medium text-yellow-800 mb-2">Database Diagnostic Mode</h3>
-                <p className="text-sm text-yellow-700">
-                  Karena terjadi error dalam mengambil data siswa, sistem menampilkan diagnostic tool untuk membantu identifikasi masalah.
-                </p>
-              </div>
-              <DatabaseDiagnostic />
-              <SelfAttendanceWithRefresh />
-            </div>
-          );
-        }
         return (
           <div className="max-w-md mx-auto">
-            <SelfAttendanceWithRefresh />
+            <SimpleStudentAttendance />
           </div>
         );
       case 'record':
@@ -75,7 +57,7 @@ const AttendanceManagement = () => {
       default:
         return (
           <div className="max-w-md mx-auto">
-            <SelfAttendanceWithRefresh />
+            <SimpleStudentAttendance />
           </div>
         );
     }

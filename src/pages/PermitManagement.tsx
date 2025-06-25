@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { StudentPermitManagement } from '@/components/student/StudentPermitManagement';
+import { SimpleStudentPermitForm } from '@/components/student/SimpleStudentPermitForm';
 import { PermitApproval } from '@/components/permits/PermitApproval';
 import PermitReport from '@/components/permits/PermitReport';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,9 +10,13 @@ const PermitManagement = () => {
   const { hasRole } = useAuth();
 
   const renderContent = () => {
-    // If user is a student, show their permit management
+    // If user is a student, show simplified permit form
     if (hasRole('siswa')) {
-      return <StudentPermitManagement />;
+      return (
+        <div className="max-w-2xl mx-auto">
+          <SimpleStudentPermitForm />
+        </div>
+      );
     }
 
     // For admin and teachers, show the management interface
@@ -33,7 +37,7 @@ const PermitManagement = () => {
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             {hasRole('siswa') 
-              ? 'Kelola pengajuan izin dan pantau status persetujuan'
+              ? 'Ajukan permohonan izin dengan mudah'
               : 'Kelola permohonan izin siswa dan proses persetujuan'
             }
           </p>
