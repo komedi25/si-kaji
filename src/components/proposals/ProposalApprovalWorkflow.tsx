@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ interface ActivityProposal {
   id: string;
   title: string;
   organizer_name: string;
-  submission_status: string;
+  status: string; // Changed from submission_status to status
   created_at: string;
 }
 
@@ -51,7 +52,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
     try {
       const { data, error } = await supabase
         .from('activity_proposals')
-        .select('id, title, organizer_name, submission_status, created_at')
+        .select('id, title, organizer_name, status, created_at') // Changed from submission_status to status
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -68,7 +69,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
     try {
       const { data, error } = await supabase
         .from('activity_proposals')
-        .select('id, title, organizer_name, submission_status, created_at')
+        .select('id, title, organizer_name, status, created_at') // Changed from submission_status to status
         .eq('id', proposalId)
         .single();
 
@@ -192,7 +193,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
                     </p>
                   </div>
                   <div className="flex items-center space-x-4">
-                    {getStatusBadge(prop.submission_status)}
+                    {getStatusBadge(prop.status)} {/* Changed from submission_status to status */}
                     <Button size="sm" variant="outline">
                       Detail
                     </Button>
@@ -212,7 +213,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
 
   const canApprove = currentUserApproval && 
     currentUserApproval.status === 'pending' && 
-    proposal.submission_status === 'submitted';
+    proposal.status === 'submitted'; // Changed from submission_status to status
 
   return (
     <div className="space-y-6">
@@ -224,7 +225,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
           </CardTitle>
           <CardDescription>
             Diajukan oleh: {proposal.organizer_name} • 
-            Status: {getStatusBadge(proposal.submission_status)}
+            Status: {getStatusBadge(proposal.status)} {/* Changed from submission_status to status */}
           </CardDescription>
         </CardHeader>
       </Card>

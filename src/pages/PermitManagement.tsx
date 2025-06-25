@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { SimpleStudentPermitForm } from '@/components/student/SimpleStudentPermitForm';
+import { EnhancedStudentPermitForm } from '@/components/student/EnhancedStudentPermitForm';
 import { PermitApproval } from '@/components/permits/PermitApproval';
 import PermitReport from '@/components/permits/PermitReport';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,11 +10,11 @@ const PermitManagement = () => {
   const { hasRole } = useAuth();
 
   const renderContent = () => {
-    // If user is a student, show simplified permit form
+    // If user is a student, show enhanced permit form
     if (hasRole('siswa')) {
       return (
         <div className="max-w-2xl mx-auto">
-          <SimpleStudentPermitForm />
+          <EnhancedStudentPermitForm />
         </div>
       );
     }
@@ -37,7 +37,7 @@ const PermitManagement = () => {
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             {hasRole('siswa') 
-              ? 'Ajukan permohonan izin dengan mudah'
+              ? 'Ajukan permohonan izin dengan mudah - termasuk kegiatan setelah jam sekolah'
               : 'Kelola permohonan izin siswa dan proses persetujuan'
             }
           </p>
