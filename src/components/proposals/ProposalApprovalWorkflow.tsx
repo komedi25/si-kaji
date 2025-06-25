@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,12 +22,12 @@ interface ActivityProposal {
   id: string;
   title: string;
   organizer_name: string;
-  status: string;
+  submission_status: string;
   created_at: string;
 }
 
 interface ProposalApprovalWorkflowProps {
-  proposalId: string;
+  proposalId?: string;
 }
 
 export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflowProps) => {
@@ -37,17 +36,39 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
   const [currentUserApproval, setCurrentUserApproval] = useState<ProposalApproval | null>(null);
   const [notes, setNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [proposals, setProposals] = useState<ActivityProposal[]>([]);
 
   useEffect(() => {
-    fetchProposal();
-    fetchApprovals();
+    if (proposalId) {
+      fetchProposal();
+      fetchApprovals();
+    } else {
+      fetchAllProposals();
+    }
   }, [proposalId]);
 
-  const fetchProposal = async () => {
+  const fetchAllProposals = async () => {
     try {
       const { data, error } = await supabase
         .from('activity_proposals')
-        .select('id, title, organizer_name, status, created_at')
+        .select('id, title, organizer_name, submission_status, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProposals(data || []);
+    } catch (error) {
+      console.error('Error fetching proposals:', error);
+      toast.error('Gagal memuat data proposal');
+    }
+  };
+
+  const fetchProposal = async () => {
+    if (!proposalId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('activity_proposals')
+        .select('id, title, organizer_name, submission_status, created_at')
         .eq('id', proposalId)
         .single();
 
@@ -60,6 +81,8 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
   };
 
   const fetchApprovals = async () => {
+    if (!proposalId) return;
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -90,7 +113,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
   };
 
   const handleApproval = async (status: 'approved' | 'rejected') => {
-    if (!currentUserApproval) return;
+    if (!currentUserApproval || !proposalId) return;
 
     setProcessing(true);
     try {
@@ -133,15 +156,55 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
     const variants = {
       pending: 'secondary',
       approved: 'default',
-      rejected: 'destructive'
+      rejected: 'destructive',
+      submitted: 'secondary'
     } as const;
     
     return (
       <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {status === 'pending' ? 'Menunggu' : status === 'approved' ? 'Disetujui' : 'Ditolak'}
+        {status === 'pending' ? 'Menunggu' : 
+         status === 'approved' ? 'Disetujui' : 
+         status === 'rejected' ? 'Ditolak' :
+         status === 'submitted' ? 'Diajukan' : status}
       </Badge>
     );
   };
+
+  // If no specific proposal ID, show list of all proposals
+  if (!proposalId) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Proposal Kegiatan</CardTitle>
+            <CardDescription>
+              Kelola dan proses proposal kegiatan yang masuk
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {proposals.map((prop) => (
+                <div key={prop.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <h3 className="font-medium">{prop.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Oleh: {prop.organizer_name} • {new Date(prop.created_at).toLocaleDateString('id-ID')}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    {getStatusBadge(prop.submission_status)}
+                    <Button size="sm" variant="outline">
+                      Detail
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!proposal) {
     return <div>Loading...</div>;
@@ -149,7 +212,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
 
   const canApprove = currentUserApproval && 
     currentUserApproval.status === 'pending' && 
-    proposal.status === 'submitted';
+    proposal.submission_status === 'submitted';
 
   return (
     <div className="space-y-6">
@@ -161,7 +224,7 @@ export const ProposalApprovalWorkflow = ({ proposalId }: ProposalApprovalWorkflo
           </CardTitle>
           <CardDescription>
             Diajukan oleh: {proposal.organizer_name} • 
-            Status: {getStatusBadge(proposal.status)}
+            Status: {getStatusBadge(proposal.submission_status)}
           </CardDescription>
         </CardHeader>
       </Card>
