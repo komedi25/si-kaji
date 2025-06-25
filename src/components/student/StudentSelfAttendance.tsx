@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Home, LogOut } from 'lucide-react';
+import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Home, LogOut, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +37,13 @@ interface SelfAttendance {
   check_out_time: string | null;
   status: string;
   violation_created: boolean;
+  device_fingerprint?: string;
+}
+
+interface LocationValidation {
+  isValid: boolean;
+  confidence: number;
+  warnings: string[];
 }
 
 export const StudentSelfAttendance = () => {
@@ -52,6 +58,13 @@ export const StudentSelfAttendance = () => {
   const [todayAttendance, setTodayAttendance] = useState<SelfAttendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isWithinSchool, setIsWithinSchool] = useState<boolean | null>(null);
+  const [locationValidation, setLocationValidation] = useState<LocationValidation | null>(null);
+  const [locationHistory, setLocationHistory] = useState<Array<{
+    latitude: number;
+    longitude: number;
+    timestamp: number;
+    accuracy: number;
+  }>>([]);
 
   // Update current time every second
   useEffect(() => {
@@ -128,8 +141,103 @@ export const StudentSelfAttendance = () => {
     if (position && locations.length > 0) {
       const withinSchool = isWithinLocation(position.coords.latitude, position.coords.longitude);
       setIsWithinSchool(withinSchool !== null);
+      
+      // Validate location for anti-fake GPS
+      const validation = validateLocationAccuracy(position);
+      setLocationValidation(validation);
     }
   }, [position, locations]);
+
+  // Anti-Fake GPS Detection
+  const validateLocationAccuracy = (position: GeolocationPosition): LocationValidation => {
+    const validation: LocationValidation = {
+      isValid: true,
+      confidence: 100,
+      warnings: []
+    };
+
+    // Check accuracy - fake GPS often has perfect accuracy
+    if (position.coords.accuracy < 5) {
+      validation.confidence -= 30;
+      validation.warnings.push('Akurasi GPS terlalu tinggi (kemungkinan fake GPS)');
+    }
+
+    // Check location jump (teleportation detection)
+    if (locationHistory.length > 0) {
+      const lastLocation = locationHistory[locationHistory.length - 1];
+      const distance = calculateDistance(
+        position.coords.latitude, position.coords.longitude,
+        lastLocation.latitude, lastLocation.longitude
+      );
+      const timeDiff = (Date.now() - lastLocation.timestamp) / 1000; // seconds
+      const speed = distance / timeDiff; // m/s
+
+      // If speed > 50 m/s (180 km/h), likely fake
+      if (speed > 50) {
+        validation.confidence -= 40;
+        validation.warnings.push('Perpindahan lokasi tidak wajar');
+      }
+    }
+
+    // Check for suspicious patterns
+    if (detectSuspiciousPattern(position.coords.latitude, position.coords.longitude)) {
+      validation.confidence -= 30;
+      validation.warnings.push('Pola lokasi mencurigakan');
+    }
+
+    validation.isValid = validation.confidence >= 60;
+    return validation;
+  };
+
+  const detectSuspiciousPattern = (lat: number, lng: number): boolean => {
+    // Check if coordinates are too perfect (fake GPS often uses exact coordinates)
+    const latStr = lat.toString();
+    const lngStr = lng.toString();
+    
+    // Perfect coordinates with many zeros
+    if (latStr.includes('00000') || lngStr.includes('00000')) {
+      return true;
+    }
+
+    // Check for commonly used fake coordinates
+    const commonFakeCoords = [
+      { lat: 0, lng: 0 },
+      { lat: -6.9174639, lng: 110.2024914 }, // SMKN 1 Kendal exact coordinates
+    ];
+
+    for (const coord of commonFakeCoords) {
+      const distance = calculateDistance(lat, lng, coord.lat, coord.lng);
+      if (distance < 1) { // Within 1 meter of exact coordinate
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const generateDeviceFingerprint = (): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.textBaseline = 'top';
+      ctx.font = '14px Arial';
+      ctx.fillText('Device fingerprint', 2, 2);
+    }
+
+    const fingerprint = {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      screen: `${screen.width}x${screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      canvas: canvas.toDataURL(),
+      memory: (navigator as any).deviceMemory || 'unknown',
+      cores: navigator.hardwareConcurrency || 'unknown',
+      timestamp: Date.now()
+    };
+
+    return btoa(JSON.stringify(fingerprint));
+  };
 
   const refreshLocation = () => {
     setRefreshingLocation(true);
@@ -147,6 +255,19 @@ export const StudentSelfAttendance = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setPosition(position);
+        
+        // Store location history for validation
+        setLocationHistory(prev => {
+          const newHistory = [...prev, {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            timestamp: Date.now(),
+            accuracy: position.coords.accuracy
+          }];
+          // Keep only last 10 locations
+          return newHistory.slice(-10);
+        });
+        
         setRefreshingLocation(false);
         toast({
           title: "Berhasil",
@@ -190,8 +311,45 @@ export const StudentSelfAttendance = () => {
     return null;
   };
 
+  const isLateForCheckIn = (): boolean => {
+    if (!schedule) return false;
+    const now = format(currentTime, 'HH:mm:ss');
+    return now > schedule.check_in_end;
+  };
+
+  const isAfterHours = (): boolean => {
+    const now = format(currentTime, 'HH:mm:ss');
+    return now > '17:15:00';
+  };
+
+  const checkForActivePermit = async (): Promise<boolean> => {
+    if (!studentData?.id) return false;
+    
+    const today = format(new Date(), 'yyyy-MM-dd');
+    
+    const { data } = await supabase
+      .from('student_permits')
+      .select('*')
+      .eq('student_id', studentData.id)
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .eq('status', 'approved')
+      .maybeSingle();
+    
+    return !!data;
+  };
+
   const handleCheckIn = async () => {
     if (!studentData?.id) return;
+
+    if (locationValidation && !locationValidation.isValid) {
+      toast({
+        title: "Validasi Lokasi Gagal",
+        description: "Lokasi tidak valid: " + locationValidation.warnings.join(', '),
+        variant: "destructive"
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -217,6 +375,16 @@ export const StudentSelfAttendance = () => {
       const now = new Date();
       const today = format(now, 'yyyy-MM-dd');
       const currentTime = format(now, 'HH:mm:ss');
+      const deviceFingerprint = generateDeviceFingerprint();
+      
+      let status = 'present';
+      let notes = '';
+      
+      // Check if late
+      if (isLateForCheckIn()) {
+        status = 'late';
+        notes = 'Terlambat masuk sekolah';
+      }
 
       const { error } = await supabase
         .from('student_self_attendances')
@@ -227,7 +395,9 @@ export const StudentSelfAttendance = () => {
           check_in_latitude: position.coords.latitude,
           check_in_longitude: position.coords.longitude,
           check_in_location_id: location.id,
-          status: 'present'
+          status: status,
+          notes: notes,
+          device_fingerprint: deviceFingerprint
         });
 
       if (error) throw error;
@@ -241,10 +411,18 @@ export const StudentSelfAttendance = () => {
 
       setTodayAttendance(updatedData);
 
-      toast({
-        title: "Berhasil Check In",
-        description: `Presensi masuk berhasil di ${location.name}`,
-      });
+      if (status === 'late') {
+        toast({
+          title: "Check In Terlambat",
+          description: `Presensi masuk terlambat dicatat di ${location.name}`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Berhasil Check In",
+          description: `Presensi masuk berhasil di ${location.name}`,
+        });
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -259,6 +437,15 @@ export const StudentSelfAttendance = () => {
   const handleCheckOut = async () => {
     if (!studentData?.id || !todayAttendance) return;
 
+    if (locationValidation && !locationValidation.isValid) {
+      toast({
+        title: "Validasi Lokasi Gagal",
+        description: "Lokasi tidak valid: " + locationValidation.warnings.join(', '),
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (!position) {
@@ -272,6 +459,23 @@ export const StudentSelfAttendance = () => {
 
       const now = new Date();
       const currentTime = format(now, 'HH:mm:ss');
+      let notes = todayAttendance.notes || '';
+      
+      // Check if after hours without permit for after-hours activities
+      if (isAfterHours()) {
+        const hasPermit = await checkForActivePermit();
+        if (!hasPermit) {
+          notes += (notes ? '; ' : '') + 'Pulang setelah jam 17:15 tanpa izin kegiatan';
+          
+          toast({
+            title: "Peringatan",
+            description: "Anda pulang setelah jam 17:15. Pastikan ada izin kegiatan yang berlaku.",
+            variant: "destructive"
+          });
+        } else {
+          notes += (notes ? '; ' : '') + 'Pulang setelah jam 17:15 dengan izin kegiatan';
+        }
+      }
 
       const { error } = await supabase
         .from('student_self_attendances')
@@ -279,6 +483,7 @@ export const StudentSelfAttendance = () => {
           check_out_time: currentTime,
           check_out_latitude: position.coords.latitude,
           check_out_longitude: position.coords.longitude,
+          notes: notes
         })
         .eq('id', todayAttendance.id);
 
@@ -334,6 +539,10 @@ export const StudentSelfAttendance = () => {
       return <Badge variant="destructive">Ada Pelanggaran</Badge>;
     }
 
+    if (todayAttendance.status === 'late') {
+      return <Badge variant="destructive">Terlambat</Badge>;
+    }
+
     if (todayAttendance.check_out_time) {
       return <Badge variant="default">Selesai</Badge>;
     }
@@ -343,6 +552,15 @@ export const StudentSelfAttendance = () => {
     }
 
     return <Badge variant="secondary">Belum Presensi</Badge>;
+  };
+
+  const getSecurityLevel = () => {
+    if (!locationValidation) return null;
+    
+    const confidence = locationValidation.confidence;
+    if (confidence >= 80) return { level: 'Tinggi', color: 'text-green-600' };
+    if (confidence >= 60) return { level: 'Sedang', color: 'text-yellow-600' };
+    return { level: 'Rendah', color: 'text-red-600' };
   };
 
   if (studentLoading) {
@@ -382,6 +600,7 @@ export const StudentSelfAttendance = () => {
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
           Presensi Mandiri
+          <Shield className="h-4 w-4 text-green-600" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -393,6 +612,29 @@ export const StudentSelfAttendance = () => {
             {format(currentTime, 'EEEE, dd MMMM yyyy', { locale: id })}
           </div>
         </div>
+
+        {/* Security Level Indicator */}
+        {locationValidation && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <span className="font-medium">Keamanan Lokasi:</span>
+              <span className={getSecurityLevel()?.color}>
+                {getSecurityLevel()?.level} ({locationValidation.confidence}%)
+              </span>
+            </div>
+            {locationValidation.warnings.length > 0 && (
+              <div className="mt-2 text-sm text-red-600">
+                <div className="font-medium">Peringatan:</div>
+                <ul className="list-disc list-inside">
+                  {locationValidation.warnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Location Status with Refresh Button */}
         <div className="bg-gray-50 p-3 rounded-lg">
@@ -419,6 +661,25 @@ export const StudentSelfAttendance = () => {
           )}
         </div>
 
+        {/* Time-based warnings */}
+        {isLateForCheckIn() && !todayAttendance?.check_in_time && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Anda terlambat! Presensi masuk akan dicatat sebagai terlambat.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isAfterHours() && !todayAttendance?.check_out_time && (
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              Waktu sudah lewat jam 17:15. Pastikan Anda memiliki izin kegiatan yang berlaku.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {schedule && (
           <div className="bg-gray-50 p-3 rounded-lg">
             <div className="text-sm font-medium mb-2">Jadwal Hari Ini: {schedule.name}</div>
@@ -438,14 +699,19 @@ export const StudentSelfAttendance = () => {
           <div className="space-y-2 text-sm">
             {todayAttendance.check_in_time && (
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>Check In: {todayAttendance.check_in_time}</span>
+                <CheckCircle className={`h-4 w-4 ${todayAttendance.status === 'late' ? 'text-red-500' : 'text-green-500'}`} />
+                <span>Check In: {todayAttendance.check_in_time} {todayAttendance.status === 'late' && '(Terlambat)'}</span>
               </div>
             )}
             {todayAttendance.check_out_time && (
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-blue-500" />
                 <span>Check Out: {todayAttendance.check_out_time}</span>
+              </div>
+            )}
+            {todayAttendance.notes && (
+              <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
+                {todayAttendance.notes}
               </div>
             )}
           </div>
@@ -476,7 +742,9 @@ export const StudentSelfAttendance = () => {
         <div className="text-xs text-gray-500">
           <div>• Pastikan GPS aktif dan lokasi akurat</div>
           <div>• Check In harus di dalam area sekolah</div>
-          <div>• Check Out bisa dilakukan kapan saja setelah check in</div>
+          <div>• Keterlambatan akan dicatat otomatis</div>
+          <div>• Pulang setelah jam 17:15 perlu izin kegiatan</div>
+          <div>• Sistem anti-fake GPS aktif</div>
         </div>
 
         {locations.length > 0 && (
