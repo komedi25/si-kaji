@@ -1,5 +1,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
+import { StudentDashboard } from './StudentDashboard';
+import { HomeroomTeacherDashboard } from './HomeroomTeacherDashboard';
 import { RoleBasedStats } from './RoleBasedStats';
 import { DashboardCharts } from './DashboardCharts';
 import { RealtimeUpdates } from './RealtimeUpdates';
@@ -29,6 +31,17 @@ export const DashboardHome = () => {
     );
   }
 
+  // Show specialized dashboard for students
+  if (user?.roles?.includes('siswa')) {
+    return <StudentDashboard />;
+  }
+
+  // Show specialized dashboard for homeroom teachers
+  if (user?.roles?.includes('wali_kelas')) {
+    return <HomeroomTeacherDashboard />;
+  }
+
+  // Default dashboard for other roles
   return (
     <div className="space-y-6">
       {/* Welcome Section */}

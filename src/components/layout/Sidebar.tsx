@@ -26,8 +26,6 @@ import {
   Database,
   Bell,
   LineChart,
-  Search,
-  Download,
   Sliders,
   Building,
   Activity,
@@ -73,6 +71,19 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
       title: 'Dashboard',
       href: '/dashboard',
       icon: Home,
+    },
+    // Siswa Menu Items
+    {
+      title: 'Prestasi Saya',
+      href: '/achievements?view=student',
+      icon: Trophy,
+      requiredRoles: ['siswa'],
+    },
+    {
+      title: 'Laporan Kasus',
+      href: '/cases?view=student',
+      icon: Shield,
+      requiredRoles: ['siswa'],
     },
     {
       title: 'Presensi Saya',
@@ -130,6 +141,7 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
       icon: User,
       requiredRoles: ['siswa'],
     },
+    // Admin & Staff Menu Items
     {
       title: 'Manajemen Pengguna',
       href: '/user-management',
@@ -205,6 +217,12 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
           icon: Trophy,
           requiredRoles: ['admin', 'wali_kelas'],
           children: [
+            {
+              title: 'Verifikasi Prestasi',
+              href: '/achievements?tab=verification',
+              icon: CheckSquare,
+              requiredRoles: ['admin', 'wali_kelas'],
+            },
             {
               title: 'Input Prestasi',
               href: '/achievements?tab=record',
@@ -548,6 +566,12 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
     if (href.includes('?tab=')) {
       const [path, tab] = href.split('?tab=');
       return currentPath === path && currentSearch.includes(`tab=${tab}`);
+    }
+    
+    // Handle view-based navigation
+    if (href.includes('?view=')) {
+      const [path, view] = href.split('?view=');
+      return currentPath === path && currentSearch.includes(`view=${view}`);
     }
     
     return currentPath === href;

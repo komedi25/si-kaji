@@ -31,6 +31,10 @@ import AIManagement from '@/pages/AIManagement';
 import PermitManagement from '@/pages/PermitManagement';
 import CounselingManagement from '@/pages/CounselingManagement';
 
+// New Student-specific components
+import { StudentAchievementForm } from '@/components/achievements/StudentAchievementForm';
+import { StudentCaseReports } from '@/components/cases/StudentCaseReports';
+
 export function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -78,9 +82,15 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* Enhanced achievements route with student view */}
       <Route path="/achievements" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk']}>
-          <AchievementManagement />
+        <ProtectedRoute>
+          {/* Conditional rendering based on user role and view parameter */}
+          {user?.roles?.includes('siswa') && new URLSearchParams(location.search).get('view') === 'student' ? (
+            <StudentAchievementForm />
+          ) : (
+            <AchievementManagement />
+          )}
         </ProtectedRoute>
       } />
       
