@@ -17,7 +17,7 @@ function App() {
           <Router>
             <div className="App">
               <Routes>
-                <Route path="/" element={<LandingPage />} />
+                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/*" element={<AppRoutes />} />
               </Routes>
               <Toaster />

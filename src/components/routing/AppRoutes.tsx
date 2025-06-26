@@ -17,16 +17,24 @@ import StudentDashboard from '@/pages/StudentDashboard';
 import HomeroomDashboard from '@/pages/HomeroomDashboard';
 import StudentCaseReportsPage from '@/pages/StudentCaseReportsPage';
 import ProfilePage from '@/pages/ProfilePage';
+import { AuthForm } from '@/components/auth/AuthForm';
+import NotFound from '@/pages/NotFound';
 
 const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>; // Show a loading indicator
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
-    // Redirect to login page if not authenticated
     return <Navigate to="/login" replace />;
   }
 
@@ -37,16 +45,20 @@ export const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/login" element={<div>Login Page</div>} />
-      <Route path="/register" element={<div>Register Page</div>} />
+      <Route path="/login" element={<AuthForm />} />
+      <Route path="/auth" element={<AuthForm />} />
+      
+      {/* Logout handler */}
+      <Route path="/logout" element={<Navigate to="/login" replace />} />
 
+      {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/homeroom-dashboard" element={<HomeroomDashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
         
-        {/* Protected Routes */}
+        {/* Management Routes */}
         <Route path="/attendance/*" element={<AttendanceManagement />} />
         <Route path="/violations/*" element={<ViolationManagement />} />
         <Route path="/achievements/*" element={<AchievementManagement />} />
@@ -58,10 +70,15 @@ export const AppRoutes = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/user-management" element={<UserManagement />} />
         
+        {/* Specific feature routes */}
         <Route path="/cases/reports" element={<StudentCaseReportsPage />} />
         
-        <Route path="*" element={<div>Page not found</div>} />
+        {/* Default redirect for authenticated users */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Route>
+      
+      {/* 404 handler */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
