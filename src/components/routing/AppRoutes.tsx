@@ -20,6 +20,7 @@ import ProfilePage from '@/pages/ProfilePage';
 import ActivityProposal from '@/pages/ActivityProposal';
 import DocumentManagement from '@/pages/DocumentManagement';
 import MasterData from '@/pages/MasterData';
+import SystemStatus from '@/pages/SystemStatus';
 import { AuthForm } from '@/components/auth/AuthForm';
 import NotFound from '@/pages/NotFound';
 
@@ -94,6 +95,7 @@ export const AppRoutes = () => {
         <Route path="/proposals/*" element={<ActivityProposal />} />
         <Route path="/documents/*" element={<DocumentManagement />} />
         <Route path="/master-data" element={<MasterData />} />
+        <Route path="/system-status" element={<SystemStatus />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/user-management" element={<UserManagement />} />
         
