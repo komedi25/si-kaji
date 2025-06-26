@@ -24,7 +24,7 @@ export const StudentDisciplineStats = ({ studentId }: StudentDisciplineStatsProp
         .from('student_violations')
         .select(`
           *,
-          violation_types(violation_name, point_deduction)
+          violation_types(name, point_deduction)
         `)
         .eq('student_id', studentId)
         .gte('violation_date', format(thirtyDaysAgo, 'yyyy-MM-dd'))
@@ -38,7 +38,7 @@ export const StudentDisciplineStats = ({ studentId }: StudentDisciplineStatsProp
         .order('created_at', { ascending: false })
         .limit(1);
 
-      const currentPoints = disciplinePoints?.[0]?.current_points || 0;
+      const currentPoints = disciplinePoints?.[0]?.final_score || 100;
       const totalDeductions = violations?.reduce((sum, v) => sum + (v.point_deduction || 0), 0) || 0;
 
       // Prepare chart data
@@ -59,7 +59,7 @@ export const StudentDisciplineStats = ({ studentId }: StudentDisciplineStatsProp
       // Group violations by type
       const violationsByType: Record<string, number> = {};
       violations?.forEach(violation => {
-        const typeName = violation.violation_types?.violation_name || 'Lainnya';
+        const typeName = violation.violation_types?.name || 'Lainnya';
         violationsByType[typeName] = (violationsByType[typeName] || 0) + 1;
       });
 
@@ -216,7 +216,7 @@ export const StudentDisciplineStats = ({ studentId }: StudentDisciplineStatsProp
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
-                        {violation.violation_types?.violation_name || 'Pelanggaran'}
+                        {violation.violation_types?.name || 'Pelanggaran'}
                       </p>
                       <p className="text-sm text-gray-600">
                         {format(new Date(violation.violation_date), 'dd MMMM yyyy', { locale: localeId })}
