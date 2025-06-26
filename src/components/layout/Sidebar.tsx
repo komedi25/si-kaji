@@ -97,6 +97,12 @@ export const Sidebar = () => {
       href: '/proposals',
       roles: ['siswa'],
     },
+    {
+      title: 'Pengajuan Surat',
+      icon: FileText,
+      href: '/documents',
+      roles: ['siswa'],
+    },
     
     // General management activities
     {
@@ -144,11 +150,11 @@ export const Sidebar = () => {
       roles: ['admin', 'waka_kesiswaan', 'koordinator_ekstrakurikuler'],
     },
     
-    // Admin specific - kembalikan menu yang hilang
+    // Admin specific - perbaiki route dan lengkapi menu
     {
       title: 'Master Data',
       icon: Database,
-      href: '/settings',
+      href: '/master-data',
       roles: ['admin'],
     },
     {

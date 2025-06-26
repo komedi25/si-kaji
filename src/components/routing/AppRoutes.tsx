@@ -18,6 +18,8 @@ import HomeroomDashboard from '@/pages/HomeroomDashboard';
 import StudentCaseReportsPage from '@/pages/StudentCaseReportsPage';
 import ProfilePage from '@/pages/ProfilePage';
 import ActivityProposal from '@/pages/ActivityProposal';
+import DocumentManagement from '@/pages/DocumentManagement';
+import MasterData from '@/pages/MasterData';
 import { AuthForm } from '@/components/auth/AuthForm';
 import NotFound from '@/pages/NotFound';
 
@@ -90,6 +92,8 @@ export const AppRoutes = () => {
         <Route path="/counseling/*" element={<CounselingManagement />} />
         <Route path="/homeroom/*" element={<HomeroomJournalManagement />} />
         <Route path="/proposals/*" element={<ActivityProposal />} />
+        <Route path="/documents/*" element={<DocumentManagement />} />
+        <Route path="/master-data" element={<MasterData />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/user-management" element={<UserManagement />} />
         
