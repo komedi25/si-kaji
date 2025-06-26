@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +24,7 @@ import UserManagement from '@/pages/UserManagement';
 import StudentDashboard from '@/pages/StudentDashboard';
 import HomeroomDashboard from '@/pages/HomeroomDashboard';
 import StudentCaseReportsPage from '@/pages/StudentCaseReportsPage';
+import ProfilePage from '@/pages/ProfilePage';
 
 const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -52,6 +54,7 @@ export const AppRoutes = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/homeroom-dashboard" element={<HomeroomDashboard />} />
+        <Route path="/profile" element={<ProfilePage />} />
         
         {/* Protected Routes */}
         <Route path="/attendance/*" element={<AttendanceManagement />} />

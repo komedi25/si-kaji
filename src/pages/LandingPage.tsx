@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Users, Award, Shield, BookOpen, AlertTriangle, Phone, Mail, MapPin, ArrowRight, CheckCircle, Star, Clock, BarChart3, FileText } from 'lucide-react';
@@ -113,10 +112,11 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header - Enhanced Navigation */}
+      {/* Enhanced Header - Relocated buttons */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/90 border-b border-white/20 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4 lg:py-6">
+            {/* Logo and Title */}
             <div className="flex items-center space-x-4">
               <div className="relative group">
                 <img 
@@ -134,20 +134,20 @@ export default function LandingPage() {
               </div>
             </div>
             
-            {/* Navigation moved to right with better spacing */}
-            <nav className="hidden lg:flex items-center space-x-6">
+            {/* Center - Navigation */}
+            <nav className="hidden lg:flex items-center space-x-8">
               <a href="#features" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Fitur</a>
               <a href="#stats" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Statistik</a>
               <a href="#testimonials" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Testimoni</a>
               <a href="#contact" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Kontak</a>
             </nav>
             
-            {/* Action buttons repositioned */}
+            {/* Right - Action buttons */}
             <div className="flex items-center space-x-3">
               <Link to="/cases">
                 <Button variant="outline" size="sm" className="group border-2 border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400 transition-all duration-300">
                   <AlertTriangle className="h-4 w-4 mr-2 group-hover:animate-pulse" />
-                  <span className="hidden sm:inline">Laporkan Kasus</span>
+                  <span className="hidden sm:inline">Lapor Kasus</span>
                   <span className="sm:hidden">Lapor</span>
                 </Button>
               </Link>

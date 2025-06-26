@@ -16,6 +16,8 @@ import {
   MessageSquare,
   User,
   GraduationCap,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,13 +54,33 @@ export const Sidebar = () => {
       roles: ['wali_kelas'],
     },
     
-    // Student activities
+    // Student specific entries
     {
-      title: 'Absensi Siswa',
+      title: 'Rekap Kehadiran Saya',
+      icon: Clock,
+      href: '/attendance/recap',
+      roles: ['siswa'],
+    },
+    {
+      title: 'Absensi Harian',
       icon: Calendar,
       href: '/attendance/self',
       roles: ['siswa'],
     },
+    {
+      title: 'Tambah Prestasi',
+      icon: Trophy,
+      href: '/achievements/submit',
+      roles: ['siswa'],
+    },
+    {
+      title: 'Laporan Kasus',
+      icon: MessageSquare,
+      href: '/cases/reports',
+      roles: ['siswa'],
+    },
+    
+    // General student activities
     {
       title: 'Manajemen Presensi',
       icon: ListChecks,
@@ -66,22 +88,10 @@ export const Sidebar = () => {
       roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
     },
     {
-      title: 'Input Prestasi',
-      icon: Trophy,
-      href: '/achievements/submit',
-      roles: ['siswa'],
-    },
-    {
       title: 'Pengajuan Surat',
       icon: PlusSquare,
       href: '/permits',
       roles: ['admin', 'siswa', 'wali_kelas'],
-    },
-    {
-      title: 'Laporan Kasus',
-      icon: MessageSquare,
-      href: '/cases/reports',
-      roles: ['siswa'],
     },
     
     // Management
