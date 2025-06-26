@@ -2,14 +2,14 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Trophy } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface StudentAchievementFormProps {
@@ -51,7 +51,7 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
     try {
       const selectedType = achievementTypes?.find(t => t.id === formData.achievement_type_id);
       
-      // Insert sebagai siswa - tidak perlu cek role admin
+      // Insert sebagai siswa
       const { error } = await supabase
         .from('student_achievements')
         .insert({
@@ -94,12 +94,14 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
   };
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Tambah Prestasi</DialogTitle>
-        </DialogHeader>
-
+    <Card className="max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5" />
+          Tambah Prestasi Baru
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="achievement_type_id">Jenis Prestasi</Label>
@@ -189,7 +191,7 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 };

@@ -17,6 +17,7 @@ import StudentDashboard from '@/pages/StudentDashboard';
 import HomeroomDashboard from '@/pages/HomeroomDashboard';
 import StudentCaseReportsPage from '@/pages/StudentCaseReportsPage';
 import ProfilePage from '@/pages/ProfilePage';
+import ActivityProposal from '@/pages/ActivityProposal';
 import { AuthForm } from '@/components/auth/AuthForm';
 import NotFound from '@/pages/NotFound';
 
@@ -48,18 +49,20 @@ const DashboardRedirect = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect siswa ke student dashboard, lainnya ke dashboard utama
+  // Redirect berdasarkan role user
   if (user.roles.includes('siswa')) {
     return <Navigate to="/student-dashboard" replace />;
+  } else if (user.roles.includes('wali_kelas')) {
+    return <Navigate to="/homeroom-dashboard" replace />;
   } else {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin-dashboard" replace />;
   }
 };
 
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes - hanya satu route untuk login */}
+      {/* Public Routes */}
       <Route path="/login" element={<AuthForm />} />
       
       {/* Logout handler */}
@@ -68,6 +71,7 @@ export const AppRoutes = () => {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
         {/* Dashboard redirect logic */}
+        <Route path="/" element={<DashboardRedirect />} />
         <Route path="/dashboard" element={<DashboardRedirect />} />
         
         {/* Specific dashboards */}
@@ -85,14 +89,12 @@ export const AppRoutes = () => {
         <Route path="/extracurricular/*" element={<ExtracurricularManagement />} />
         <Route path="/counseling/*" element={<CounselingManagement />} />
         <Route path="/homeroom/*" element={<HomeroomJournalManagement />} />
+        <Route path="/proposals/*" element={<ActivityProposal />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/user-management" element={<UserManagement />} />
         
         {/* Specific feature routes */}
         <Route path="/cases/reports" element={<StudentCaseReportsPage />} />
-        
-        {/* Default redirect for authenticated users */}
-        <Route path="/" element={<DashboardRedirect />} />
       </Route>
       
       {/* 404 handler */}

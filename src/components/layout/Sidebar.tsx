@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Clock,
   TrendingUp,
+  ClipboardList,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,16 +37,16 @@ export const Sidebar = () => {
   const menuItems: MenuItem[] = [
     // Dashboard items - pisahkan berdasarkan role
     {
-      title: 'Dashboard',
+      title: 'Dashboard Siswa',
       icon: Home,
       href: '/student-dashboard',
       roles: ['siswa'],
     },
     {
-      title: 'Dashboard Utama',
+      title: 'Dashboard Admin',
       icon: Home,
       href: '/admin-dashboard',
-      roles: ['admin', 'wali_kelas', 'guru_bk', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
+      roles: ['admin', 'waka_kesiswaan'],
     },
     {
       title: 'Dashboard Wali Kelas',
@@ -63,7 +64,7 @@ export const Sidebar = () => {
     },
     {
       title: 'Rekap Presensi',
-      icon: Calendar,
+      icon: BarChart3,
       href: '/attendance/recap',
       roles: ['siswa'],
     },
@@ -79,8 +80,14 @@ export const Sidebar = () => {
       href: '/cases/reports',
       roles: ['siswa'],
     },
+    {
+      title: 'Proposal Kegiatan',
+      icon: ClipboardList,
+      href: '/proposals',
+      roles: ['siswa'],
+    },
     
-    // General student activities
+    // General management activities
     {
       title: 'Manajemen Presensi',
       icon: ListChecks,
@@ -88,7 +95,7 @@ export const Sidebar = () => {
       roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
     },
     {
-      title: 'Pengajuan Surat',
+      title: 'Permohonan Izin',
       icon: PlusSquare,
       href: '/permits',
       roles: ['admin', 'siswa', 'wali_kelas'],
@@ -118,6 +125,12 @@ export const Sidebar = () => {
       icon: GraduationCap,
       href: '/counseling',
       roles: ['siswa', 'guru_bk'],
+    },
+    {
+      title: 'Proposal Kegiatan',
+      icon: ClipboardList,
+      href: '/proposals',
+      roles: ['admin', 'waka_kesiswaan', 'koordinator_ekstrakurikuler'],
     },
     
     // Settings
