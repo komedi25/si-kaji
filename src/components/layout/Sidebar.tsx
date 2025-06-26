@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -11,6 +12,10 @@ import {
   BarChart3,
   ShieldAlert,
   LogOut,
+  Trophy,
+  MessageSquare,
+  User,
+  GraduationCap,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,9 +32,9 @@ export const Sidebar = () => {
   const location = useLocation();
 
   const menuItems = [
-    // General items
+    // Dashboard items
     {
-      title: 'Dashboard',
+      title: 'Dashboard Utama',
       icon: Home,
       href: '/dashboard',
       roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
@@ -46,8 +51,10 @@ export const Sidebar = () => {
       href: '/homeroom-dashboard', 
       roles: ['wali_kelas'],
     },
+    
+    // Student activities
     {
-      title: 'Presensi',
+      title: 'Absensi Siswa',
       icon: Calendar,
       href: '/attendance/self',
       roles: ['siswa'],
@@ -59,10 +66,10 @@ export const Sidebar = () => {
       roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
     },
     {
-      title: 'Ekstrakurikuler',
-      icon: BookOpen,
-      href: '/extracurricular',
-      roles: ['admin', 'siswa', 'koordinator_ekstrakurikuler'],
+      title: 'Input Prestasi',
+      icon: Trophy,
+      href: '/achievements/submit',
+      roles: ['siswa'],
     },
     {
       title: 'Pengajuan Surat',
@@ -71,7 +78,21 @@ export const Sidebar = () => {
       roles: ['admin', 'siswa', 'wali_kelas'],
     },
     {
-      title: 'Pelanggaran',
+      title: 'Laporan Kasus',
+      icon: MessageSquare,
+      href: '/cases/reports',
+      roles: ['siswa'],
+    },
+    
+    // Management
+    {
+      title: 'Ekstrakurikuler',
+      icon: BookOpen,
+      href: '/extracurricular',
+      roles: ['admin', 'siswa', 'koordinator_ekstrakurikuler'],
+    },
+    {
+      title: 'Data Pelanggaran',
       icon: ShieldAlert,
       href: '/violations',
       roles: ['admin', 'tppk', 'guru_bk', 'wali_kelas'],
@@ -83,10 +104,18 @@ export const Sidebar = () => {
       roles: ['admin', 'wali_kelas'],
     },
     {
-      title: 'Laporan Kasus',
-      icon: FileText,
-      href: '/cases/reports',
-      roles: ['siswa'],
+      title: 'Konseling BK',
+      icon: GraduationCap,
+      href: '/counseling',
+      roles: ['siswa', 'guru_bk'],
+    },
+    
+    // Settings
+    {
+      title: 'Profil Saya',
+      icon: User,
+      href: '/profile',
+      roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
     },
     {
       title: 'Pengaturan',
@@ -110,25 +139,44 @@ export const Sidebar = () => {
   });
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 border-r py-4">
-      <div className="px-4 mb-4">
-        <img src="/logo.png" alt="Logo" className="h-8" />
+    <div className="flex flex-col h-full bg-gradient-to-b from-blue-50 to-indigo-50 border-r border-blue-200 py-4">
+      <div className="px-4 mb-6">
+        <div className="flex items-center space-x-3">
+          <img 
+            src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
+            alt="Logo SMKN 1 Kendal" 
+            className="h-10 w-10 rounded-full shadow-md"
+          />
+          <div>
+            <h2 className="font-bold text-blue-900 text-lg">Si-Kaji</h2>
+            <p className="text-xs text-blue-600 font-medium">SMK N 1 Kendal</p>
+          </div>
+        </div>
       </div>
-      <div className="space-y-1 flex-1">
+      
+      <div className="space-y-1 flex-1 px-2">
         {filteredMenuItems.map((item) => (
           <NavLink
             key={item.title}
             to={item.href}
             className={({ isActive }) =>
-              `flex items-center px-4 py-2 text-sm font-medium rounded-md hover:bg-gray-200 ${
-                isActive ? 'bg-gray-200 text-blue-600' : 'text-gray-700'
+              `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group hover:bg-blue-100 hover:text-blue-700 ${
+                isActive 
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105' 
+                  : 'text-gray-700 hover:scale-102'
               }`
             }
           >
-            <item.icon className="h-4 w-4 mr-2" />
-            {item.title}
+            <item.icon className="h-4 w-4 mr-3 group-hover:scale-110 transition-transform" />
+            <span className="truncate">{item.title}</span>
           </NavLink>
         ))}
+      </div>
+      
+      <div className="px-4 pt-4 border-t border-blue-200">
+        <p className="text-xs text-blue-600 text-center font-medium">
+          Sistem Kesiswaan Terpadu
+        </p>
       </div>
     </div>
   );
