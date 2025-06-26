@@ -17,7 +17,6 @@ const AttendanceManagement = () => {
   const getCurrentTab = () => {
     const path = location.pathname;
     if (path === '/attendance/self') return 'self';
-    if (path === '/attendance/recap') return 'recap';
     if (path === '/attendance/record') return 'record';
     if (path === '/attendance/report') return 'report';
     if (path === '/attendance/location') return 'location';
@@ -35,16 +34,6 @@ const AttendanceManagement = () => {
             <StudentSelfAttendance />
           </div>
         );
-      case 'recap':
-        // Khusus untuk siswa - tampilkan rekap presensi pribadi
-        if (hasRole('siswa')) {
-          return (
-            <div className="max-w-4xl mx-auto">
-              <AttendanceReport />
-            </div>
-          );
-        }
-        break;
       case 'record':
         if (hasRole('admin') || hasRole('wali_kelas') || hasRole('guru_bk') || hasRole('tppk')) {
           return <AttendanceRecorder />;
@@ -86,8 +75,6 @@ const AttendanceManagement = () => {
     switch (tab) {
       case 'self':
         return 'Presensi Mandiri';
-      case 'recap':
-        return 'Rekap Presensi Saya';
       case 'record':
         return 'Input Presensi';
       case 'report':

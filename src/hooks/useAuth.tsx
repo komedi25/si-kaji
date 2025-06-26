@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, 'Session:', !!session);
+        console.log('Auth state changed:', event);
         setSession(session);
         
         if (session?.user) {
@@ -146,7 +146,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', !!session);
       setSession(session);
       if (session?.user) {
         setTimeout(() => {
@@ -161,16 +160,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting sign in for:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (!error) {
-      console.log('Sign in successful, waiting for auth state change...');
-    } else {
-      console.error('Sign in error:', error);
+      // Refresh user data after successful sign in
+      setTimeout(async () => {
+        await refreshUserData();
+      }, 1000);
     }
     
     return { error };

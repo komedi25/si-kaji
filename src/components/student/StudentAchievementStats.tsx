@@ -1,92 +1,92 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
-import { Trophy, Medal, Star, TrendingUp } from 'lucide-react';
+import { Trophy, Star, Plus, Medal, Award, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
-import { id as localeId } from 'date-fns/locale';
+import { id } from 'date-fns/locale';
+import { StudentAchievementForm } from './StudentAchievementForm';
+import { useState } from 'react';
 
 interface StudentAchievementStatsProps {
   studentId: string;
 }
 
 export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsProps) => {
-  const { data: achievementData, isLoading } = useQuery({
-    queryKey: ['student-achievement-stats', studentId],
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  // Query untuk statistik prestasi
+  const { data: achievementStats, isLoading, refetch } = useQuery({
+    queryKey: ['student-achievements', studentId],
     queryFn: async () => {
-      // Get achievements
-      const { data: achievements } = await supabase
+      const { data, error } = await supabase
         .from('student_achievements')
         .select(`
           *,
-          achievement_types(name, point_reward, category, level)
+          achievement_types (
+            name,
+            category,
+            level,
+            point_reward
+          )
         `)
         .eq('student_id', studentId)
         .order('achievement_date', { ascending: false });
 
-      const verified = achievements?.filter(a => a.status === 'verified') || [];
-      const pending = achievements?.filter(a => a.status === 'pending') || [];
-      const rejected = achievements?.filter(a => a.status === 'rejected') || [];
+      if (error) throw error;
 
-      const totalPoints = verified.reduce((sum, a) => sum + (a.point_reward || 0), 0);
+      const verified = data?.filter(a => a.status === 'verified').length || 0;
+      const pending = data?.filter(a => a.status === 'pending').length || 0;
+      const rejected = data?.filter(a => a.status === 'rejected').length || 0;
+      const totalPoints = data?.filter(a => a.status === 'verified')
+        .reduce((sum, a) => sum + (a.point_reward || 0), 0) || 0;
 
       // Group by category
-      const byCategory: Record<string, number> = {};
-      verified.forEach(achievement => {
-        const category = achievement.achievement_types?.category || 'Lainnya';
-        byCategory[category] = (byCategory[category] || 0) + 1;
+      const categoryStats: Record<string, number> = {};
+      data?.filter(a => a.status === 'verified').forEach(achievement => {
+        const category = achievement.achievement_types?.category || 'lainnya';
+        categoryStats[category] = (categoryStats[category] || 0) + 1;
       });
 
-      const categoryData = Object.entries(byCategory)
-        .map(([category, count]) => ({ category, count }))
-        .sort((a, b) => b.count - a.count);
-
-      // Group by level/tier
-      const byLevel: Record<string, number> = {};
-      verified.forEach(achievement => {
-        const level = achievement.achievement_types?.level || 'Sekolah';
-        byLevel[level] = (byLevel[level] || 0) + 1;
+      // Group by level
+      const levelStats: Record<string, number> = {};
+      data?.filter(a => a.status === 'verified').forEach(achievement => {
+        const level = achievement.achievement_types?.level || 'sekolah';
+        levelStats[level] = (levelStats[level] || 0) + 1;
       });
-
-      const levelData = Object.entries(byLevel)
-        .map(([level, count]) => ({ level, count }));
-
-      // Monthly trend (last 6 months)
-      const monthlyTrend: Record<string, number> = {};
-      verified.forEach(achievement => {
-        const month = format(new Date(achievement.achievement_date), 'MMM yyyy', { locale: localeId });
-        monthlyTrend[month] = (monthlyTrend[month] || 0) + 1;
-      });
-
-      const trendData = Object.entries(monthlyTrend)
-        .map(([month, count]) => ({ month, count }))
-        .slice(-6);
 
       return {
-        totalAchievements: verified.length,
-        pendingCount: pending.length,
-        rejectedCount: rejected.length,
+        total: data?.length || 0,
+        verified,
+        pending,
+        rejected,
         totalPoints,
-        recentAchievements: verified.slice(0, 5),
-        categoryData,
-        levelData,
-        trendData
+        achievements: data || [],
+        categoryStats: Object.entries(categoryStats).map(([category, count]) => ({
+          category,
+          count
+        })),
+        levelStats: Object.entries(levelStats).map(([level, count]) => ({
+          level,
+          count
+        }))
       };
     },
-    enabled: !!studentId
   });
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
+      <div className="grid gap-4 md:grid-cols-2">
+        {[...Array(4)].map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
               </div>
             </CardContent>
           </Card>
@@ -95,106 +95,136 @@ export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsPr
     );
   }
 
-  const { totalAchievements, pendingCount, rejectedCount, totalPoints, recentAchievements, categoryData, levelData, trendData } = achievementData || {};
-
-  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+  const levelColors = {
+    sekolah: '#10b981',
+    kota: '#3b82f6',
+    provinsi: '#8b5cf6',
+    nasional: '#f59e0b',
+    internasional: '#ef4444'
+  };
 
   return (
     <div className="space-y-6">
+      {/* Add Achievement Button */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Prestasi Saya</h2>
+        <Button 
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Tambah Prestasi
+        </Button>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Prestasi</CardTitle>
             <Trophy className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{totalAchievements}</div>
-            <p className="text-xs text-muted-foreground">terverifikasi</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Poin Prestasi</CardTitle>
-            <Star className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{totalPoints}</div>
-            <p className="text-xs text-muted-foreground">total poin</p>
+            <div className="text-2xl font-bold text-yellow-600">{achievementStats?.verified || 0}</div>
+            <p className="text-xs text-muted-foreground">Prestasi terverifikasi</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Menunggu Verifikasi</CardTitle>
-            <Medal className="h-4 w-4 text-orange-600" />
+            <Star className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{pendingCount}</div>
-            <p className="text-xs text-muted-foreground">prestasi</p>
+            <div className="text-2xl font-bold text-blue-600">{achievementStats?.pending || 0}</div>
+            <p className="text-xs text-muted-foreground">Prestasi pending</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Trend Bulanan</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Total Poin</CardTitle>
+            <Award className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {trendData?.[trendData.length - 1]?.count || 0}
+            <div className="text-2xl font-bold text-green-600">{achievementStats?.totalPoints || 0}</div>
+            <p className="text-xs text-muted-foreground">Poin prestasi</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tingkat Tertinggi</CardTitle>
+            <Medal className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-purple-600">
+              {achievementStats?.levelStats.find(l => l.level === 'internasional') ? 'Internasional' :
+               achievementStats?.levelStats.find(l => l.level === 'nasional') ? 'Nasional' :
+               achievementStats?.levelStats.find(l => l.level === 'provinsi') ? 'Provinsi' :
+               achievementStats?.levelStats.find(l => l.level === 'kota') ? 'Kota' : 'Sekolah'}
             </div>
-            <p className="text-xs text-muted-foreground">bulan ini</p>
+            <p className="text-xs text-muted-foreground">Level tertinggi</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Category Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Prestasi per Kategori</CardTitle>
+            <CardTitle>Kategori Prestasi</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
               config={{
-                count: { label: "Jumlah", color: "#3b82f6" }
+                akademik: { label: "Akademik", color: "#3b82f6" },
+                olahraga: { label: "Olahraga", color: "#10b981" },
+                seni: { label: "Seni", color: "#8b5cf6" },
+                teknologi: { label: "Teknologi", color: "#f59e0b" }
               }}
-              className="h-[250px]"
+              className="h-[300px]"
             >
-              <BarChart data={categoryData}>
+              <BarChart data={achievementStats?.categoryStats || []}>
                 <XAxis dataKey="category" />
                 <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="count" fill="#3b82f6" />
+                <Bar dataKey="count" fill="#3b82f6" name="Jumlah" />
               </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
 
+        {/* Level Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Prestasi per Tingkat</CardTitle>
+            <CardTitle>Tingkat Prestasi</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
               config={{
-                level: { label: "Tingkat", color: "#10b981" }
+                sekolah: { label: "Sekolah", color: "#10b981" },
+                kota: { label: "Kota", color: "#3b82f6" },
+                provinsi: { label: "Provinsi", color: "#8b5cf6" },
+                nasional: { label: "Nasional", color: "#f59e0b" },
+                internasional: { label: "Internasional", color: "#ef4444" }
               }}
-              className="h-[250px]"
+              className="h-[300px]"
             >
               <PieChart>
                 <Pie
-                  data={levelData}
+                  data={achievementStats?.levelStats || []}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
+                  labelLine={false}
+                  label={({ level, count }) => `${level} (${count})`}
+                  outerRadius={80}
+                  fill="#8884d8"
                   dataKey="count"
                 >
-                  {levelData?.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  {achievementStats?.levelStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={levelColors[entry.level as keyof typeof levelColors] || '#8884d8'} />
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -204,72 +234,75 @@ export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsPr
         </Card>
       </div>
 
-      {/* Trend Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Trend Prestasi (6 Bulan Terakhir)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer
-            config={{
-              count: { label: "Jumlah Prestasi", color: "#10b981" }
-            }}
-            className="h-[250px]"
-          >
-            <BarChart data={trendData}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="count" fill="#10b981" />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
       {/* Recent Achievements */}
       <Card>
         <CardHeader>
-          <CardTitle>Prestasi Terbaru</CardTitle>
+          <CardTitle>Riwayat Prestasi</CardTitle>
         </CardHeader>
         <CardContent>
-          {recentAchievements?.length > 0 ? (
-            <div className="space-y-3">
-              {recentAchievements.map((achievement, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-full bg-yellow-100 text-yellow-600">
-                      <Trophy className="h-4 w-4" />
-                    </div>
+          {achievementStats?.achievements.length === 0 ? (
+            <div className="text-center py-8">
+              <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-600 mb-2">Belum Ada Prestasi</h3>
+              <p className="text-muted-foreground mb-4">
+                Mulai tambahkan prestasi Anda untuk membangun portofolio yang mengesankan!
+              </p>
+              <Button onClick={() => setShowAddForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Prestasi Pertama
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {achievementStats?.achievements.map((achievement) => (
+                <div key={achievement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Trophy className={`h-5 w-5 ${
+                      achievement.achievement_types?.level === 'internasional' ? 'text-red-600' :
+                      achievement.achievement_types?.level === 'nasional' ? 'text-orange-600' :
+                      achievement.achievement_types?.level === 'provinsi' ? 'text-purple-600' :
+                      achievement.achievement_types?.level === 'kota' ? 'text-blue-600' :
+                      'text-green-600'
+                    }`} />
                     <div>
-                      <p className="font-medium text-gray-900">
-                        {achievement.achievement_types?.name || achievement.description}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {format(new Date(achievement.achievement_date), 'dd MMMM yyyy', { locale: localeId })}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Tingkat: {achievement.achievement_types?.level} • Kategori: {achievement.achievement_types?.category}
+                      <p className="font-medium">{achievement.achievement_types?.name || 'Prestasi'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(achievement.achievement_date), 'dd MMMM yyyy', { locale: id })}
+                        {achievement.description && ` • ${achievement.description}`}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-bold text-yellow-600">
-                      +{achievement.point_reward}
+                    <div className="text-sm font-medium text-green-600">
+                      +{achievement.point_reward} poin
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      achievement.status === 'verified' ? 'bg-green-100 text-green-800' :
+                      achievement.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {achievement.status === 'verified' ? 'Terverifikasi' :
+                       achievement.status === 'pending' ? 'Menunggu' : 'Ditolak'}
                     </span>
-                    <p className="text-xs text-gray-500">poin</p>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Belum Ada Prestasi</h3>
-              <p className="text-gray-600">Mulai raih prestasi pertama Anda!</p>
-            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Add Achievement Form Dialog */}
+      {showAddForm && (
+        <StudentAchievementForm
+          studentId={studentId}
+          onClose={() => setShowAddForm(false)}
+          onSuccess={() => {
+            setShowAddForm(false);
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 };

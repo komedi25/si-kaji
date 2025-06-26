@@ -10,27 +10,19 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // Redirect berdasarkan role user
-        const roles = user.roles || [];
-        if (roles.includes('siswa')) {
-          navigate('/student-dashboard');
-        } else if (roles.includes('wali_kelas')) {
-          navigate('/homeroom-dashboard');
-        } else {
-          navigate('/admin-dashboard');
-        }
+        navigate('/dashboard');
       } else {
-        navigate('/landing');
+        navigate('/');
       }
     }
   }, [user, loading, navigate]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat aplikasi...</p>
+          <p className="mt-4 text-gray-600">Memuat...</p>
         </div>
       </div>
     );

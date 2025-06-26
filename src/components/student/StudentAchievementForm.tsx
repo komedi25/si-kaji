@@ -2,15 +2,14 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, X, Trophy } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { Upload, X } from 'lucide-react';
 
 interface StudentAchievementFormProps {
   studentId: string;
@@ -20,7 +19,6 @@ interface StudentAchievementFormProps {
 
 export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: StudentAchievementFormProps) => {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     achievement_type_id: '',
@@ -51,7 +49,6 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
     try {
       const selectedType = achievementTypes?.find(t => t.id === formData.achievement_type_id);
       
-      // Insert sebagai siswa
       const { error } = await supabase
         .from('student_achievements')
         .insert({
@@ -61,8 +58,7 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
           description: formData.description,
           certificate_url: formData.certificate_url || null,
           point_reward: selectedType?.point_reward || 0,
-          status: 'pending', // Menunggu verifikasi wali kelas
-          recorded_by: user?.id // Dicatat oleh siswa sendiri
+          status: 'pending' // Menunggu verifikasi wali kelas
         });
 
       if (error) throw error;
@@ -94,14 +90,12 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          Tambah Prestasi Baru
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Tambah Prestasi</DialogTitle>
+        </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="achievement_type_id">Jenis Prestasi</Label>
@@ -191,7 +185,7 @@ export const StudentAchievementForm = ({ studentId, onClose, onSuccess }: Studen
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };

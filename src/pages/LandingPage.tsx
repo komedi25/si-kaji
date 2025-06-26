@@ -1,172 +1,181 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  GraduationCap, 
-  Users, 
-  Calendar, 
-  TrendingUp, 
-  Shield, 
-  BookOpen,
-  Star,
-  Trophy,
-  MessageSquare,
-  Clock,
-  ArrowRight,
-  CheckCircle,
-  Zap,
-  Target,
-  Heart
-} from 'lucide-react';
+import { GraduationCap, Users, Award, Shield, BookOpen, AlertTriangle, Phone, Mail, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { CaseTracker } from '@/components/cases/CaseTracker';
 
-const LandingPage = () => {
+export default function LandingPage() {
+  // Fetch real statistics from database
+  const { data: stats } = useQuery({
+    queryKey: ['landing-stats'],
+    queryFn: async () => {
+      const [studentsResult, teachersResult, majorsResult, achievementsResult] = await Promise.all([
+        supabase.from('students').select('id').eq('status', 'active'),
+        supabase.from('profiles').select('id').limit(100), // Approximation for staff
+        supabase.from('majors').select('id').eq('is_active', true),
+        supabase.from('student_achievements').select('id').eq('status', 'verified')
+          .gte('achievement_date', new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0])
+      ]);
+
+      return {
+        activeStudents: studentsResult.data?.length || 0,
+        staffCount: Math.min(teachersResult.data?.length || 0, 85), // Cap at reasonable number
+        majors: majorsResult.data?.length || 0,
+        achievements: achievementsResult.data?.length || 0
+      };
+    },
+  });
+
+  const features = [
+    {
+      icon: Users,
+      title: 'Manajemen Siswa',
+      description: 'Kelola data siswa, kelas, dan informasi akademik secara terpusat'
+    },
+    {
+      icon: BookOpen,
+      title: 'Jurnal Pembelajaran',
+      description: 'Catat dan pantau perkembangan pembelajaran harian siswa'
+    },
+    {
+      icon: Award,
+      title: 'Sistem Prestasi',
+      description: 'Rekam dan verifikasi prestasi siswa di berbagai bidang'
+    },
+    {
+      icon: Shield,
+      title: 'Sistem Disiplin',
+      description: 'Monitoring pelanggaran dan poin kedisiplinan siswa'
+    },
+    {
+      icon: AlertTriangle,
+      title: 'Manajemen Kasus',
+      description: 'Sistem pelaporan dan penanganan kasus siswa yang terintegrasi'
+    },
+    {
+      icon: GraduationCap,
+      title: 'Portal Orangtua',
+      description: 'Akses informasi perkembangan anak secara real-time'
+    }
+  ];
+
+  const displayStats = [
+    { label: 'Siswa Aktif', value: stats ? `${stats.activeStudents}+` : '1,200+' },
+    { label: 'Guru & Staff', value: '85+' },
+    { label: 'Program Keahlian', value: stats ? `${stats.majors}` : '5' },
+    { label: 'Prestasi Tahun Ini', value: stats ? `${stats.achievements}+` : '150+' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
-      <header className="relative z-50 bg-white/80 backdrop-blur-md border-b border-blue-100 sticky top-0">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Header - Improved mobile responsiveness */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex justify-between items-center py-3 sm:py-4 lg:py-6">
+            <div className="flex items-center flex-shrink-0 min-w-0">
               <img 
                 src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
                 alt="Logo SMKN 1 Kendal" 
-                className="h-10 w-10 rounded-full shadow-lg"
+                className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 mr-2 sm:mr-3 flex-shrink-0"
               />
-              <div>
-                <h1 className="text-xl font-bold text-blue-900">Si-Kaji</h1>
-                <p className="text-xs text-blue-600 font-medium">SMK Negeri 1 Kendal</p>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-lg lg:text-xl font-bold text-gray-900 truncate">SMK Negeri 1 Kendal</h1>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Sistem Informasi Kesiswaan Terpadu</p>
               </div>
             </div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                Fitur
-              </a>
-              <a href="#about" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                Tentang
-              </a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                Kontak
-              </a>
-            </nav>
-
-            {/* Auth Buttons */}
-            <div className="flex items-center space-x-3">
-              <Link to="/login">
-                <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50">
-                  Masuk
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 flex-shrink-0">
+              <Link to="/cases">
+                <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-8 sm:h-9 sm:px-3">
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Laporkan</span>
+                  <span className="sm:hidden">Lapor</span>
                 </Button>
               </Link>
-              <Link to="/dashboard">
-                <Button size="sm" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg">
-                  Dashboard
+              <Link to="/auth">
+                <Button size="sm" className="text-xs px-2 py-1 h-8 sm:h-9 sm:px-3">
+                  <span className="hidden sm:inline">Login Sistem</span>
+                  <span className="sm:hidden">Login</span>
                 </Button>
               </Link>
             </div>
           </div>
+          {/* Mobile Case Tracker */}
+          <div className="pb-3 sm:pb-4 lg:hidden">
+            <CaseTracker />
+          </div>
+          {/* Desktop Case Tracker */}
+          <div className="hidden lg:block pb-4">
+            <CaseTracker />
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10"></div>
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200 px-4 py-2">
-              ✨ Sistem Informasi Kesiswaan Terpadu
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Kelola Data Siswa dengan
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                {" "}Mudah & Efisien
-              </span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
-              Si-Kaji adalah platform digital yang mengintegrasikan seluruh aspek manajemen kesiswaan, 
-              dari presensi hingga evaluasi prestasi, dalam satu sistem yang mudah digunakan.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/dashboard">
-                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                  Mulai Sekarang
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Button variant="outline" size="lg" className="border-blue-200 text-blue-700 hover:bg-blue-50 px-8 py-3 rounded-xl">
-                Pelajari Lebih Lanjut
+      {/* Hero Section - Better mobile spacing */}
+      <section className="py-8 sm:py-12 lg:py-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6">
+            Sistem Informasi
+            <span className="text-blue-600 block">Kesiswaan Terpadu</span>
+          </h1>
+          <p className="text-sm sm:text-base lg:text-xl text-gray-600 mb-6 sm:mb-8 max-w-3xl mx-auto px-2">
+            Platform digital terintegrasi untuk manajemen kesiswaan SMK Negeri 1 Kendal. 
+            Mendukung pembelajaran, monitoring, dan pengembangan karakter siswa secara komprehensif.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <Link to="/auth" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                Akses Sistem
               </Button>
-            </div>
+            </Link>
+            <Link to="/cases" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                Laporkan Kasus
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-12 lg:py-16 bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-8">
+            {displayStats.map((stat, index) => (
+              <div key={index} className="text-center text-white">
+                <div className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-2">{stat.value}</div>
+                <div className="text-sm lg:text-base text-blue-100">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Fitur Unggulan Si-Kaji
+      <section className="py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-4">
+              Fitur Unggulan Sistem
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Solusi lengkap untuk mengelola seluruh aspek kesiswaan dengan teknologi modern
+            <p className="text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto">
+              Solusi komprehensif untuk mendukung ekosistem pendidikan yang modern dan terintegrasi
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Users className="h-8 w-8" />,
-                title: "Manajemen Siswa",
-                description: "Kelola data siswa, kelas, dan wali kelas dalam satu platform terpadu",
-                color: "from-blue-500 to-blue-600"
-              },
-              {
-                icon: <Calendar className="h-8 w-8" />,
-                title: "Presensi Digital",
-                description: "Sistem absensi otomatis dengan teknologi geolocation dan QR code",
-                color: "from-green-500 to-green-600"
-              },
-              {
-                icon: <Trophy className="h-8 w-8" />,
-                title: "Tracking Prestasi",
-                description: "Catat dan pantau perkembangan prestasi siswa secara real-time",
-                color: "from-yellow-500 to-yellow-600"
-              },
-              {
-                icon: <Shield className="h-8 w-8" />,
-                title: "Sistem Kedisiplinan",
-                description: "Monitoring pelanggaran dan poin kedisiplinan siswa",
-                color: "from-red-500 to-red-600"
-              },
-              {
-                icon: <MessageSquare className="h-8 w-8" />,
-                title: "Konseling Digital",
-                description: "Platform konseling dan bimbingan siswa yang terintegrasi",
-                color: "from-purple-500 to-purple-600"
-              },
-              {
-                icon: <TrendingUp className="h-8 w-8" />,
-                title: "Analytics & Laporan",
-                description: "Dashboard analitik dengan visualisasi data yang komprehensif",
-                color: "from-indigo-500 to-indigo-600"
-              }
-            ].map((feature, index) => (
-              <Card key={index} className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:transform hover:scale-105">
-                <CardHeader className="pb-4">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-r ${feature.color} text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                    {feature.icon}
-                  </div>
-                  <CardTitle className="text-xl font-bold text-gray-900">
-                    {feature.title}
-                  </CardTitle>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            {features.map((feature, index) => (
+              <Card key={index} className="h-full hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <feature.icon className="h-10 w-10 lg:h-12 lg:w-12 text-blue-600 mb-4" />
+                  <CardTitle className="text-lg lg:text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600 leading-relaxed">
+                  <CardDescription className="text-gray-600 text-sm lg:text-base">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -176,112 +185,88 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Statistics Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              Dipercaya oleh Ribuan Pengguna
-            </h2>
-            <p className="text-xl text-blue-100">
-              Bergabunglah dengan komunitas sekolah yang telah merasakan manfaat Si-Kaji
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              { number: "1000+", label: "Siswa Aktif" },
-              { number: "50+", label: "Guru & Staff" },
-              { number: "98%", label: "Tingkat Kepuasan" },
-              { number: "24/7", label: "Support" }
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl font-bold mb-2">{stat.number}</div>
-                <div className="text-blue-100">{stat.label}</div>
-              </div>
-            ))}
+      {/* CTA Section */}
+      <section className="py-16 lg:py-20 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-6">
+            Siap Menggunakan Sistem?
+          </h2>
+          <p className="text-lg lg:text-xl text-gray-600 mb-8">
+            Bergabunglah dengan ekosistem digital SMK Negeri 1 Kendal untuk pengalaman 
+            pendidikan yang lebih terstruktur dan efisien.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/auth">
+              <Button size="lg" className="w-full sm:w-auto">
+                Login ke Sistem
+              </Button>
+            </Link>
+            <Link to="/cases">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                <AlertTriangle className="h-4 w-5 mr-2" />
+                Laporkan Kasus Siswa
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Siap Memulai Transformasi Digital?
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Bergabunglah dengan Si-Kaji dan rasakan kemudahan mengelola data kesiswaan 
-            dengan teknologi terdepan.
-          </p>
-          <Link to="/dashboard">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              Mulai Gratis Sekarang
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+      {/* Contact Section */}
+      <section className="py-12 lg:py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8 lg:mb-12">
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-4">Kontak Sekolah</h2>
+            <p className="text-gray-600">Hubungi kami untuk informasi lebih lanjut</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            <div className="text-center">
+              <Phone className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Telepon</h3>
+              <p className="text-gray-600 text-sm lg:text-base">(0294) 381547</p>
+            </div>
+            
+            <div className="text-center">
+              <Mail className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
+              <p className="text-gray-600 text-sm lg:text-base">smkn1kendal@gmail.com</p>
+            </div>
+            
+            <div className="text-center">
+              <MapPin className="h-6 w-6 lg:h-8 lg:w-8 text-blue-600 mx-auto mb-4" />
+              <h3 className="font-semibold text-gray-900 mb-2">Alamat</h3>
+              <p className="text-gray-600 text-sm lg:text-base">Jl. Soekarno Hatta No. 6, Kendal</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <img 
-                  src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
-                  alt="Logo SMKN 1 Kendal" 
-                  className="h-8 w-8 rounded-full"
-                />
-                <div>
-                  <h3 className="font-bold">Si-Kaji</h3>
-                  <p className="text-sm text-gray-400">SMK N 1 Kendal</p>
-                </div>
+      <footer className="bg-gray-900 text-white py-8 lg:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-4 md:mb-0">
+              <img 
+                src="/lovable-uploads/b258db0b-54a9-4826-a0ce-5850c64b6fc7.png" 
+                alt="Logo SMKN 1 Kendal" 
+                className="h-8 w-8 lg:h-10 lg:w-10 mr-3"
+              />
+              <div>
+                <h3 className="font-bold text-sm lg:text-base">SMK Negeri 1 Kendal</h3>
+                <p className="text-xs lg:text-sm text-gray-400">Sistem Informasi Kesiswaan</p>
               </div>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Sistem Informasi Kesiswaan yang mengintegrasikan seluruh aspek manajemen siswa.
+            </div>
+            <div className="text-center md:text-right">
+              <p className="text-xs lg:text-sm text-gray-400">
+                © 2024 SMK Negeri 1 Kendal. All rights reserved.
+              </p>
+              <p className="text-xs lg:text-sm text-gray-400 mt-1">
+                Jl. Soekarno Hatta No. 6, Kendal, Jawa Tengah
               </p>
             </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Fitur</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Manajemen Siswa</li>
-                <li>Presensi Digital</li>
-                <li>Tracking Prestasi</li>
-                <li>Konseling Online</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Bantuan</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Dokumentasi</li>
-                <li>Tutorial</li>
-                <li>FAQ</li>
-                <li>Support</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold mb-4">Kontak</h4>
-              <div className="text-sm text-gray-400 space-y-2">
-                <p>SMK Negeri 1 Kendal</p>
-                <p>Jl. Soekarno Hatta No. 1</p>
-                <p>Kendal, Jawa Tengah</p>
-                <p>Telp: (0294) 381-234</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 Si-Kaji SMK Negeri 1 Kendal. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
   );
-};
-
-export default LandingPage;
+}

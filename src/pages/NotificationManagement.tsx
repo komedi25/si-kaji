@@ -1,77 +1,53 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, Send, Users, MessageCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { NotificationTemplateManager } from '@/components/notifications/NotificationTemplateManager';
+import { NotificationChannelManager } from '@/components/notifications/NotificationChannelManager';
+import { UserNotificationPreferences } from '@/components/notifications/UserNotificationPreferences';
+import { useAuth } from '@/hooks/useAuth';
 
 const NotificationManagement = () => {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Sistem Notifikasi</h1>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Notifikasi Aktif</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">Pending notifikasi</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Terkirim</CardTitle>
-            <Send className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,847</div>
-            <p className="text-xs text-muted-foreground">Hari ini</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Penerima</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">User aktif</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Template</CardTitle>
-            <MessageCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">Template aktif</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Manajemen Notifikasi</CardTitle>
-          <CardDescription>
-            Kelola notifikasi WhatsApp, email, dan push notification
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
+    <AppLayout>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Manajemen Notifikasi</h1>
             <p className="text-muted-foreground">
-              Sistem notifikasi terpusat sedang dalam pengembangan
+              Kelola sistem notifikasi terpusat dengan template dan channel
             </p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          <Tabs defaultValue={isAdmin ? "templates" : "preferences"} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              {isAdmin && <TabsTrigger value="templates">Template</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="channels">Channel</TabsTrigger>}
+              <TabsTrigger value="preferences">Preferensi</TabsTrigger>
+            </TabsList>
+
+            {isAdmin && (
+              <TabsContent value="templates" className="space-y-4">
+                <NotificationTemplateManager />
+              </TabsContent>
+            )}
+
+            {isAdmin && (
+              <TabsContent value="channels" className="space-y-4">
+                <NotificationChannelManager />
+              </TabsContent>
+            )}
+
+            <TabsContent value="preferences" className="space-y-4">
+              <UserNotificationPreferences />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DashboardLayout>
+    </AppLayout>
   );
 };
 

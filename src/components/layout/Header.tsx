@@ -15,7 +15,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
-import { GraduationCap, Search, Bell, Settings, User, LogOut } from 'lucide-react';
+import { GraduationCap, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { MobileSidebar } from './MobileSidebar';
@@ -32,11 +32,10 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center px-4 md:px-6">
+      <div className="flex h-14 items-center px-4 md:px-6">
         {/* Mobile Navigation */}
         <MobileSidebar />
         
-        {/* Logo and Title */}
         <div className="mr-4 flex items-center">
           <Link className="flex items-center space-x-2" to="/dashboard">
             <img 
@@ -53,82 +52,79 @@ const Header = () => {
           </Link>
         </div>
         
-        {/* Center - Search Bar */}
-        <div className="flex-1 flex justify-center px-4">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari siswa, kelas, atau data..."
-              className="pl-10 w-full"
-            />
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:w-auto md:flex-none">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari..."
+                className="pl-8 w-full sm:w-48 md:w-64 lg:w-80"
+              />
+            </div>
           </div>
-        </div>
-        
-        {/* Right Side - User Actions */}
-        <div className="flex items-center space-x-3">
-          {/* Notifications */}
-          <NotificationBell />
           
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
-          {/* User Menu */}
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src="/avatars/01.png" alt="@user" />
-                    <AvatarFallback className="bg-blue-500 text-white">
-                      {user.email?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.profile?.full_name || 'Pengguna'}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
-                    </p>
-                    {user.roles && user.roles.length > 0 && (
-                      <p className="text-xs text-blue-600 font-medium">
-                        Role: {user.roles.join(', ')}
+          <nav className="flex items-center space-x-1 lg:space-x-2">
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/avatars/01.png" alt="@user" />
+                      <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.profile?.full_name || user.email}
                       </p>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profil Saya</span>
-                    <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem className="lg:hidden">
+                      <NotificationBell />
+                      <span className="ml-2">Notifications</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="lg:hidden">
+                      <ThemeToggle />
+                      <span className="ml-2">Theme</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Profile
+                      <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Settings
+                      <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Log out
+                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Pengaturan</span>
-                    <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Keluar</span>
-                  <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link to="/auth">
-              <Button variant="default" size="sm">
-                Masuk
-              </Button>
-            </Link>
-          )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button variant="ghost" size="sm" className="text-xs lg:text-sm">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </nav>
         </div>
       </div>
     </header>
