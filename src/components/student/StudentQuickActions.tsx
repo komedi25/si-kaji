@@ -9,7 +9,7 @@ export const StudentQuickActions = () => {
   const quickActions = [
     {
       title: 'Presensi Hari Ini',
-      description: 'Absen kehadiran harian',
+      description: 'Presensi kehadiran harian',
       icon: Clock,
       href: '/attendance/self',
       color: 'bg-blue-50 hover:bg-blue-100 border-blue-200',

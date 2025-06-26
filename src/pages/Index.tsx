@@ -10,14 +10,14 @@ const Index = () => {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        // Redirect based on user role
+        // Redirect berdasarkan role user
         const roles = user.roles || [];
         if (roles.includes('siswa')) {
           navigate('/student-dashboard');
         } else if (roles.includes('wali_kelas')) {
           navigate('/homeroom-dashboard');
         } else {
-          navigate('/dashboard');
+          navigate('/admin-dashboard');
         }
       } else {
         navigate('/landing');

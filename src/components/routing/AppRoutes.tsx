@@ -41,19 +41,37 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   return children ? <>{children}</> : <Outlet />;
 };
 
+const DashboardRedirect = () => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect siswa ke student dashboard, lainnya ke dashboard utama
+  if (user.roles.includes('siswa')) {
+    return <Navigate to="/student-dashboard" replace />;
+  } else {
+    return <Navigate to="/dashboard" replace />;
+  }
+};
+
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Routes - hanya satu route untuk login */}
       <Route path="/login" element={<AuthForm />} />
-      <Route path="/auth" element={<AuthForm />} />
       
       {/* Logout handler */}
       <Route path="/logout" element={<Navigate to="/login" replace />} />
 
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* Dashboard redirect logic */}
+        <Route path="/dashboard" element={<DashboardRedirect />} />
+        
+        {/* Specific dashboards */}
+        <Route path="/admin-dashboard" element={<Dashboard />} />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/homeroom-dashboard" element={<HomeroomDashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -74,7 +92,7 @@ export const AppRoutes = () => {
         <Route path="/cases/reports" element={<StudentCaseReportsPage />} />
         
         {/* Default redirect for authenticated users */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<DashboardRedirect />} />
       </Route>
       
       {/* 404 handler */}

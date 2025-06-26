@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Home,
@@ -33,18 +34,18 @@ export const Sidebar = () => {
   const location = useLocation();
 
   const menuItems: MenuItem[] = [
-    // Dashboard items
+    // Dashboard items - pisahkan berdasarkan role
+    {
+      title: 'Dashboard',
+      icon: Home,
+      href: '/student-dashboard',
+      roles: ['siswa'],
+    },
     {
       title: 'Dashboard Utama',
       icon: Home,
-      href: '/dashboard',
-      roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
-    },
-    {
-      title: 'Dashboard Siswa',
-      icon: BarChart3,
-      href: '/student-dashboard',
-      roles: ['siswa'],
+      href: '/admin-dashboard',
+      roles: ['admin', 'wali_kelas', 'guru_bk', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
     },
     {
       title: 'Dashboard Wali Kelas',
@@ -53,17 +54,17 @@ export const Sidebar = () => {
       roles: ['wali_kelas'],
     },
     
-    // Student specific entries
+    // Student specific entries - ubah istilah absensi ke presensi
     {
-      title: 'Rekap Kehadiran Saya',
+      title: 'Presensi Harian',
       icon: Clock,
-      href: '/attendance/recap',
+      href: '/attendance/self',
       roles: ['siswa'],
     },
     {
-      title: 'Absensi Harian',
+      title: 'Rekap Presensi',
       icon: Calendar,
-      href: '/attendance/self',
+      href: '/attendance/recap',
       roles: ['siswa'],
     },
     {
