@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Home,
@@ -33,7 +32,7 @@ export const Sidebar = () => {
   const { hasRole } = useAuth();
   const location = useLocation();
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     // Dashboard items
     {
       title: 'Dashboard Utama',
@@ -145,7 +144,7 @@ export const Sidebar = () => {
     if (item.href === '/logout') {
       return true;
     }
-    return item.roles.some(role => hasRole(role));
+    return item.roles.some(role => hasRole(role as any));
   });
 
   return (

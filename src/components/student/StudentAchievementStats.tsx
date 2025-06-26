@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,7 +21,7 @@ export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsPr
         .from('student_achievements')
         .select(`
           *,
-          achievement_types(achievement_name, point_reward, category)
+          achievement_types(name, point_reward, category, level)
         `)
         .eq('student_id', studentId)
         .order('achievement_date', { ascending: false });
@@ -47,7 +46,7 @@ export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsPr
       // Group by level/tier
       const byLevel: Record<string, number> = {};
       verified.forEach(achievement => {
-        const level = achievement.level || 'Sekolah';
+        const level = achievement.achievement_types?.level || 'Sekolah';
         byLevel[level] = (byLevel[level] || 0) + 1;
       });
 
@@ -243,13 +242,13 @@ export const StudentAchievementStats = ({ studentId }: StudentAchievementStatsPr
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">
-                        {achievement.achievement_types?.achievement_name || achievement.achievement_name}
+                        {achievement.achievement_types?.name || achievement.description}
                       </p>
                       <p className="text-sm text-gray-600">
                         {format(new Date(achievement.achievement_date), 'dd MMMM yyyy', { locale: localeId })}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Tingkat: {achievement.level} • Kategori: {achievement.achievement_types?.category}
+                        Tingkat: {achievement.achievement_types?.level} • Kategori: {achievement.achievement_types?.category}
                       </p>
                     </div>
                   </div>
