@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -59,20 +58,23 @@ export const StudentCaseReports = () => {
   // Submit case report mutation
   const submitCaseMutation = useMutation({
     mutationFn: async (data: typeof reportForm) => {
+      // Create the insert object without case_number (it's auto-generated)
+      const insertData = {
+        category: data.category,
+        title: data.title,
+        description: data.description,
+        incident_location: data.incident_location || null,
+        incident_date: data.incident_date || null,
+        witnesses: data.witnesses || null,
+        reported_by: data.is_anonymous ? null : user?.id,
+        is_anonymous: data.is_anonymous,
+        status: 'pending',
+        priority: 'medium'
+      };
+
       const { error } = await supabase
         .from('student_cases')
-        .insert({
-          category: data.category as any,
-          title: data.title,
-          description: data.description,
-          incident_location: data.incident_location || null,
-          incident_date: data.incident_date || null,
-          witnesses: data.witnesses || null,
-          reported_by: data.is_anonymous ? null : user?.id,
-          is_anonymous: data.is_anonymous,
-          status: 'pending' as any,
-          priority: 'medium' as any
-        });
+        .insert(insertData);
 
       if (error) throw error;
     },
