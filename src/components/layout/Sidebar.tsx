@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Home,
   Users,
@@ -15,316 +15,335 @@ import {
   BookOpen,
   GraduationCap,
   Database,
-  MapPin,
-  CalendarClock,
-  UserPlus,
-  FolderOpen,
-  Archive,
-  Activity,
-  HardDrive,
   Settings,
-  Monitor,
-  TrendingUp,
-  Download,
-  Upload,
-  Search,
-  CheckCircle,
-  Target,
   User,
   LogOut,
   Bell,
-  Zap
+  Zap,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 interface MenuItem {
   title: string;
   icon: React.ComponentType<any>;
-  href: string;
+  href?: string;
   roles: string[];
+  children?: MenuItem[];
 }
+
+interface MenuGroupProps {
+  item: MenuItem;
+  level?: number;
+}
+
+const MenuGroup: React.FC<MenuGroupProps> = ({ item, level = 0 }) => {
+  const [isOpen, setIsOpen] = useState(level === 0);
+  const { hasRole } = useAuth();
+
+  // Check if user has access to this menu item
+  const hasAccess = item.roles.some(role => hasRole(role as any));
+  
+  if (!hasAccess) return null;
+
+  const paddingLeft = `${(level + 1) * 12}px`;
+
+  if (item.children && item.children.length > 0) {
+    return (
+      <div>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-blue-100 hover:text-blue-700 text-gray-700"
+          style={{ paddingLeft }}
+        >
+          <item.icon className="h-4 w-4 mr-3" />
+          <span className="flex-1 text-left truncate">{item.title}</span>
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 ml-2" />
+          ) : (
+            <ChevronRight className="h-4 w-4 ml-2" />
+          )}
+        </button>
+        
+        {isOpen && (
+          <div className="mt-1 space-y-1">
+            {item.children.map((child, index) => (
+              <MenuGroup key={index} item={child} level={level + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <NavLink
+      to={item.href!}
+      className={({ isActive }) =>
+        `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group hover:bg-blue-100 hover:text-blue-700 ${
+          isActive 
+            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105' 
+            : 'text-gray-700 hover:scale-102'
+        }`
+      }
+      style={{ paddingLeft }}
+    >
+      <item.icon className="h-4 w-4 mr-3 group-hover:scale-110 transition-transform" />
+      <span className="truncate">{item.title}</span>
+    </NavLink>
+  );
+};
 
 export const Sidebar = () => {
   const { hasRole } = useAuth();
-  const location = useLocation();
 
   const menuItems: MenuItem[] = [
-    // Dashboard items - pisahkan berdasarkan role
+    // Dashboard
     {
-      title: 'Dashboard Admin',
+      title: 'Dashboard',
       icon: Home,
-      href: '/admin-dashboard',
-      roles: ['admin', 'waka_kesiswaan'],
+      roles: ['admin', 'waka_kesiswaan', 'siswa', 'wali_kelas'],
+      children: [
+        {
+          title: 'Dashboard Admin',
+          icon: Home,
+          href: '/admin-dashboard',
+          roles: ['admin', 'waka_kesiswaan'],
+        },
+        {
+          title: 'Dashboard Siswa',
+          icon: Home,
+          href: '/student-dashboard',
+          roles: ['siswa'],
+        },
+        {
+          title: 'Dashboard Wali Kelas',
+          icon: Users,
+          href: '/homeroom-dashboard', 
+          roles: ['wali_kelas'],
+        },
+      ]
     },
-    {
-      title: 'Dashboard Siswa',
-      icon: Home,
-      href: '/student-dashboard',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Dashboard Wali Kelas',
-      icon: Users,
-      href: '/homeroom-dashboard', 
-      roles: ['wali_kelas'],
-    },
-    
-    // Student specific entries
-    {
-      title: 'Presensi Harian',
-      icon: Clock,
-      href: '/attendance/self',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Rekap Presensi',
-      icon: BarChart3,
-      href: '/attendance/recap',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Tambah Prestasi',
-      icon: Trophy,
-      href: '/achievements/submit',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Laporan Kasus',
-      icon: MessageSquare,
-      href: '/cases/reports',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Permohonan Izin',
-      icon: PlusSquare,
-      href: '/permits',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Proposal Kegiatan',
-      icon: ClipboardList,
-      href: '/proposals',
-      roles: ['siswa'],
-    },
-    {
-      title: 'Pengajuan Surat',
-      icon: FileText,
-      href: '/documents',
-      roles: ['siswa'],
-    },
-    
-    // General management activities
-    {
-      title: 'Manajemen Presensi',
-      icon: ListChecks,
-      href: '/attendance/record',
-      roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-    },
-    {
-      title: 'Permohonan Izin',
-      icon: PlusSquare,
-      href: '/permits',
-      roles: ['admin', 'wali_kelas'],
-    },
-    
-    // Management modules for admin
+
+    // Manajemen Siswa
     {
       title: 'Manajemen Siswa',
       icon: Users,
-      href: '/student-management',
       roles: ['admin', 'wali_kelas', 'guru_bk'],
+      children: [
+        {
+          title: 'Data Siswa',
+          icon: Users,
+          href: '/student-management',
+          roles: ['admin', 'wali_kelas', 'guru_bk'],
+        },
+        {
+          title: 'Presensi',
+          icon: Clock,
+          roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa'],
+          children: [
+            {
+              title: 'Rekap Presensi',
+              icon: BarChart3,
+              href: '/attendance/recap',
+              roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa'],
+            },
+            {
+              title: 'Input Presensi',
+              icon: ListChecks,
+              href: '/attendance/record',
+              roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
+            },
+            {
+              title: 'Presensi Mandiri',
+              icon: Clock,
+              href: '/attendance/self',
+              roles: ['siswa'],
+            },
+          ]
+        },
+        {
+          title: 'Pelanggaran',
+          icon: ShieldAlert,
+          href: '/violations',
+          roles: ['admin', 'tppk', 'guru_bk', 'wali_kelas'],
+        },
+        {
+          title: 'Prestasi',
+          icon: Trophy,
+          roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa'],
+          children: [
+            {
+              title: 'Data Prestasi',
+              icon: Trophy,
+              href: '/achievements',
+              roles: ['admin', 'wali_kelas', 'guru_bk'],
+            },
+            {
+              title: 'Input Prestasi',
+              icon: Trophy,
+              href: '/achievements/submit',
+              roles: ['siswa'],
+            },
+          ]
+        },
+      ]
     },
+
+    // Layanan Siswa
     {
-      title: 'Manajemen Pelanggaran',
-      icon: ShieldAlert,
-      href: '/violations',
-      roles: ['admin', 'tppk', 'guru_bk', 'wali_kelas'],
-    },
-    {
-      title: 'Manajemen Prestasi',
-      icon: Trophy,
-      href: '/achievements',
-      roles: ['admin', 'wali_kelas', 'guru_bk'],
-    },
-    {
-      title: 'Manajemen Kasus',
-      icon: MessageSquare,
-      href: '/cases',
-      roles: ['admin', 'tppk', 'arps', 'p4gn', 'guru_bk'],
-    },
-    {
-      title: 'Ekstrakurikuler',
-      icon: BookOpen,
-      href: '/extracurricular',
-      roles: ['admin', 'siswa', 'koordinator_ekstrakurikuler'],
-    },
-    {
-      title: 'Jurnal Perwalian',
+      title: 'Layanan Siswa',
       icon: FileText,
-      href: '/homeroom',
-      roles: ['admin', 'wali_kelas'],
+      roles: ['admin', 'siswa', 'wali_kelas', 'guru_bk'],
+      children: [
+        {
+          title: 'Perizinan',
+          icon: PlusSquare,
+          href: '/permits',
+          roles: ['admin', 'wali_kelas', 'siswa'],
+        },
+        {
+          title: 'Bimbingan Konseling',
+          icon: GraduationCap,
+          href: '/counseling',
+          roles: ['admin', 'siswa', 'guru_bk'],
+        },
+        {
+          title: 'Laporan Kasus',
+          icon: MessageSquare,
+          href: '/cases/reports',
+          roles: ['siswa'],
+        },
+        {
+          title: 'Pengajuan Surat',
+          icon: FileText,
+          href: '/documents',
+          roles: ['siswa'],
+        },
+      ]
     },
+
+    // Kegiatan & Ekstrakurikuler
     {
-      title: 'Konseling BK',
-      icon: GraduationCap,
-      href: '/counseling',
-      roles: ['admin', 'siswa', 'guru_bk'],
+      title: 'Kegiatan',
+      icon: BookOpen,
+      roles: ['admin', 'siswa', 'koordinator_ekstrakurikuler', 'waka_kesiswaan'],
+      children: [
+        {
+          title: 'Ekstrakurikuler',
+          icon: BookOpen,
+          href: '/extracurricular',
+          roles: ['admin', 'siswa', 'koordinator_ekstrakurikuler'],
+        },
+        {
+          title: 'Proposal Kegiatan',
+          icon: ClipboardList,
+          href: '/proposals',
+          roles: ['admin', 'waka_kesiswaan', 'koordinator_ekstrakurikuler', 'siswa'],
+        },
+      ]
     },
+
+    // Penanganan Kasus
     {
-      title: 'Proposal Kegiatan',
-      icon: ClipboardList,
-      href: '/proposals',
-      roles: ['admin', 'waka_kesiswaan', 'koordinator_ekstrakurikuler'],
+      title: 'Penanganan Kasus',
+      icon: MessageSquare,
+      roles: ['admin', 'tppk', 'arps', 'p4gn', 'guru_bk'],
+      children: [
+        {
+          title: 'Manajemen Kasus',
+          icon: MessageSquare,
+          href: '/cases',
+          roles: ['admin', 'tppk', 'arps', 'p4gn', 'guru_bk'],
+        },
+        {
+          title: 'Jurnal Perwalian',
+          icon: FileText,
+          href: '/homeroom',
+          roles: ['admin', 'wali_kelas'],
+        },
+      ]
     },
+
+    // Laporan & Analitik
     {
       title: 'Laporan & Analitik',
       icon: BarChart3,
-      href: '/reports',
       roles: ['admin', 'waka_kesiswaan', 'kepala_sekolah'],
+      children: [
+        {
+          title: 'Laporan Umum',
+          icon: BarChart3,
+          href: '/reports',
+          roles: ['admin', 'waka_kesiswaan', 'kepala_sekolah'],
+        },
+        {
+          title: 'AI Management',
+          icon: Zap,
+          href: '/ai-management',
+          roles: ['admin'],
+        },
+      ]
     },
+
+    // Sistem & Konfigurasi
     {
-      title: 'AI Management',
-      icon: Zap,
-      href: '/ai-management',
-      roles: ['admin'],
-    },
-    {
-      title: 'Sistem Notifikasi',
-      icon: Bell,
-      href: '/notifications',
-      roles: ['admin', 'waka_kesiswaan'],
-    },
-    
-    // Admin specific - lengkapi semua menu admin
-    {
-      title: 'Master Data',
-      icon: Database,
-      href: '/master-data',
-      roles: ['admin'],
-    },
-    {
-      title: 'Kelola Lokasi Presensi',
-      icon: MapPin,
-      href: '/attendance/location',
-      roles: ['admin'],
-    },
-    {
-      title: 'Pengaturan Jadwal Presensi',
-      icon: CalendarClock,
-      href: '/attendance/schedule',
-      roles: ['admin'],
-    },
-    {
-      title: 'Manajemen Pengguna',
-      icon: UserPlus,
-      href: '/user-management',
-      roles: ['admin'],
-    },
-    {
-      title: 'Manajemen Dokumen',
-      icon: FolderOpen,
-      href: '/document-management',
-      roles: ['admin'],
-    },
-    {
-      title: 'Repository Dokumen',
-      icon: Archive,
-      href: '/document-repository',
-      roles: ['admin'],
-    },
-    {
-      title: 'Audit Trail & Log',
-      icon: Activity,
-      href: '/audit-logs',
-      roles: ['admin'],
-    },
-    {
-      title: 'Backup & Maintenance',
-      icon: HardDrive,
-      href: '/backup-maintenance',
-      roles: ['admin'],
-    },
-    {
-      title: 'Konfigurasi Sistem',
+      title: 'Sistem',
       icon: Settings,
-      href: '/system-config',
       roles: ['admin'],
+      children: [
+        {
+          title: 'Master Data',
+          icon: Database,
+          href: '/master-data',
+          roles: ['admin'],
+        },
+        {
+          title: 'Manajemen Pengguna',
+          icon: Users,
+          href: '/user-management',
+          roles: ['admin'],
+        },
+        {
+          title: 'Notifikasi',
+          icon: Bell,
+          href: '/notifications',
+          roles: ['admin', 'waka_kesiswaan'],
+        },
+        {
+          title: 'Pengaturan',
+          icon: Settings,
+          href: '/settings',
+          roles: ['admin'],
+        },
+      ]
     },
+
+    // User Menu
     {
-      title: 'Template Manager',
-      icon: FileText,
-      href: '/template-manager',
-      roles: ['admin'],
-    },
-    {
-      title: 'Status Sistem',
-      icon: Monitor,
-      href: '/system-status',
-      roles: ['admin'],
-    },
-    {
-      title: 'Analitik Lanjutan',
-      icon: TrendingUp,
-      href: '/advanced-analytics',
-      roles: ['admin', 'kepala_sekolah'],
-    },
-    {
-      title: 'Export Data',
-      icon: Download,
-      href: '/export-data',
-      roles: ['admin'],
-    },
-    {
-      title: 'Import Data',
-      icon: Upload,
-      href: '/import-data',
-      roles: ['admin'],
-    },
-    {
-      title: 'Pencarian Global',
-      icon: Search,
-      href: '/global-search',
-      roles: ['admin'],
-    },
-    {
-      title: 'Verifikasi Prestasi',
-      icon: CheckCircle,
-      href: '/achievement-verification',
-      roles: ['admin', 'wali_kelas', 'guru_bk'],
-    },
-    {
-      title: 'Poin Disiplin',
-      icon: Target,
-      href: '/discipline-points',
-      roles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
-    },
-    
-    // Settings
-    {
-      title: 'Profil Saya',
+      title: 'Akun',
       icon: User,
-      href: '/profile',
       roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
-    },
-    {
-      title: 'Pengaturan',
-      icon: Settings,
-      href: '/settings',
-      roles: ['admin'],
-    },
-    {
-      title: 'Keluar',
-      icon: LogOut,
-      href: '/logout',
-      roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
+      children: [
+        {
+          title: 'Profil Saya',
+          icon: User,
+          href: '/profile',
+          roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
+        },
+        {
+          title: 'Keluar',
+          icon: LogOut,
+          href: '/logout',
+          roles: ['admin', 'wali_kelas', 'guru_bk', 'siswa', 'koordinator_ekstrakurikuler', 'tppk', 'waka_kesiswaan'],
+        },
+      ]
     },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
-    if (item.href === '/logout') {
-      return true;
-    }
     return item.roles.some(role => hasRole(role as any));
   });
 
@@ -344,22 +363,9 @@ export const Sidebar = () => {
         </div>
       </div>
       
-      <div className="space-y-1 flex-1 px-2">
-        {filteredMenuItems.map((item) => (
-          <NavLink
-            key={item.title}
-            to={item.href}
-            className={({ isActive }) =>
-              `flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group hover:bg-blue-100 hover:text-blue-700 ${
-                isActive 
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg scale-105' 
-                  : 'text-gray-700 hover:scale-102'
-              }`
-            }
-          >
-            <item.icon className="h-4 w-4 mr-3 group-hover:scale-110 transition-transform" />
-            <span className="truncate">{item.title}</span>
-          </NavLink>
+      <div className="space-y-2 flex-1 px-2 overflow-y-auto">
+        {filteredMenuItems.map((item, index) => (
+          <MenuGroup key={index} item={item} />
         ))}
       </div>
       
