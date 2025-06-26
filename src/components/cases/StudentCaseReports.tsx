@@ -65,13 +65,13 @@ export const StudentCaseReports = () => {
           category: data.category as any,
           title: data.title,
           description: data.description,
-          incident_location: data.incident_location,
+          incident_location: data.incident_location || null,
           incident_date: data.incident_date || null,
           witnesses: data.witnesses || null,
           reported_by: data.is_anonymous ? null : user?.id,
           is_anonymous: data.is_anonymous,
-          status: 'pending',
-          priority: 'medium'
+          status: 'pending' as any,
+          priority: 'medium' as any
         });
 
       if (error) throw error;
@@ -143,11 +143,13 @@ export const StudentCaseReports = () => {
   const getCategoryLabel = (category: string) => {
     const categories: Record<string, string> = {
       'bullying': 'Bullying/Perundungan',
-      'violence': 'Kekerasan',
-      'drugs': 'Penyalahgunaan Narkoba',
-      'theft': 'Pencurian',
-      'vandalism': 'Vandalisme',
-      'other': 'Lainnya'
+      'kekerasan': 'Kekerasan',
+      'narkoba': 'Penyalahgunaan Narkoba',
+      'pergaulan_bebas': 'Pergaulan Bebas',
+      'tawuran': 'Tawuran',
+      'pencurian': 'Pencurian',
+      'vandalisme': 'Vandalisme',
+      'lainnya': 'Lainnya'
     };
     return categories[category] || category;
   };
@@ -192,11 +194,13 @@ export const StudentCaseReports = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="bullying">Bullying/Perundungan</SelectItem>
-                        <SelectItem value="violence">Kekerasan</SelectItem>
-                        <SelectItem value="drugs">Penyalahgunaan Narkoba</SelectItem>
-                        <SelectItem value="theft">Pencurian</SelectItem>
-                        <SelectItem value="vandalism">Vandalisme</SelectItem>
-                        <SelectItem value="other">Lainnya</SelectItem>
+                        <SelectItem value="kekerasan">Kekerasan</SelectItem>
+                        <SelectItem value="narkoba">Penyalahgunaan Narkoba</SelectItem>
+                        <SelectItem value="pergaulan_bebas">Pergaulan Bebas</SelectItem>
+                        <SelectItem value="tawuran">Tawuran</SelectItem>
+                        <SelectItem value="pencurian">Pencurian</SelectItem>
+                        <SelectItem value="vandalisme">Vandalisme</SelectItem>
+                        <SelectItem value="lainnya">Lainnya</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
