@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 export const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,7 +19,24 @@ export const AuthForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect user if already logged in
+  useEffect(() => {
+    if (user) {
+      console.log('User logged in, redirecting based on roles:', user.roles);
+      
+      // Redirect berdasarkan role user
+      if (user.roles.includes('siswa')) {
+        navigate('/student-dashboard', { replace: true });
+      } else if (user.roles.includes('wali_kelas')) {
+        navigate('/homeroom-dashboard', { replace: true });
+      } else {
+        navigate('/admin-dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +79,9 @@ export const AuthForm = () => {
           } else {
             setError(error.message);
           }
+        } else {
+          // Login berhasil, redirect akan ditangani oleh useEffect di atas
+          console.log('Login berhasil, menunggu redirect...');
         }
       }
     } catch (err) {

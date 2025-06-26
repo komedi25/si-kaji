@@ -19,6 +19,11 @@ import {
   Clock,
   TrendingUp,
   ClipboardList,
+  Database,
+  MapPin,
+  CalendarClock,
+  UserPlus,
+  FolderOpen,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -81,6 +86,12 @@ export const Sidebar = () => {
       roles: ['siswa'],
     },
     {
+      title: 'Permohonan Izin',
+      icon: PlusSquare,
+      href: '/permits',
+      roles: ['siswa'],
+    },
+    {
       title: 'Proposal Kegiatan',
       icon: ClipboardList,
       href: '/proposals',
@@ -98,7 +109,7 @@ export const Sidebar = () => {
       title: 'Permohonan Izin',
       icon: PlusSquare,
       href: '/permits',
-      roles: ['admin', 'siswa', 'wali_kelas'],
+      roles: ['admin', 'wali_kelas'],
     },
     
     // Management
@@ -131,6 +142,38 @@ export const Sidebar = () => {
       icon: ClipboardList,
       href: '/proposals',
       roles: ['admin', 'waka_kesiswaan', 'koordinator_ekstrakurikuler'],
+    },
+    
+    // Admin specific - kembalikan menu yang hilang
+    {
+      title: 'Master Data',
+      icon: Database,
+      href: '/settings',
+      roles: ['admin'],
+    },
+    {
+      title: 'Kelola Lokasi Presensi',
+      icon: MapPin,
+      href: '/attendance/location',
+      roles: ['admin'],
+    },
+    {
+      title: 'Pengaturan Jadwal Presensi',
+      icon: CalendarClock,
+      href: '/attendance/schedule',
+      roles: ['admin'],
+    },
+    {
+      title: 'Manajemen Pengguna',
+      icon: UserPlus,
+      href: '/user-management',
+      roles: ['admin'],
+    },
+    {
+      title: 'Manajemen Dokumen',
+      icon: FolderOpen,
+      href: '/documents',
+      roles: ['admin'],
     },
     
     // Settings
