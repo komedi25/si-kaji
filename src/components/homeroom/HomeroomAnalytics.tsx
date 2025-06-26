@@ -7,7 +7,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { BarChart, Bar, XAxis, YAxis, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Calendar } from 'lucide-react';
 import { format, subDays, startOfWeek } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id as localeId } from 'date-fns/locale';
 
 interface HomeroomAnalyticsProps {
   classId: string;
@@ -57,7 +57,7 @@ export const HomeroomAnalytics = ({ classId }: HomeroomAnalyticsProps) => {
 
       const attendanceTrend = Object.entries(attendanceByDate)
         .map(([date, stats]) => ({
-          date: format(new Date(date), 'dd/MM', { locale: id }),
+          date: format(new Date(date), 'dd/MM', { locale: localeId }),
           fullDate: date,
           ...stats,
           total: stats.present + stats.late,
@@ -81,7 +81,7 @@ export const HomeroomAnalytics = ({ classId }: HomeroomAnalyticsProps) => {
 
       const violationsTrend = Object.entries(violationsByDate)
         .map(([date, count]) => ({
-          date: format(new Date(date), 'dd/MM', { locale: id }),
+          date: format(new Date(date), 'dd/MM', { locale: localeId }),
           violations: count
         }));
 
@@ -102,7 +102,7 @@ export const HomeroomAnalytics = ({ classId }: HomeroomAnalyticsProps) => {
 
       const achievementsTrend = Object.entries(achievementsByDate)
         .map(([date, count]) => ({
-          date: format(new Date(date), 'dd/MM', { locale: id }),
+          date: format(new Date(date), 'dd/MM', { locale: localeId }),
           achievements: count
         }));
 
