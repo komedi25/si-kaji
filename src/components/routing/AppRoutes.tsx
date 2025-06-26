@@ -1,80 +1,213 @@
-import React from 'react';
+
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthForm } from '@/components/auth/AuthForm';
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
+
+// Pages
+import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import AttendanceManagement from '@/pages/AttendanceManagement';
+import StudentManagement from '@/pages/StudentManagement';
 import ViolationManagement from '@/pages/ViolationManagement';
 import AchievementManagement from '@/pages/AchievementManagement';
-import PermitManagement from '@/pages/PermitManagement';
+import DisciplinePointsManagement from '@/pages/DisciplinePointsManagement';
+import AttendanceManagement from '@/pages/AttendanceManagement';
 import CaseManagement from '@/pages/CaseManagement';
-import ExtracurricularManagement from '@/pages/ExtracurricularManagement';
-import CounselingManagement from '@/pages/CounselingManagement';
-import HomeroomJournalManagement from '@/pages/HomeroomJournalManagement';
-import StudentDataManager from '@/pages/StudentDataManager';
-import Settings from '@/pages/Settings';
-import AcademicCalendar from '@/pages/AcademicCalendar';
-import LocationManagement from '@/pages/LocationManagement';
-import ScheduleManagement from '@/pages/ScheduleManagement';
-import AchievementTypeManagement from '@/pages/AchievementTypeManagement';
-import ViolationTypeManagement from '@/pages/ViolationTypeManagement';
+import DocumentManagement from '@/pages/DocumentManagement';
+import DocumentRepositoryManagement from '@/pages/DocumentRepositoryManagement';
+import NotificationManagement from '@/pages/NotificationManagement';
 import UserManagement from '@/pages/UserManagement';
-import StudentDashboard from '@/pages/StudentDashboard';
-import HomeroomDashboard from '@/pages/HomeroomDashboard';
-import StudentCaseReportsPage from '@/pages/StudentCaseReportsPage';
+import SystemStatus from '@/pages/SystemStatus';
+import Settings from '@/pages/Settings';
+import MasterData from '@/pages/MasterData';
+import ActivityProposal from '@/pages/ActivityProposal';
+import AchievementVerification from '@/pages/AchievementVerification';
+import ComingSoon from '@/pages/ComingSoon';
+import NotFound from '@/pages/NotFound';
+import ExtracurricularManagement from '@/pages/ExtracurricularManagement';
+import HomeroomJournalManagement from '@/pages/HomeroomJournalManagement';
+import ParentPortal from '@/pages/ParentPortal';
+import AIManagement from '@/pages/AIManagement';
+import PermitManagement from '@/pages/PermitManagement';
+import CounselingManagement from '@/pages/CounselingManagement';
 
-const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
+export function AppRoutes() {
+  const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>; // Show a loading indicator
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
-  if (!isAuthenticated) {
-    // Redirect to login page if not authenticated
-    return <Navigate to="/login" replace />;
-  }
-
-  return children ? <>{children}</> : <Outlet />;
-};
-
-import { Outlet } from 'react-router-dom';
-
-export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/student-dashboard" element={<StudentDashboard />} />
-        <Route path="/homeroom-dashboard" element={<HomeroomDashboard />} />
-        
-        {/* Protected Routes */}
-        <Route path="/attendance/*" element={<AttendanceManagement />} />
-        <Route path="/violations/*" element={<ViolationManagement />} />
-        <Route path="/achievements/*" element={<AchievementManagement />} />
-        <Route path="/permits/*" element={<PermitManagement />} />
-        <Route path="/cases/*" element={<CaseManagement />} />
-        <Route path="/extracurricular/*" element={<ExtracurricularManagement />} />
-        <Route path="/counseling/*" element={<CounselingManagement />} />
-        <Route path="/homeroom/*" element={<HomeroomJournalManagement />} />
-        <Route path="/student-data" element={<StudentDataManager />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/academic-calendar" element={<AcademicCalendar />} />
-        <Route path="/location-management" element={<LocationManagement />} />
-        <Route path="/schedule-management" element={<ScheduleManagement />} />
-        <Route path="/achievement-types" element={<AchievementTypeManagement />} />
-        <Route path="/violation-types" element={<ViolationTypeManagement />} />
-        <Route path="/user-management" element={<UserManagement />} />
-        
-        <Route path="/cases/reports" element={<StudentCaseReportsPage />} />
-        
-        <Route path="*" element={<div>Page not found</div>} />
-      </Route>
+      {/* Public routes */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Index />} />
+      <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <AuthForm />} />
+      
+      {/* Public case reporting - accessible without login */}
+      <Route path="/cases" element={<CaseManagement />} />
+      
+      {/* Protected routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
+      
+      {/* User Management - unified for all user types */}
+      <Route path="/user-management" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
+          <UserManagement />
+        </ProtectedRoute>
+      } />
+      
+      {/* Legacy student route - redirect to user management */}
+      <Route path="/students" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
+          <StudentManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/violations" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <ViolationManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/achievements" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk']}>
+          <AchievementManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/achievement-verification" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas']}>
+          <AchievementVerification />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/discipline-points" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <DisciplinePointsManagement />
+        </ProtectedRoute>
+      } />
+      
+      {/* Attendance routes - updated to handle all attendance sub-routes */}
+      <Route path="/attendance" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/self" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/record" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/report" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/location" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/schedule" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/permits" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa']}>
+          <PermitManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/counseling" element={
+        <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'siswa']}>
+          <CounselingManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/extracurricular" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'pelatih_ekstrakurikuler', 'koordinator_ekstrakurikuler', 'siswa']}>
+          <ExtracurricularManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/homeroom-journal" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas']}>
+          <HomeroomJournalManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/parent-portal" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'orang_tua']}>
+          <ParentPortal />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/ai-management" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk']}>
+          <AIManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/documents" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
+          <DocumentManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/document-repository" element={
+        <ProtectedRoute requiredRoles={['admin', 'siswa']}>
+          <DocumentRepositoryManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/notifications" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <NotificationManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/master-data" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MasterData />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/activity-proposal" element={
+        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa', 'koordinator_ekstrakurikuler']}>
+          <ActivityProposal />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/system-status" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <SystemStatus />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
+      
+      {/* Catch all route */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
-};
+}
