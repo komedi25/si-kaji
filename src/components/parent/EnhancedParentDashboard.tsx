@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,6 @@ import {
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
 
-// Define interfaces to avoid type inference issues
 interface StudentData {
   id: string;
   full_name: string;
@@ -27,32 +27,16 @@ interface StudentData {
   };
 }
 
-interface AttendanceTrend {
-  date: string;
-  status: string;
-}
-
 interface AttendanceStats {
   total_days: number;
   present_days: number;
   absent_days: number;
   late_days: number;
   percentage: number;
-  weekly_trend: AttendanceTrend[];
-}
-
-interface ViolationRecord {
-  id: string;
-  violation_date: string;
-  violation_type: string;
-  point_deduction: number;
-}
-
-interface AchievementRecord {
-  id: string;
-  achievement_date: string;
-  achievement_type: string;
-  point_reward: number;
+  weekly_trend: Array<{
+    date: string;
+    status: string;
+  }>;
 }
 
 interface DisciplineData {
@@ -60,33 +44,34 @@ interface DisciplineData {
   total_violations: number;
   total_achievements: number;
   status: string;
-  recent_violations: ViolationRecord[];
-  recent_achievements: AchievementRecord[];
+  recent_violations: Array<{
+    id: string;
+    violation_date: string;
+    violation_type: string;
+    point_deduction: number;
+  }>;
+  recent_achievements: Array<{
+    id: string;
+    achievement_date: string;
+    achievement_type: string;
+    point_reward: number;
+  }>;
 }
 
-interface NotificationData {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-}
-
-export const EnhancedParentDashboard: React.FC = () => {
+export const EnhancedParentDashboard = () => {
   const { user } = useAuth();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
   const [disciplineData, setDisciplineData] = useState<DisciplineData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [notifications, setNotifications] = useState<NotificationData[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (user?.id) {
-      fetchAllData();
-    }
+    fetchAllData();
   }, [user]);
 
-  const fetchAllData = async (): Promise<void> => {
+  const fetchAllData = async () => {
     if (!user?.id) return;
 
     try {
@@ -113,11 +98,10 @@ export const EnhancedParentDashboard: React.FC = () => {
       }
 
       const student = parentAccess.student;
-      const studentWithClass: StudentData = {
+      setStudentData({
         ...student,
-        class: student.student_enrollments?.[0]?.class || undefined
-      };
-      setStudentData(studentWithClass);
+        class: student.student_enrollments?.[0]?.class || null
+      });
 
       // Fetch comprehensive attendance stats
       await fetchAttendanceStats(student.id);
@@ -126,9 +110,7 @@ export const EnhancedParentDashboard: React.FC = () => {
       await fetchDisciplineData(student.id);
       
       // Fetch notifications
-      if (student.user_id) {
-        await fetchNotifications(student.user_id);
-      }
+      await fetchNotifications(student.user_id);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -137,7 +119,7 @@ export const EnhancedParentDashboard: React.FC = () => {
     }
   };
 
-  const fetchAttendanceStats = async (studentId: string): Promise<void> => {
+  const fetchAttendanceStats = async (studentId: string) => {
     const now = new Date();
     const startMonth = startOfMonth(now);
     const endMonth = endOfMonth(now);
@@ -166,25 +148,21 @@ export const EnhancedParentDashboard: React.FC = () => {
       const absentDays = monthlyAttendance.filter(a => a.status === 'absent').length;
       const lateDays = monthlyAttendance.filter(a => a.status === 'late').length;
       
-      const weeklyTrend: AttendanceTrend[] = (weeklyData || []).map(item => ({
-        date: item.attendance_date,
-        status: item.status
-      }));
-      
-      const stats: AttendanceStats = {
+      setAttendanceStats({
         total_days: totalDays,
         present_days: presentDays,
         absent_days: absentDays,
         late_days: lateDays,
         percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
-        weekly_trend: weeklyTrend
-      };
-      
-      setAttendanceStats(stats);
+        weekly_trend: (weeklyData || []).map(item => ({
+          date: item.attendance_date,
+          status: item.status
+        }))
+      });
     }
   };
 
-  const fetchDisciplineData = async (studentId: string): Promise<void> => {
+  const fetchDisciplineData = async (studentId: string) => {
     // Get current discipline points
     const { data: disciplinePoints } = await supabase
       .from('student_discipline_points')
@@ -219,34 +197,30 @@ export const EnhancedParentDashboard: React.FC = () => {
       .limit(5);
 
     if (disciplinePoints) {
-      const recentViolations: ViolationRecord[] = violations?.map(v => ({
-        id: v.id,
-        violation_date: v.violation_date,
-        violation_type: (v.violation_types as any)?.name || '',
-        point_deduction: v.point_deduction
-      })) || [];
-
-      const recentAchievements: AchievementRecord[] = achievements?.map(a => ({
-        id: a.id,
-        achievement_date: a.achievement_date,
-        achievement_type: (a.achievement_types as any)?.name || '',
-        point_reward: a.point_reward
-      })) || [];
-
-      const discipline: DisciplineData = {
+      setDisciplineData({
         final_score: disciplinePoints.final_score,
         total_violations: disciplinePoints.total_violation_points,
         total_achievements: disciplinePoints.total_achievement_points,
         status: disciplinePoints.discipline_status,
-        recent_violations: recentViolations,
-        recent_achievements: recentAchievements
-      };
-
-      setDisciplineData(discipline);
+        recent_violations: violations?.map(v => ({
+          id: v.id,
+          violation_date: v.violation_date,
+          violation_type: v.violation_types?.name || '',
+          point_deduction: v.point_deduction
+        })) || [],
+        recent_achievements: achievements?.map(a => ({
+          id: a.id,
+          achievement_date: a.achievement_date,
+          achievement_type: a.achievement_types?.name || '',
+          point_reward: a.point_reward
+        })) || []
+      });
     }
   };
 
-  const fetchNotifications = async (studentUserId: string): Promise<void> => {
+  const fetchNotifications = async (studentUserId?: string) => {
+    if (!studentUserId) return;
+
     const { data } = await supabase
       .from('notifications')
       .select('*')
@@ -255,32 +229,24 @@ export const EnhancedParentDashboard: React.FC = () => {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    if (data) {
-      const notificationList: NotificationData[] = data.map(item => ({
-        id: item.id,
-        title: item.title,
-        message: item.message,
-        created_at: item.created_at
-      }));
-      setNotifications(notificationList);
-    }
+    setNotifications(data || []);
   };
 
-  const getDisciplineColor = (score: number): string => {
+  const getDisciplineColor = (score: number) => {
     if (score >= 90) return 'text-green-600';
     if (score >= 75) return 'text-blue-600';
     if (score >= 60) return 'text-yellow-600';
     return 'text-red-600';
   };
 
-  const getDisciplineLabel = (score: number): string => {
+  const getDisciplineLabel = (score: number) => {
     if (score >= 90) return 'Sangat Baik';
     if (score >= 75) return 'Baik';
     if (score >= 60) return 'Cukup';
     return 'Perlu Perhatian';
   };
 
-  const getAttendanceColor = (percentage: number): string => {
+  const getAttendanceColor = (percentage: number) => {
     if (percentage >= 95) return 'text-green-600';
     if (percentage >= 85) return 'text-blue-600';
     if (percentage >= 75) return 'text-yellow-600';
