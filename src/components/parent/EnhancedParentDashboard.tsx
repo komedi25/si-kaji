@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +14,9 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { ParentHeader } from './ParentHeader';
+import { ParentQuickStats } from './ParentQuickStats';
+import { ParentOverviewTab } from './ParentOverviewTab';
 
 interface StudentData {
   id: string;
@@ -239,27 +241,6 @@ export const EnhancedParentDashboard = () => {
     setNotifications(data || []);
   };
 
-  const getDisciplineColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 75) return 'text-blue-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getDisciplineLabel = (score: number) => {
-    if (score >= 90) return 'Sangat Baik';
-    if (score >= 75) return 'Baik';
-    if (score >= 60) return 'Cukup';
-    return 'Perlu Perhatian';
-  };
-
-  const getAttendanceColor = (percentage: number) => {
-    if (percentage >= 95) return 'text-green-600';
-    if (percentage >= 85) return 'text-blue-600';
-    if (percentage >= 75) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -282,103 +263,14 @@ export const EnhancedParentDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header with Student Info */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                {studentData.full_name.charAt(0)}
-              </div>
-              <div>
-                <CardTitle className="text-xl">{studentData.full_name}</CardTitle>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <div>NIS: {studentData.nis}</div>
-                  {studentData.class && (
-                    <div>Kelas: {studentData.class.grade} {studentData.class.name}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Phone className="w-4 h-4 mr-2" />
-                Hubungi Sekolah
-              </Button>
-              <Button variant="outline" size="sm">
-                <Mail className="w-4 h-4 mr-2" />
-                Kirim Pesan
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <ParentHeader studentData={studentData} />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Kehadiran</div>
-                <div className={`text-xl font-bold ${getAttendanceColor(attendanceStats?.percentage || 0)}`}>
-                  {attendanceStats?.percentage || 0}%
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Target className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Disiplin</div>
-                <div className={`text-xl font-bold ${getDisciplineColor(disciplineData?.final_score || 0)}`}>
-                  {disciplineData?.final_score || 0}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Star className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Prestasi</div>
-                <div className="text-xl font-bold text-yellow-600">
-                  {disciplineData?.recent_achievements.length || 0}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Bell className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Notifikasi</div>
-                <div className="text-xl font-bold text-red-600">
-                  {notifications.length}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ParentQuickStats 
+        attendanceStats={attendanceStats}
+        disciplineData={disciplineData}
+        notifications={notifications}
+      />
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -391,127 +283,10 @@ export const EnhancedParentDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Attendance Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Ringkasan Kehadiran
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Persentase Kehadiran</span>
-                  <span className={`font-bold ${getAttendanceColor(attendanceStats?.percentage || 0)}`}>
-                    {attendanceStats?.percentage || 0}%
-                  </span>
-                </div>
-                <Progress value={attendanceStats?.percentage || 0} className="h-2" />
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-green-600 font-semibold">{attendanceStats?.present_days || 0}</div>
-                    <div className="text-muted-foreground">Hadir</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-yellow-600 font-semibold">{attendanceStats?.late_days || 0}</div>
-                    <div className="text-muted-foreground">Terlambat</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-red-600 font-semibold">{attendanceStats?.absent_days || 0}</div>
-                    <div className="text-muted-foreground">Tidak Hadir</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Discipline Overview */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  Status Disiplin
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <div className={`text-3xl font-bold ${getDisciplineColor(disciplineData?.final_score || 0)}`}>
-                    {disciplineData?.final_score || 0}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {getDisciplineLabel(disciplineData?.final_score || 0)}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-center p-2 bg-red-50 rounded">
-                    <div className="text-red-600 font-semibold">-{disciplineData?.total_violations || 0}</div>
-                    <div className="text-muted-foreground">Poin Pelanggaran</div>
-                  </div>
-                  <div className="text-center p-2 bg-green-50 rounded">
-                    <div className="text-green-600 font-semibold">+{disciplineData?.total_achievements || 0}</div>
-                    <div className="text-muted-foreground">Poin Prestasi</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activities */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Prestasi Terbaru</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {disciplineData?.recent_achievements.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Belum ada prestasi</p>
-                ) : (
-                  <div className="space-y-3">
-                    {disciplineData?.recent_achievements.slice(0, 3).map((achievement) => (
-                      <div key={achievement.id} className="flex items-center gap-3 p-2 bg-green-50 rounded">
-                        <Award className="w-4 h-4 text-green-600" />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{achievement.achievement_type}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(achievement.achievement_date), 'dd MMM yyyy', { locale: id })}
-                          </div>
-                        </div>
-                        <Badge variant="default">+{achievement.point_reward}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Pelanggaran Terbaru</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {disciplineData?.recent_violations.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">Tidak ada pelanggaran</p>
-                ) : (
-                  <div className="space-y-3">
-                    {disciplineData?.recent_violations.slice(0, 3).map((violation) => (
-                      <div key={violation.id} className="flex items-center gap-3 p-2 bg-red-50 rounded">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{violation.violation_type}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(violation.violation_date), 'dd MMM yyyy', { locale: id })}
-                          </div>
-                        </div>
-                        <Badge variant="destructive">-{violation.point_deduction}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <ParentOverviewTab 
+            attendanceStats={attendanceStats}
+            disciplineData={disciplineData}
+          />
         </TabsContent>
 
         <TabsContent value="attendance" className="space-y-6">
