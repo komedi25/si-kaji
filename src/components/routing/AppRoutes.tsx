@@ -54,7 +54,7 @@ export const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       
-      {/* Student Management - redirects to User Management */}
+      {/* Student Management */}
       <Route path="/students" element={<ProtectedRoute><StudentManagement /></ProtectedRoute>} />
       <Route path="/user-management" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
       
@@ -63,7 +63,7 @@ export const AppRoutes = () => {
       <Route path="/achievements" element={<ProtectedRoute><StudentAchievements /></ProtectedRoute>} />
       <Route path="/proposals" element={<ProtectedRoute><StudentProposals /></ProtectedRoute>} />
       
-      {/* Attendance routes - using ComingSoon placeholder */}      
+      {/* Attendance routes */}      
       <Route path="/attendance" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Sistem Presensi" description="Fitur pencatatan dan monitoring kehadiran siswa" features={["Presensi manual", "QR Code scanning", "Geofencing", "Laporan kehadiran"]} /></Suspense></ProtectedRoute>} />
       <Route path="/attendance/report" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Laporan Presensi" description="Laporan dan analisis data kehadiran siswa" features={["Laporan harian", "Statistik bulanan", "Export data", "Grafik kehadiran"]} /></Suspense></ProtectedRoute>} />
       <Route path="/attendance/self" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Presensi Mandiri" description="Sistem presensi mandiri untuk siswa" features={["Self check-in", "Lokasi otomatis", "Notifikasi reminder", "Riwayat presensi"]} /></Suspense></ProtectedRoute>} />
