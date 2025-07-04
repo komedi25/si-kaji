@@ -15,25 +15,18 @@ import StudentProfile from '@/pages/StudentProfile';
 import StudentAchievements from '@/pages/StudentAchievements';
 import StudentProposals from '@/pages/StudentProposals';
 
-// Lazy load other pages
+// Lazy load other pages that exist
 import { lazy, Suspense } from 'react';
 
-const AttendanceRecording = lazy(() => import('@/pages/AttendanceRecording'));
-const AttendanceReport = lazy(() => import('@/pages/AttendanceReport'));
-const SelfAttendance = lazy(() => import('@/pages/SelfAttendance'));
 const PermitManagement = lazy(() => import('@/pages/PermitManagement'));
 const CounselingManagement = lazy(() => import('@/pages/CounselingManagement'));
 const CaseManagement = lazy(() => import('@/pages/CaseManagement'));
 const MasterData = lazy(() => import('@/pages/MasterData'));
-const LetterRequests = lazy(() => import('@/pages/LetterRequests'));
-const DocumentRepository = lazy(() => import('@/pages/DocumentRepository'));
-const HomeroomJournal = lazy(() => import('@/pages/HomeroomJournal'));
 const ExtracurricularManagement = lazy(() => import('@/pages/ExtracurricularManagement'));
 const Settings = lazy(() => import('@/pages/Settings'));
-const CoachDashboard = lazy(() => import('@/pages/CoachDashboard'));
-const ParentDashboard = lazy(() => import('@/pages/ParentDashboard'));
-const AIAssistant = lazy(() => import('@/pages/AIAssistant'));
-const Analytics = lazy(() => import('@/pages/Analytics'));
+
+// Create placeholder for missing pages
+const ComingSoon = lazy(() => import('@/pages/ComingSoon'));
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -69,10 +62,10 @@ export const AppRoutes = () => {
       <Route path="/achievements" element={<ProtectedRoute><StudentAchievements /></ProtectedRoute>} />
       <Route path="/proposals" element={<ProtectedRoute><StudentProposals /></ProtectedRoute>} />
       
-      {/* Attendance routes */}      
-      <Route path="/attendance" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><AttendanceRecording /></Suspense></ProtectedRoute>} />
-      <Route path="/attendance/report" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><AttendanceReport /></Suspense></ProtectedRoute>} />
-      <Route path="/attendance/self" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><SelfAttendance /></Suspense></ProtectedRoute>} />
+      {/* Attendance routes - using ComingSoon placeholder */}      
+      <Route path="/attendance" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/attendance/report" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/attendance/self" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
       
       {/* Activity & Achievement routes */}
       <Route path="/activity-proposals" element={<ProtectedRoute><ActivityProposal /></ProtectedRoute>} />
@@ -83,15 +76,15 @@ export const AppRoutes = () => {
       <Route path="/counseling" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><CounselingManagement /></Suspense></ProtectedRoute>} />
       <Route path="/cases" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><CaseManagement /></Suspense></ProtectedRoute>} />
       <Route path="/master-data" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><MasterData /></Suspense></ProtectedRoute>} />
-      <Route path="/letters" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><LetterRequests /></Suspense></ProtectedRoute>} />
-      <Route path="/documents" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><DocumentRepository /></Suspense></ProtectedRoute>} />
-      <Route path="/homeroom-journal" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><HomeroomJournal /></Suspense></ProtectedRoute>} />
+      <Route path="/letters" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/documents" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/homeroom-journal" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
       <Route path="/extracurricular" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ExtracurricularManagement /></Suspense></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><Settings /></Suspense></ProtectedRoute>} />
-      <Route path="/coach" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><CoachDashboard /></Suspense></ProtectedRoute>} />
-      <Route path="/parent" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ParentDashboard /></Suspense></ProtectedRoute>} />
-      <Route path="/ai-assistant" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><AIAssistant /></Suspense></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><Analytics /></Suspense></ProtectedRoute>} />
+      <Route path="/coach" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/parent" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/ai-assistant" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
