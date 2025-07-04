@@ -154,10 +154,7 @@ export const EnhancedParentDashboard = () => {
         absent_days: absentDays,
         late_days: lateDays,
         percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
-        weekly_trend: (weeklyData || []).map(item => ({
-          date: item.attendance_date,
-          status: item.status
-        }))
+        weekly_trend: weeklyData || []
       });
     }
   };
@@ -402,7 +399,7 @@ export const EnhancedParentDashboard = () => {
                 </div>
                 <Progress value={attendanceStats?.percentage || 0} className="h-2" />
                 
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div class="grid grid-cols-3 gap-4 text-sm">
                   <div className="text-center">
                     <div className="text-green-600 font-semibold">{attendanceStats?.present_days || 0}</div>
                     <div className="text-muted-foreground">Hadir</div>
@@ -537,7 +534,7 @@ export const EnhancedParentDashboard = () => {
                 <div className="space-y-2">
                   {attendanceStats?.weekly_trend.map((day) => (
                     <div key={day.date} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
-                      <span className="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
+                      <span class="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
                       <Badge 
                         variant={day.status === 'present' ? 'default' : day.status === 'late' ? 'secondary' : 'destructive'}
                       >
