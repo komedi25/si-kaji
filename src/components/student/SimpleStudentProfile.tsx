@@ -43,7 +43,9 @@ export const SimpleStudentProfile = () => {
   });
 
   useEffect(() => {
-    fetchStudentData();
+    if (user?.id) {
+      fetchStudentData();
+    }
   }, [user]);
 
   const fetchStudentData = async () => {
@@ -54,6 +56,7 @@ export const SimpleStudentProfile = () => {
 
     try {
       setLoading(true);
+      console.log('🔍 Fetching student data for user:', user.id);
       
       // Try to find student by user_id first
       let { data: student, error } = await supabase
@@ -63,19 +66,23 @@ export const SimpleStudentProfile = () => {
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching student:', error);
+        console.error('❌ Error fetching student:', error);
         throw error;
       }
 
       // If not found by user_id, try to match by profile data
       if (!student) {
+        console.log('🔍 Student not found by user_id, checking profile...');
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
 
+        console.log('📋 Profile data:', profile);
+
         if (profile?.nis) {
+          console.log('🔍 Searching by NIS:', profile.nis);
           const { data: studentByNis } = await supabase
             .from('students')
             .select('*')
@@ -84,7 +91,7 @@ export const SimpleStudentProfile = () => {
             .maybeSingle();
 
           if (studentByNis) {
-            // Link the student to the user
+            console.log('✅ Found student by NIS, linking...');
             await supabase
               .from('students')
               .update({ user_id: user.id })
@@ -96,6 +103,7 @@ export const SimpleStudentProfile = () => {
       }
 
       if (student) {
+        console.log('✅ Student data found:', student);
         setStudentData(student);
         setFormData({
           phone: student.phone || '',
@@ -104,10 +112,13 @@ export const SimpleStudentProfile = () => {
           parent_phone: student.parent_phone || '',
           parent_address: student.parent_address || ''
         });
+      } else {
+        console.log('❌ No student data found');
+        setStudentData(null);
       }
 
     } catch (error) {
-      console.error('Error in fetchStudentData:', error);
+      console.error('💥 Error in fetchStudentData:', error);
       toast({
         title: "Error",
         description: "Gagal memuat data siswa",
@@ -166,6 +177,9 @@ export const SimpleStudentProfile = () => {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Data Tidak Ditemukan</h3>
           <p className="text-gray-500">Data siswa Anda belum tersedia dalam sistem. Silakan hubungi administrator sekolah.</p>
+          <Button onClick={fetchStudentData} className="mt-4">
+            Coba Lagi
+          </Button>
         </CardContent>
       </Card>
     );

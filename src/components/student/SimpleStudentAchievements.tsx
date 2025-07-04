@@ -31,7 +31,9 @@ export const SimpleStudentAchievements = () => {
   const [studentId, setStudentId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStudentData();
+    if (user?.id) {
+      fetchStudentData();
+    }
   }, [user]);
 
   const fetchStudentData = async () => {
@@ -42,6 +44,7 @@ export const SimpleStudentAchievements = () => {
 
     try {
       setLoading(true);
+      console.log('🔍 Fetching student data for achievements:', user.id);
       
       // Get student data first
       let { data: student, error } = await supabase
@@ -83,8 +86,12 @@ export const SimpleStudentAchievements = () => {
       }
 
       if (student) {
+        console.log('✅ Student found:', student.id);
         setStudentId(student.id);
         await fetchAchievements(student.id);
+      } else {
+        console.log('❌ No student data found');
+        setStudentId(null);
       }
 
     } catch (error) {
@@ -101,6 +108,7 @@ export const SimpleStudentAchievements = () => {
 
   const fetchAchievements = async (studentId: string) => {
     try {
+      console.log('🏆 Fetching achievements for student:', studentId);
       const { data, error } = await supabase
         .from('student_achievements')
         .select(`
@@ -113,7 +121,12 @@ export const SimpleStudentAchievements = () => {
         .eq('student_id', studentId)
         .order('achievement_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching achievements:', error);
+        throw error;
+      }
+
+      console.log('✅ Achievements loaded:', data?.length || 0);
       setAchievements(data || []);
     } catch (error) {
       console.error('Error fetching achievements:', error);
@@ -170,7 +183,10 @@ export const SimpleStudentAchievements = () => {
             <Award className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Data Tidak Ditemukan</h3>
-          <p className="text-gray-500">Data siswa Anda belum tersedia dalam sistem. Silakan hubungi administrator sekolah.</p>
+          <p className="text-gray-500 mb-4">Data siswa Anda belum tersedia dalam sistem. Silakan hubungi administrator sekolah.</p>
+          <Button onClick={fetchStudentData}>
+            Coba Lagi
+          </Button>
         </CardContent>
       </Card>
     );

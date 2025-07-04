@@ -44,13 +44,19 @@ export const SimpleStudentProposals = () => {
     }
 
     try {
+      console.log('📝 Fetching proposals for user:', user.id);
       const { data, error } = await supabase
         .from('activity_proposals')
         .select('*')
         .eq('organizer_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching proposals:', error);
+        throw error;
+      }
+      
+      console.log('✅ Proposals loaded:', data?.length || 0);
       setProposals(data || []);
     } catch (error) {
       console.error('Error fetching proposals:', error);
