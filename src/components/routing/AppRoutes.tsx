@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -63,9 +64,9 @@ export const AppRoutes = () => {
       <Route path="/proposals" element={<ProtectedRoute><StudentProposals /></ProtectedRoute>} />
       
       {/* Attendance routes - using ComingSoon placeholder */}      
-      <Route path="/attendance" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/attendance/report" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/attendance/self" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Sistem Presensi" description="Fitur pencatatan dan monitoring kehadiran siswa" features={["Presensi manual", "QR Code scanning", "Geofencing", "Laporan kehadiran"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/attendance/report" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Laporan Presensi" description="Laporan dan analisis data kehadiran siswa" features={["Laporan harian", "Statistik bulanan", "Export data", "Grafik kehadiran"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/attendance/self" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Presensi Mandiri" description="Sistem presensi mandiri untuk siswa" features={["Self check-in", "Lokasi otomatis", "Notifikasi reminder", "Riwayat presensi"]} /></Suspense></ProtectedRoute>} />
       
       {/* Activity & Achievement routes */}
       <Route path="/activity-proposals" element={<ProtectedRoute><ActivityProposal /></ProtectedRoute>} />
@@ -76,15 +77,15 @@ export const AppRoutes = () => {
       <Route path="/counseling" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><CounselingManagement /></Suspense></ProtectedRoute>} />
       <Route path="/cases" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><CaseManagement /></Suspense></ProtectedRoute>} />
       <Route path="/master-data" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><MasterData /></Suspense></ProtectedRoute>} />
-      <Route path="/letters" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/documents" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/homeroom-journal" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/letters" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Sistem Surat" description="Permohonan dan penerbitan surat keterangan" features={["Surat aktif kuliah", "Surat keterangan siswa", "Template otomatis", "Tracking status"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/documents" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Repositori Dokumen" description="Penyimpanan dan pengelolaan dokumen sekolah" features={["Upload dokumen", "Kategorisasi", "Version control", "Search dokumen"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/homeroom-journal" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Jurnal Perwalian" description="Jurnal digital untuk wali kelas" features={["Catatan harian", "Progress siswa", "Komunikasi ortu", "Laporan perwalian"]} /></Suspense></ProtectedRoute>} />
       <Route path="/extracurricular" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ExtracurricularManagement /></Suspense></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><Settings /></Suspense></ProtectedRoute>} />
-      <Route path="/coach" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/parent" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/ai-assistant" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon /></Suspense></ProtectedRoute>} />
+      <Route path="/coach" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Dashboard Pelatih" description="Portal khusus untuk pelatih ekstrakurikuler" features={["Jurnal latihan", "Presensi pelatih", "Progress siswa", "Laporan kegiatan"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/parent" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Portal Orang Tua" description="Akses informasi untuk orang tua siswa" features={["Monitoring anak", "Notifikasi sekolah", "Komunikasi guru", "Laporan progress"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/ai-assistant" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="AI Assistant" description="Asisten AI untuk analisis dan rekomendasi" features={["Analisis perilaku", "Prediksi risiko", "Rekomendasi intervensi", "Chat assistant"]} /></Suspense></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Suspense fallback={<LoadingSpinner />}><ComingSoon title="Analytics Dashboard" description="Dashboard analitik dan laporan komprehensif" features={["Data visualization", "Trend analysis", "Performance metrics", "Custom reports"]} /></Suspense></ProtectedRoute>} />
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
