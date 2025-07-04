@@ -16,7 +16,6 @@ export const MobileSidebar = () => {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-64">
-        {/* Remove onClick that closes sidebar, let individual menu items control closure */}
         <Sidebar isMobile={true} onItemClick={() => setIsOpen(false)} />
       </SheetContent>
     </Sheet>

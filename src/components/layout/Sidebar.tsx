@@ -11,7 +11,7 @@ import {
   Home, Users, UserCheck, FileText, MessageSquare, Calendar,
   GraduationCap, Shield, Award, AlertTriangle, BarChart3,
   Settings, ChevronRight, ChevronDown, BookOpen, Brain,
-  School, ClipboardList, FileSearch, Heart, Activity
+  School, ClipboardList, FileSearch, Heart, Activity, MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +24,12 @@ interface MenuItem {
   badge?: string;
 }
 
-export const Sidebar = () => {
+interface SidebarProps {
+  isMobile?: boolean;
+  onItemClick?: () => void;
+}
+
+export const Sidebar = ({ isMobile, onItemClick }: SidebarProps) => {
   const { user, hasRole } = useAuth();
   const location = useLocation();
   const [openItems, setOpenItems] = useState<string[]>(['data-siswa']);
@@ -207,6 +212,12 @@ export const Sidebar = () => {
     return location.pathname === href || location.pathname.startsWith(href + '/');
   };
 
+  const handleItemClick = () => {
+    if (isMobile && onItemClick) {
+      onItemClick();
+    }
+  };
+
   const renderMenuItem = (item: MenuItem, level = 0) => {
     if (!isItemVisible(item)) return null;
 
@@ -250,7 +261,7 @@ export const Sidebar = () => {
     }
 
     return (
-      <Link key={item.title} to={item.href!}>
+      <Link key={item.title} to={item.href!} onClick={handleItemClick}>
         <Button
           variant="ghost"
           className={cn(
@@ -307,7 +318,7 @@ export const Sidebar = () => {
       <Separator />
       
       <div className="p-2">
-        <Link to="/settings">
+        <Link to="/settings" onClick={handleItemClick}>
           <Button
             variant="ghost"
             className={cn(

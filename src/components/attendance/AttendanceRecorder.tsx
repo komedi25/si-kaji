@@ -11,12 +11,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Calendar, Clock, UserCheck, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { StudentSearchWithQR } from '@/components/common/StudentSearchWithQR';
 
 interface Student {
   id: string;
   full_name: string;
   nis: string;
+  class_id?: string;
 }
 
 export const AttendanceRecorder = () => {
@@ -41,7 +41,15 @@ export const AttendanceRecorder = () => {
       setLoading(true);
       let query = supabase
         .from('students')
-        .select('id, full_name, nis')
+        .select(`
+          id, 
+          full_name, 
+          nis,
+          student_enrollments!inner(
+            class_id,
+            classes(id, name)
+          )
+        `)
         .eq('status', 'active')
         .order('full_name');
 
@@ -52,7 +60,16 @@ export const AttendanceRecorder = () => {
 
       const { data, error } = await query;
       if (error) throw error;
-      setStudents(data || []);
+      
+      // Transform data to include class_id
+      const transformedData = data?.map(student => ({
+        id: student.id,
+        full_name: student.full_name,
+        nis: student.nis,
+        class_id: student.student_enrollments?.[0]?.class_id || ''
+      })) || [];
+      
+      setStudents(transformedData);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -109,6 +126,12 @@ export const AttendanceRecorder = () => {
 
     setSubmitting(true);
     try {
+      // Get the selected student's class_id
+      const selectedStudent = students.find(s => s.id === formData.student_id);
+      if (!selectedStudent || !selectedStudent.class_id) {
+        throw new Error('Class information not found for selected student');
+      }
+
       // Check if attendance already exists
       const { data: existing } = await supabase
         .from('student_attendances')
@@ -140,6 +163,7 @@ export const AttendanceRecorder = () => {
           .from('student_attendances')
           .insert({
             student_id: formData.student_id,
+            class_id: selectedStudent.class_id,
             attendance_date: formData.attendance_date,
             status: formData.status,
             notes: formData.notes || null,
@@ -207,15 +231,24 @@ export const AttendanceRecorder = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label>Siswa *</Label>
-            <StudentSearchWithQR
+            <Select
               value={formData.student_id}
               onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}
-              placeholder={hasRole('wali_kelas') && !hasRole('admin') && !hasRole('tppk') 
-                ? "Cari siswa perwalian Anda..." 
-                : "Cari siswa berdasarkan nama atau NIS"
-              }
-              students={students}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={hasRole('wali_kelas') && !hasRole('admin') && !hasRole('tppk') 
+                  ? "Pilih siswa perwalian Anda..." 
+                  : "Pilih siswa"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((student) => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.full_name} - {student.nis}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

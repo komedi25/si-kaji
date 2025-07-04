@@ -19,7 +19,7 @@ interface ExtracurricularCoach {
   extracurriculars: {
     name: string;
   };
-  profiles: {
+  coach_profile: {
     full_name: string;
   };
 }
@@ -63,17 +63,26 @@ export const CoachAssignmentManager = () => {
       const { data, error } = await supabase
         .from('user_roles')
         .select(`
-          user_id,
-          profiles!inner(id, full_name)
+          user_id
         `)
         .eq('role', 'pelatih_ekstrakurikuler')
         .eq('is_active', true);
       
       if (error) throw error;
       
-      return data.map(item => ({
-        id: item.user_id,
-        full_name: item.profiles.full_name
+      // Get profiles for these users
+      const userIds = data.map(item => item.user_id);
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      
+      if (profilesError) throw profilesError;
+      
+      return profiles.map(profile => ({
+        id: profile.id,
+        full_name: profile.full_name
       })) as Coach[];
     }
   });
@@ -86,14 +95,29 @@ export const CoachAssignmentManager = () => {
         .from('extracurricular_coaches')
         .select(`
           *,
-          extracurriculars(name),
-          profiles(full_name)
+          extracurriculars(name)
         `)
         .eq('is_active', true)
         .order('assigned_at', { ascending: false });
       
       if (error) throw error;
-      return data as ExtracurricularCoach[];
+      
+      // Get coach profiles separately
+      const coachIds = data.map(assignment => assignment.coach_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', coachIds);
+      
+      if (profilesError) throw profilesError;
+      
+      // Combine data
+      const assignmentsWithProfiles = data.map(assignment => ({
+        ...assignment,
+        coach_profile: profiles.find(p => p.id === assignment.coach_id) || { full_name: 'Unknown' }
+      }));
+      
+      return assignmentsWithProfiles as ExtracurricularCoach[];
     }
   });
 
@@ -281,7 +305,7 @@ export const CoachAssignmentManager = () => {
                       {assignment.extracurriculars.name}
                     </Badge>
                     <span className="font-medium">
-                      {assignment.profiles.full_name}
+                      {assignment.coach_profile.full_name}
                     </span>
                     <span className="text-sm text-gray-500">
                       Ditugaskan: {new Date(assignment.assigned_at).toLocaleDateString('id-ID')}
