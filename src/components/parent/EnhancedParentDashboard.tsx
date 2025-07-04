@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
 import { 
-  User, Award, AlertTriangle, Calendar, FileText, MessageCircle, 
-  TrendingUp, BookOpen, Clock, MapPin, Phone, Mail, Bell,
-  CheckCircle, XCircle, Users, Target, Star
+  AlertTriangle, FileText, Target, Award, Phone, MessageCircle, Users
 } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -18,7 +15,8 @@ import { ParentHeader } from './ParentHeader';
 import { ParentQuickStats } from './ParentQuickStats';
 import { ParentOverviewTab } from './ParentOverviewTab';
 
-interface StudentData {
+// Simple, clean interfaces
+interface Student {
   id: string;
   full_name: string;
   nis: string;
@@ -29,7 +27,7 @@ interface StudentData {
   };
 }
 
-interface AttendanceStats {
+interface AttendanceData {
   total_days: number;
   present_days: number;
   absent_days: number;
@@ -41,7 +39,7 @@ interface AttendanceStats {
   }>;
 }
 
-interface DisciplineData {
+interface DisciplineInfo {
   final_score: number;
   total_violations: number;
   total_achievements: number;
@@ -60,7 +58,7 @@ interface DisciplineData {
   }>;
 }
 
-interface NotificationData {
+interface NotificationInfo {
   id: string;
   title: string;
   message: string;
@@ -69,11 +67,11 @@ interface NotificationData {
 
 export const EnhancedParentDashboard = () => {
   const { user } = useAuth();
-  const [studentData, setStudentData] = useState<StudentData | null>(null);
-  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
-  const [disciplineData, setDisciplineData] = useState<DisciplineData | null>(null);
+  const [studentData, setStudentData] = useState<Student | null>(null);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceData | null>(null);
+  const [disciplineData, setDisciplineData] = useState<DisciplineInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -112,13 +110,9 @@ export const EnhancedParentDashboard = () => {
         class: student.student_enrollments?.[0]?.class || null
       });
 
-      // Fetch comprehensive attendance stats
+      // Fetch attendance and discipline data
       await fetchAttendanceStats(student.id);
-      
-      // Fetch discipline data
       await fetchDisciplineData(student.id);
-      
-      // Fetch notifications
       await fetchNotifications(student.user_id);
 
     } catch (error) {
@@ -133,7 +127,6 @@ export const EnhancedParentDashboard = () => {
     const startMonth = startOfMonth(now);
     const endMonth = endOfMonth(now);
     
-    // Get this month's attendance
     const { data: monthlyAttendance } = await supabase
       .from('student_self_attendances')
       .select('attendance_date, check_in_time, check_out_time, status')
@@ -142,7 +135,6 @@ export const EnhancedParentDashboard = () => {
       .lte('attendance_date', format(endMonth, 'yyyy-MM-dd'))
       .order('attendance_date', { ascending: false });
 
-    // Get weekly trend (last 7 days)
     const weekAgo = subDays(now, 7);
     const { data: weeklyData } = await supabase
       .from('student_self_attendances')
@@ -172,7 +164,6 @@ export const EnhancedParentDashboard = () => {
   };
 
   const fetchDisciplineData = async (studentId: string) => {
-    // Get current discipline points
     const { data: disciplinePoints } = await supabase
       .from('student_discipline_points')
       .select('*')
@@ -181,7 +172,6 @@ export const EnhancedParentDashboard = () => {
       .limit(1)
       .single();
 
-    // Get recent violations
     const { data: violations } = await supabase
       .from('student_violations')
       .select(`
@@ -193,7 +183,6 @@ export const EnhancedParentDashboard = () => {
       .order('violation_date', { ascending: false })
       .limit(5);
 
-    // Get recent achievements
     const { data: achievements } = await supabase
       .from('student_achievements')
       .select(`
@@ -262,17 +251,13 @@ export const EnhancedParentDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Student Info */}
       <ParentHeader studentData={studentData} />
-
-      {/* Quick Stats */}
       <ParentQuickStats 
         attendanceStats={attendanceStats}
         disciplineData={disciplineData}
         notifications={notifications}
       />
 
-      {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="overview">Ringkasan</TabsTrigger>
