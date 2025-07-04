@@ -8,14 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
+import { useStudentDetails } from '@/hooks/useStudentData';
 import { User, Save, Mail } from 'lucide-react';
 import { StudentDataError } from './StudentDataError';
 
 export const StudentProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading, error, refetch } = useStudentData();
+  const { data: studentData, isLoading: loading, error, refetch } = useStudentDetails(user?.id || null);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({

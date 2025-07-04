@@ -7,7 +7,7 @@ import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, Shield, Brain, Refr
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
+import { useStudentDetails } from '@/hooks/useStudentData';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { attendanceSecurityManager } from './SecurityEnhancements';
@@ -47,7 +47,7 @@ interface SelfAttendance {
 export const EnhancedSelfAttendanceWidget = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
+  const { data: studentData, isLoading: studentLoading, error: studentError, refetch } = useStudentDetails(user?.id || null);
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [locations, setLocations] = useState<AttendanceLocation[]>([]);

@@ -5,8 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Users, AlertTriangle, Award, UserCheck, Clock, TrendingUp } from 'lucide-react';
 
+type TrendType = "up" | "down" | "neutral";
+
 export const ResponsiveStatsGrid = () => {
   const { user } = useAuth();
+
+  // Helper function to convert values to proper trend type
+  const getTrendValue = (value: number, threshold: number = 80): TrendType => {
+    if (value >= threshold) return "up";
+    if (value < 60) return "down";
+    return "neutral";
+  };
 
   // Fetch real-time statistics
   const { data: stats, isLoading } = useQuery({
@@ -59,7 +68,7 @@ export const ResponsiveStatsGrid = () => {
       value: `${stats?.todayAttendanceRate || 0}%`,
       description: `${stats?.todayPresent || 0} dari ${stats?.todayTotal || 0} siswa`,
       icon: UserCheck,
-      trend: (stats?.todayAttendanceRate || 0) >= 80 ? 'up' : 'down' as const,
+      trend: getTrendValue(stats?.todayAttendanceRate || 0),
       show: user?.roles?.some(role => ['admin', 'wali_kelas', 'tppk'].includes(role))
     },
     {

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
+import { useStudentDetails } from '@/hooks/useStudentData';
 import { FileText, Calendar, Clock, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -30,7 +30,7 @@ interface StudentPermit {
 export const StudentPermitManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
+  const { data: studentData, isLoading: studentLoading, error: studentError, refetch } = useStudentDetails(user?.id || null);
   const [permits, setPermits] = useState<StudentPermit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw, Home, Lo
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
+import { useStudentDetails } from '@/hooks/useStudentData';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -51,7 +50,7 @@ interface LocationValidation {
 export const StudentSelfAttendance = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
+  const { data: studentData, isLoading: studentLoading, error: studentError, refetch } = useStudentDetails(user?.id || null);
   const [loading, setLoading] = useState(false);
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentData } from '@/hooks/useStudentData';
+import { useStudentDetails } from '@/hooks/useStudentData';
 import { Activity, Users, Calendar, MapPin, Plus, AlertTriangle } from 'lucide-react';
 
 interface Extracurricular {
@@ -25,7 +25,7 @@ interface Extracurricular {
 export const StudentExtracurricularEnrollment = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { studentData, loading: studentLoading } = useStudentData();
+  const { data: studentData, isLoading: studentLoading } = useStudentDetails(user?.id || null);
   const [loading, setLoading] = useState(true);
   const [extracurriculars, setExtracurriculars] = useState<Extracurricular[]>([]);
 
