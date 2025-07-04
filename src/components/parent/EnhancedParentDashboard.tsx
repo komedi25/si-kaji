@@ -2,22 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { 
-  AlertTriangle, FileText, Target, Award, Phone, MessageCircle, Users
+  User, Award, AlertTriangle, Calendar, FileText, MessageCircle, 
+  TrendingUp, BookOpen, Clock, MapPin, Phone, Mail, Bell,
+  CheckCircle, XCircle, Users, Target, Star
 } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ParentHeader } from './ParentHeader';
-import { ParentQuickStats } from './ParentQuickStats';
-import { ParentOverviewTab } from './ParentOverviewTab';
 
-// Simple, clean interfaces to avoid deep type instantiation
-interface Student {
+interface StudentData {
   id: string;
   full_name: string;
   nis: string;
@@ -25,10 +24,10 @@ interface Student {
   class?: {
     name: string;
     grade: number;
-  } | null;
+  };
 }
 
-interface AttendanceData {
+interface AttendanceStats {
   total_days: number;
   present_days: number;
   absent_days: number;
@@ -40,7 +39,7 @@ interface AttendanceData {
   }>;
 }
 
-interface DisciplineInfo {
+interface DisciplineData {
   final_score: number;
   total_violations: number;
   total_achievements: number;
@@ -59,20 +58,13 @@ interface DisciplineInfo {
   }>;
 }
 
-interface NotificationInfo {
-  id: string;
-  title: string;
-  message: string;
-  created_at: string;
-}
-
 export const EnhancedParentDashboard = () => {
   const { user } = useAuth();
-  const [studentData, setStudentData] = useState<Student | null>(null);
-  const [attendanceStats, setAttendanceStats] = useState<AttendanceData | null>(null);
-  const [disciplineData, setDisciplineData] = useState<DisciplineInfo | null>(null);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
+  const [disciplineData, setDisciplineData] = useState<DisciplineData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -85,8 +77,8 @@ export const EnhancedParentDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch student data with explicit type handling
-      const { data: parentAccess, error: parentError } = await supabase
+      // Fetch student data
+      const { data: parentAccess } = await supabase
         .from('parent_access')
         .select(`
           student:students(
@@ -100,35 +92,25 @@ export const EnhancedParentDashboard = () => {
         .eq('is_active', true)
         .single();
 
-      if (parentError) {
-        console.error('Parent access error:', parentError);
-        setLoading(false);
-        return;
-      }
-
       if (!parentAccess?.student) {
         setLoading(false);
         return;
       }
 
-      // Type-safe data processing
-      const rawStudent = parentAccess.student as any;
-      const processedStudent: Student = {
-        id: rawStudent.id,
-        full_name: rawStudent.full_name,
-        nis: rawStudent.nis,
-        user_id: rawStudent.user_id,
-        class: rawStudent.student_enrollments?.[0]?.class || null
-      };
-      
-      setStudentData(processedStudent);
+      const student = parentAccess.student;
+      setStudentData({
+        ...student,
+        class: student.student_enrollments?.[0]?.class || null
+      });
 
-      // Fetch other data
-      await Promise.all([
-        fetchAttendanceStats(processedStudent.id),
-        fetchDisciplineData(processedStudent.id),
-        fetchNotifications(processedStudent.user_id)
-      ]);
+      // Fetch comprehensive attendance stats
+      await fetchAttendanceStats(student.id);
+      
+      // Fetch discipline data
+      await fetchDisciplineData(student.id);
+      
+      // Fetch notifications
+      await fetchNotifications(student.user_id);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -138,160 +120,134 @@ export const EnhancedParentDashboard = () => {
   };
 
   const fetchAttendanceStats = async (studentId: string) => {
-    try {
-      const now = new Date();
-      const startMonth = startOfMonth(now);
-      const endMonth = endOfMonth(now);
+    const now = new Date();
+    const startMonth = startOfMonth(now);
+    const endMonth = endOfMonth(now);
+    
+    // Get this month's attendance
+    const { data: monthlyAttendance } = await supabase
+      .from('student_self_attendances')
+      .select('attendance_date, check_in_time, check_out_time, status')
+      .eq('student_id', studentId)
+      .gte('attendance_date', format(startMonth, 'yyyy-MM-dd'))
+      .lte('attendance_date', format(endMonth, 'yyyy-MM-dd'))
+      .order('attendance_date', { ascending: false });
+
+    // Get weekly trend (last 7 days)
+    const weekAgo = subDays(now, 7);
+    const { data: weeklyData } = await supabase
+      .from('student_self_attendances')
+      .select('attendance_date, status')
+      .eq('student_id', studentId)
+      .gte('attendance_date', format(weekAgo, 'yyyy-MM-dd'))
+      .order('attendance_date', { ascending: true });
+
+    if (monthlyAttendance) {
+      const totalDays = monthlyAttendance.length;
+      const presentDays = monthlyAttendance.filter(a => a.status === 'present').length;
+      const absentDays = monthlyAttendance.filter(a => a.status === 'absent').length;
+      const lateDays = monthlyAttendance.filter(a => a.status === 'late').length;
       
-      const { data: monthlyAttendance, error: monthlyError } = await supabase
-        .from('student_self_attendances')
-        .select('attendance_date, check_in_time, check_out_time, status')
-        .eq('student_id', studentId)
-        .gte('attendance_date', format(startMonth, 'yyyy-MM-dd'))
-        .lte('attendance_date', format(endMonth, 'yyyy-MM-dd'))
-        .order('attendance_date', { ascending: false });
-
-      if (monthlyError) {
-        console.error('Monthly attendance error:', monthlyError);
-        return;
-      }
-
-      const weekAgo = subDays(now, 7);
-      const { data: weeklyData, error: weeklyError } = await supabase
-        .from('student_self_attendances')
-        .select('attendance_date, status')
-        .eq('student_id', studentId)
-        .gte('attendance_date', format(weekAgo, 'yyyy-MM-dd'))
-        .order('attendance_date', { ascending: true });
-
-      if (weeklyError) {
-        console.error('Weekly attendance error:', weeklyError);
-        return;
-      }
-
-      if (monthlyAttendance) {
-        const totalDays = monthlyAttendance.length;
-        const presentDays = monthlyAttendance.filter(a => a.status === 'present').length;
-        const absentDays = monthlyAttendance.filter(a => a.status === 'absent').length;
-        const lateDays = monthlyAttendance.filter(a => a.status === 'late').length;
-        
-        const attendanceData: AttendanceData = {
-          total_days: totalDays,
-          present_days: presentDays,
-          absent_days: absentDays,
-          late_days: lateDays,
-          percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
-          weekly_trend: (weeklyData || []).map(item => ({
-            date: item.attendance_date,
-            status: item.status
-          }))
-        };
-        
-        setAttendanceStats(attendanceData);
-      }
-    } catch (error) {
-      console.error('Error fetching attendance stats:', error);
+      setAttendanceStats({
+        total_days: totalDays,
+        present_days: presentDays,
+        absent_days: absentDays,
+        late_days: lateDays,
+        percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
+        weekly_trend: weeklyData || []
+      });
     }
   };
 
   const fetchDisciplineData = async (studentId: string) => {
-    try {
-      const { data: disciplinePoints, error: disciplineError } = await supabase
-        .from('student_discipline_points')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    // Get current discipline points
+    const { data: disciplinePoints } = await supabase
+      .from('student_discipline_points')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-      if (disciplineError) {
-        console.error('Discipline points error:', disciplineError);
-        return;
-      }
+    // Get recent violations
+    const { data: violations } = await supabase
+      .from('student_violations')
+      .select(`
+        id, violation_date, point_deduction,
+        violation_types(name)
+      `)
+      .eq('student_id', studentId)
+      .eq('status', 'active')
+      .order('violation_date', { ascending: false })
+      .limit(5);
 
-      const { data: violations, error: violationsError } = await supabase
-        .from('student_violations')
-        .select(`
-          id, violation_date, point_deduction,
-          violation_types(name)
-        `)
-        .eq('student_id', studentId)
-        .eq('status', 'active')
-        .order('violation_date', { ascending: false })
-        .limit(5);
+    // Get recent achievements
+    const { data: achievements } = await supabase
+      .from('student_achievements')
+      .select(`
+        id, achievement_date, point_reward,
+        achievement_types(name)
+      `)
+      .eq('student_id', studentId)
+      .eq('status', 'verified')
+      .order('achievement_date', { ascending: false })
+      .limit(5);
 
-      if (violationsError) {
-        console.error('Violations error:', violationsError);
-      }
-
-      const { data: achievements, error: achievementsError } = await supabase
-        .from('student_achievements')
-        .select(`
-          id, achievement_date, point_reward,
-          achievement_types(name)
-        `)
-        .eq('student_id', studentId)
-        .eq('status', 'verified')
-        .order('achievement_date', { ascending: false })
-        .limit(5);
-
-      if (achievementsError) {
-        console.error('Achievements error:', achievementsError);
-      }
-
-      const disciplineInfo: DisciplineInfo = {
-        final_score: disciplinePoints?.final_score || 100,
-        total_violations: disciplinePoints?.total_violation_points || 0,
-        total_achievements: disciplinePoints?.total_achievement_points || 0,
-        status: disciplinePoints?.discipline_status || 'good',
-        recent_violations: (violations || []).map((v: any) => ({
+    if (disciplinePoints) {
+      setDisciplineData({
+        final_score: disciplinePoints.final_score,
+        total_violations: disciplinePoints.total_violation_points,
+        total_achievements: disciplinePoints.total_achievement_points,
+        status: disciplinePoints.discipline_status,
+        recent_violations: violations?.map(v => ({
           id: v.id,
           violation_date: v.violation_date,
-          violation_type: v.violation_types?.name || 'Unknown',
+          violation_type: v.violation_types?.name || '',
           point_deduction: v.point_deduction
-        })),
-        recent_achievements: (achievements || []).map((a: any) => ({
+        })) || [],
+        recent_achievements: achievements?.map(a => ({
           id: a.id,
           achievement_date: a.achievement_date,
-          achievement_type: a.achievement_types?.name || 'Unknown',
+          achievement_type: a.achievement_types?.name || '',
           point_reward: a.point_reward
-        }))
-      };
-
-      setDisciplineData(disciplineInfo);
-    } catch (error) {
-      console.error('Error fetching discipline data:', error);
+        })) || []
+      });
     }
   };
 
   const fetchNotifications = async (studentUserId?: string) => {
     if (!studentUserId) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', studentUserId)
-        .eq('read', false)
-        .order('created_at', { ascending: false })
-        .limit(10);
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', studentUserId)
+      .eq('is_read', false)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-      if (error) {
-        console.error('Notifications error:', error);
-        return;
-      }
+    setNotifications(data || []);
+  };
 
-      const processedNotifications: NotificationInfo[] = (data || []).map(n => ({
-        id: n.id,
-        title: n.title,
-        message: n.message,
-        created_at: n.created_at || new Date().toISOString()
-      }));
+  const getDisciplineColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 75) return 'text-blue-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
 
-      setNotifications(processedNotifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    }
+  const getDisciplineLabel = (score: number) => {
+    if (score >= 90) return 'Sangat Baik';
+    if (score >= 75) return 'Baik';
+    if (score >= 60) return 'Cukup';
+    return 'Perlu Perhatian';
+  };
+
+  const getAttendanceColor = (percentage: number) => {
+    if (percentage >= 95) return 'text-green-600';
+    if (percentage >= 85) return 'text-blue-600';
+    if (percentage >= 75) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   if (loading) {
@@ -315,13 +271,106 @@ export const EnhancedParentDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <ParentHeader studentData={studentData} />
-      <ParentQuickStats 
-        attendanceStats={attendanceStats}
-        disciplineData={disciplineData}
-        notifications={notifications}
-      />
+      {/* Header with Student Info */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                {studentData.full_name.charAt(0)}
+              </div>
+              <div>
+                <CardTitle className="text-xl">{studentData.full_name}</CardTitle>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div>NIS: {studentData.nis}</div>
+                  {studentData.class && (
+                    <div>Kelas: {studentData.class.grade} {studentData.class.name}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Phone className="w-4 h-4 mr-2" />
+                Hubungi Sekolah
+              </Button>
+              <Button variant="outline" size="sm">
+                <Mail className="w-4 h-4 mr-2" />
+                Kirim Pesan
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Calendar className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Kehadiran</div>
+                <div className={`text-xl font-bold ${getAttendanceColor(attendanceStats?.percentage || 0)}`}>
+                  {attendanceStats?.percentage || 0}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Target className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Disiplin</div>
+                <div className={`text-xl font-bold ${getDisciplineColor(disciplineData?.final_score || 0)}`}>
+                  {disciplineData?.final_score || 0}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Star className="w-5 h-5 text-yellow-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Prestasi</div>
+                <div className="text-xl font-bold text-yellow-600">
+                  {disciplineData?.recent_achievements.length || 0}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Bell className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Notifikasi</div>
+                <div className="text-xl font-bold text-red-600">
+                  {notifications.length}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="overview">Ringkasan</TabsTrigger>
@@ -332,10 +381,127 @@ export const EnhancedParentDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <ParentOverviewTab 
-            attendanceStats={attendanceStats}
-            disciplineData={disciplineData}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Attendance Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Ringkasan Kehadiran
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span>Persentase Kehadiran</span>
+                  <span className={`font-bold ${getAttendanceColor(attendanceStats?.percentage || 0)}`}>
+                    {attendanceStats?.percentage || 0}%
+                  </span>
+                </div>
+                <Progress value={attendanceStats?.percentage || 0} className="h-2" />
+                
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-green-600 font-semibold">{attendanceStats?.present_days || 0}</div>
+                    <div className="text-muted-foreground">Hadir</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-yellow-600 font-semibold">{attendanceStats?.late_days || 0}</div>
+                    <div className="text-muted-foreground">Terlambat</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-red-600 font-semibold">{attendanceStats?.absent_days || 0}</div>
+                    <div className="text-muted-foreground">Tidak Hadir</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Discipline Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="w-5 h-5" />
+                  Status Disiplin
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className={`text-3xl font-bold ${getDisciplineColor(disciplineData?.final_score || 0)}`}>
+                    {disciplineData?.final_score || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {getDisciplineLabel(disciplineData?.final_score || 0)}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-center p-2 bg-red-50 rounded">
+                    <div className="text-red-600 font-semibold">-{disciplineData?.total_violations || 0}</div>
+                    <div className="text-muted-foreground">Poin Pelanggaran</div>
+                  </div>
+                  <div className="text-center p-2 bg-green-50 rounded">
+                    <div className="text-green-600 font-semibold">+{disciplineData?.total_achievements || 0}</div>
+                    <div className="text-muted-foreground">Poin Prestasi</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activities */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Prestasi Terbaru</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {disciplineData?.recent_achievements.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Belum ada prestasi</p>
+                ) : (
+                  <div className="space-y-3">
+                    {disciplineData?.recent_achievements.slice(0, 3).map((achievement) => (
+                      <div key={achievement.id} className="flex items-center gap-3 p-2 bg-green-50 rounded">
+                        <Award className="w-4 h-4 text-green-600" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{achievement.achievement_type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(achievement.achievement_date), 'dd MMM yyyy', { locale: id })}
+                          </div>
+                        </div>
+                        <Badge variant="default">+{achievement.point_reward}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Pelanggaran Terbaru</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {disciplineData?.recent_violations.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Tidak ada pelanggaran</p>
+                ) : (
+                  <div className="space-y-3">
+                    {disciplineData?.recent_violations.slice(0, 3).map((violation) => (
+                      <div key={violation.id} className="flex items-center gap-3 p-2 bg-red-50 rounded">
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{violation.violation_type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(violation.violation_date), 'dd MMM yyyy', { locale: id })}
+                          </div>
+                        </div>
+                        <Badge variant="destructive">-{violation.point_deduction}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="attendance" className="space-y-6">
@@ -366,9 +532,9 @@ export const EnhancedParentDashboard = () => {
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">Tren Kehadiran 7 Hari Terakhir</h4>
                 <div className="space-y-2">
-                  {attendanceStats?.weekly_trend.map((day, index) => (
-                    <div key={`${day.date}-${index}`} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
-                      <span className="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
+                  {attendanceStats?.weekly_trend.map((day) => (
+                    <div key={day.date} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
+                      <span class="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
                       <Badge 
                         variant={day.status === 'present' ? 'default' : day.status === 'late' ? 'secondary' : 'destructive'}
                       >
@@ -393,8 +559,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-8">Belum ada prestasi yang dicatat</p>
                 ) : (
                   <div className="space-y-4">
-                    {disciplineData?.recent_achievements.map((achievement, index) => (
-                      <div key={`${achievement.id}-${index}`} className="flex justify-between items-start p-4 border rounded">
+                    {disciplineData?.recent_achievements.map((achievement) => (
+                      <div key={achievement.id} className="flex justify-between items-start p-4 border rounded">
                         <div>
                           <div className="font-medium">{achievement.achievement_type}</div>
                           <div className="text-sm text-muted-foreground">
@@ -418,8 +584,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-8">Tidak ada catatan pelanggaran</p>
                 ) : (
                   <div className="space-y-4">
-                    {disciplineData?.recent_violations.map((violation, index) => (
-                      <div key={`${violation.id}-${index}`} className="flex justify-between items-start p-4 border rounded">
+                    {disciplineData?.recent_violations.map((violation) => (
+                      <div key={violation.id} className="flex justify-between items-start p-4 border rounded">
                         <div>
                           <div className="font-medium">{violation.violation_type}</div>
                           <div className="text-sm text-muted-foreground">
@@ -448,7 +614,7 @@ export const EnhancedParentDashboard = () => {
                   <div>
                     <div className="font-medium">Pak/Bu Wali Kelas</div>
                     <div className="text-sm text-muted-foreground">
-                      Kelas {studentData.class?.grade || ''} {studentData.class?.name || ''}
+                      Kelas {studentData.class?.grade} {studentData.class?.name}
                     </div>
                   </div>
                 </div>
@@ -474,8 +640,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-4">Tidak ada notifikasi baru</p>
                 ) : (
                   <div className="space-y-3">
-                    {notifications.slice(0, 5).map((notification, index) => (
-                      <div key={`${notification.id}-${index}`} className="p-3 border rounded">
+                    {notifications.slice(0, 5).map((notification) => (
+                      <div key={notification.id} className="p-3 border rounded">
                         <div className="font-medium text-sm">{notification.title}</div>
                         <div className="text-sm text-muted-foreground">{notification.message}</div>
                         <div className="text-xs text-muted-foreground mt-1">
