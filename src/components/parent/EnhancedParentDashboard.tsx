@@ -58,13 +58,20 @@ interface DisciplineData {
   }>;
 }
 
+interface NotificationData {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+}
+
 export const EnhancedParentDashboard = () => {
   const { user } = useAuth();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStats | null>(null);
   const [disciplineData, setDisciplineData] = useState<DisciplineData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -97,7 +104,7 @@ export const EnhancedParentDashboard = () => {
         return;
       }
 
-      const student = parentAccess.student;
+      const student = parentAccess.student as any;
       setStudentData({
         ...student,
         class: student.student_enrollments?.[0]?.class || null
@@ -154,7 +161,10 @@ export const EnhancedParentDashboard = () => {
         absent_days: absentDays,
         late_days: lateDays,
         percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
-        weekly_trend: weeklyData || []
+        weekly_trend: (weeklyData || []).map(item => ({
+          date: item.attendance_date,
+          status: item.status
+        }))
       });
     }
   };
@@ -199,18 +209,18 @@ export const EnhancedParentDashboard = () => {
         total_violations: disciplinePoints.total_violation_points,
         total_achievements: disciplinePoints.total_achievement_points,
         status: disciplinePoints.discipline_status,
-        recent_violations: violations?.map(v => ({
+        recent_violations: (violations || []).map((v: any) => ({
           id: v.id,
           violation_date: v.violation_date,
           violation_type: v.violation_types?.name || '',
           point_deduction: v.point_deduction
-        })) || [],
-        recent_achievements: achievements?.map(a => ({
+        })),
+        recent_achievements: (achievements || []).map((a: any) => ({
           id: a.id,
           achievement_date: a.achievement_date,
           achievement_type: a.achievement_types?.name || '',
           point_reward: a.point_reward
-        })) || []
+        }))
       });
     }
   };
@@ -399,7 +409,7 @@ export const EnhancedParentDashboard = () => {
                 </div>
                 <Progress value={attendanceStats?.percentage || 0} className="h-2" />
                 
-                <div class="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div className="text-center">
                     <div className="text-green-600 font-semibold">{attendanceStats?.present_days || 0}</div>
                     <div className="text-muted-foreground">Hadir</div>
@@ -534,7 +544,7 @@ export const EnhancedParentDashboard = () => {
                 <div className="space-y-2">
                   {attendanceStats?.weekly_trend.map((day) => (
                     <div key={day.date} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
-                      <span class="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
+                      <span className="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
                       <Badge 
                         variant={day.status === 'present' ? 'default' : day.status === 'late' ? 'secondary' : 'destructive'}
                       >
