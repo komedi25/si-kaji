@@ -926,6 +926,47 @@ export type Database = {
         }
         Relationships: []
       }
+      extracurricular_coaches: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          coach_id: string
+          created_at: string | null
+          extracurricular_id: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          coach_id: string
+          created_at?: string | null
+          extracurricular_id: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          coach_id?: string
+          created_at?: string | null
+          extracurricular_id?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracurricular_coaches_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurricular_enrollments: {
         Row: {
           created_at: string
@@ -2312,6 +2353,7 @@ export type Database = {
           description: string | null
           id: string
           point_deduction: number
+          recorded_by: string | null
           reported_by: string | null
           resolution_notes: string | null
           resolved_at: string | null
@@ -2327,6 +2369,7 @@ export type Database = {
           description?: string | null
           id?: string
           point_deduction?: number
+          recorded_by?: string | null
           reported_by?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -2342,6 +2385,7 @@ export type Database = {
           description?: string | null
           id?: string
           point_deduction?: number
+          recorded_by?: string | null
           reported_by?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null

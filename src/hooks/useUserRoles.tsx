@@ -13,6 +13,7 @@ export const useUserRoles = () => {
   const [newRole, setNewRole] = useState<AppRole | ''>('');
   const [isAddingRole, setIsAddingRole] = useState(false);
 
+  // Updated role options - removed admin_kesiswaan
   const roleOptions: { value: AppRole; label: string }[] = [
     { value: 'admin', label: 'Admin Sistem' },
     { value: 'kepala_sekolah', label: 'Kepala Sekolah' },

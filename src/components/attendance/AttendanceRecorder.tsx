@@ -1,14 +1,17 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Users, Save, Clock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Calendar, Clock, UserCheck, AlertCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import { StudentSearchWithQR } from '@/components/common/StudentSearchWithQR';
 
 interface Student {
   id: string;
@@ -16,83 +19,40 @@ interface Student {
   nis: string;
 }
 
-interface Class {
-  id: string;
-  name: string;
-  grade: number;
-}
-
-export function AttendanceRecorder() {
+export const AttendanceRecorder = () => {
+  const { user, hasRole } = useAuth();
   const { toast } = useToast();
-  const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [attendance, setAttendance] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    student_id: '',
+    attendance_date: format(new Date(), 'yyyy-MM-dd'),
+    status: 'present' as 'present' | 'absent' | 'sick' | 'permission',
+    notes: ''
+  });
 
   useEffect(() => {
-    fetchClasses();
+    fetchStudents();
   }, []);
 
-  useEffect(() => {
-    if (selectedClass) {
-      fetchStudents();
-      checkExistingAttendance();
-    }
-  }, [selectedClass, selectedDate]);
-
-  const fetchClasses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('id, name, grade')
-        .eq('is_active', true)
-        .order('grade', { ascending: true });
-
-      if (error) throw error;
-      setClasses(data || []);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data kelas",
-        variant: "destructive"
-      });
-    }
-  };
-
   const fetchStudents = async () => {
-    if (!selectedClass) return;
-    
-    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('student_enrollments')
-        .select(`
-          students (
-            id,
-            full_name,
-            nis
-          )
-        `)
-        .eq('class_id', selectedClass)
-        .eq('status', 'active');
+      setLoading(true);
+      let query = supabase
+        .from('students')
+        .select('id, full_name, nis')
+        .eq('status', 'active')
+        .order('full_name');
 
+      // Jika wali kelas, hanya tampilkan siswa perwaliannya
+      if (hasRole('wali_kelas') && !hasRole('admin') && !hasRole('tppk')) {
+        query = query.in('id', await getHomeRoomStudentIds());
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
-      
-      const studentData = data?.map(enrollment => enrollment.students).filter(Boolean) || [];
-      setStudents(studentData as Student[]);
-      
-      // Initialize attendance state
-      const initialAttendance: Record<string, string> = {};
-      studentData.forEach(student => {
-        if (student) {
-          initialAttendance[student.id] = 'present';
-        }
-      });
-      setAttendance(initialAttendance);
+      setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -105,263 +65,230 @@ export function AttendanceRecorder() {
     }
   };
 
-  const checkExistingAttendance = async () => {
-    if (!selectedClass || !selectedDate) return;
-
+  const getHomeRoomStudentIds = async (): Promise<string[]> => {
     try {
       const { data, error } = await supabase
-        .from('student_attendances')
-        .select('student_id, status')
-        .eq('class_id', selectedClass)
-        .eq('attendance_date', selectedDate);
+        .from('classes')
+        .select(`
+          student_enrollments!inner(student_id)
+        `)
+        .eq('homeroom_teacher_id', user?.id)
+        .eq('student_enrollments.status', 'active');
 
       if (error) throw error;
-
-      if (data && data.length > 0) {
-        const existingAttendance: Record<string, string> = {};
-        data.forEach(record => {
-          existingAttendance[record.student_id] = record.status;
-        });
-        setAttendance(prev => ({ ...prev, ...existingAttendance }));
-      }
+      
+      return data?.flatMap(cls => 
+        cls.student_enrollments.map(enrollment => enrollment.student_id)
+      ) || [];
     } catch (error) {
-      console.error('Error checking existing attendance:', error);
+      console.error('Error fetching homeroom students:', error);
+      return [];
     }
   };
 
-  const handleAttendanceChange = (studentId: string, status: string) => {
-    setAttendance(prev => ({
-      ...prev,
-      [studentId]: status
-    }));
-  };
-
-  const saveAttendance = async () => {
-    if (!selectedClass || !selectedDate) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!hasRole('admin') && !hasRole('tppk') && !hasRole('wali_kelas')) {
       toast({
-        title: "Error",
-        description: "Pilih kelas dan tanggal terlebih dahulu",
+        title: "Akses Ditolak",
+        description: "Anda tidak memiliki izin untuk mencatat presensi",
         variant: "destructive"
       });
       return;
     }
 
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Prepare attendance records
-      const attendanceRecords = Object.entries(attendance).map(([studentId, status]) => ({
-        student_id: studentId,
-        class_id: selectedClass,
-        attendance_date: selectedDate,
-        status,
-        recorded_by: user?.id,
-        recorded_at: new Date().toISOString()
-      }));
-
-      // Delete existing records for this date and class
-      await supabase
-        .from('student_attendances')
-        .delete()
-        .eq('class_id', selectedClass)
-        .eq('attendance_date', selectedDate);
-
-      // Insert new records
-      const { error } = await supabase
-        .from('student_attendances')
-        .insert(attendanceRecords);
-
-      if (error) throw error;
-
+    if (!formData.student_id || !formData.attendance_date) {
       toast({
-        title: "Berhasil",
-        description: `Presensi untuk ${students.length} siswa berhasil disimpan`
+        title: "Data Tidak Lengkap",
+        description: "Harap pilih siswa dan tanggal presensi",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Check if attendance already exists
+      const { data: existing } = await supabase
+        .from('student_attendances')
+        .select('id')
+        .eq('student_id', formData.student_id)
+        .eq('attendance_date', formData.attendance_date)
+        .single();
+
+      if (existing) {
+        // Update existing attendance
+        const { error } = await supabase
+          .from('student_attendances')
+          .update({
+            status: formData.status,
+            notes: formData.notes || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Berhasil",
+          description: "Data presensi berhasil diperbarui",
+        });
+      } else {
+        // Create new attendance record
+        const { error } = await supabase
+          .from('student_attendances')
+          .insert({
+            student_id: formData.student_id,
+            attendance_date: formData.attendance_date,
+            status: formData.status,
+            notes: formData.notes || null,
+            recorded_by: user?.id
+          });
+
+        if (error) throw error;
+        
+        toast({
+          title: "Berhasil",
+          description: "Data presensi berhasil dicatat",
+        });
+      }
+
+      // Reset form
+      setFormData({
+        student_id: '',
+        attendance_date: format(new Date(), 'yyyy-MM-dd'),
+        status: 'present',
+        notes: ''
       });
     } catch (error) {
-      console.error('Error saving attendance:', error);
+      console.error('Error recording attendance:', error);
       toast({
         title: "Error",
-        description: "Gagal menyimpan presensi",
+        description: "Gagal mencatat presensi",
         variant: "destructive"
       });
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'present': return 'default';
-      case 'absent': return 'destructive';
-      case 'late': return 'secondary';
-      case 'sick': return 'outline';
-      case 'permission': return 'secondary';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'present': return 'Hadir';
-      case 'absent': return 'Tidak Hadir';
-      case 'late': return 'Terlambat';
-      case 'sick': return 'Sakit';
-      case 'permission': return 'Izin';
-      default: return status;
-    }
-  };
-
-  const attendanceStats = {
-    present: Object.values(attendance).filter(status => status === 'present').length,
-    absent: Object.values(attendance).filter(status => status === 'absent').length,
-    late: Object.values(attendance).filter(status => status === 'late').length,
-    sick: Object.values(attendance).filter(status => status === 'sick').length,
-    permission: Object.values(attendance).filter(status => status === 'permission').length,
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Header & Controls */}
+  if (!hasRole('admin') && !hasRole('tppk') && !hasRole('wali_kelas')) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Input Presensi Harian
-          </CardTitle>
-          <CardDescription>
-            Pilih kelas dan tanggal untuk mencatat kehadiran siswa
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="class">Kelas</Label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name} (Kelas {cls.grade})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date">Tanggal</Label>
-              <Input
-                id="date"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+        <CardContent className="pt-6">
+          <div className="text-center space-y-4">
+            <AlertCircle className="h-12 w-12 mx-auto text-orange-500" />
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Akses Terbatas</h3>
+              <p className="text-gray-500 mt-2">
+                Anda tidak memiliki akses untuk mencatat presensi siswa. 
+                Fitur ini hanya tersedia untuk wali kelas, TPPK, dan administrator.
+              </p>
             </div>
           </div>
-
-          {/* Statistics */}
-          {students.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              <div className="text-center p-2 bg-green-50 rounded">
-                <div className="text-lg font-bold text-green-700">{attendanceStats.present}</div>
-                <div className="text-xs text-green-600">Hadir</div>
-              </div>
-              <div className="text-center p-2 bg-red-50 rounded">
-                <div className="text-lg font-bold text-red-700">{attendanceStats.absent}</div>
-                <div className="text-xs text-red-600">Tidak Hadir</div>
-              </div>
-              <div className="text-center p-2 bg-yellow-50 rounded">
-                <div className="text-lg font-bold text-yellow-700">{attendanceStats.late}</div>
-                <div className="text-xs text-yellow-600">Terlambat</div>
-              </div>
-              <div className="text-center p-2 bg-blue-50 rounded">
-                <div className="text-lg font-bold text-blue-700">{attendanceStats.sick}</div>
-                <div className="text-xs text-blue-600">Sakit</div>
-              </div>
-              <div className="text-center p-2 bg-purple-50 rounded">
-                <div className="text-lg font-bold text-purple-700">{attendanceStats.permission}</div>
-                <div className="text-xs text-purple-600">Izin</div>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Student List */}
-      {selectedClass && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Daftar Siswa ({students.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Memuat data siswa...</div>
-            ) : students.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Tidak ada siswa dalam kelas ini
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {students.map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium">
-                        {student.full_name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-medium">{student.full_name}</div>
-                        <div className="text-sm text-muted-foreground">NIS: {student.nis}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={attendance[student.id] || 'present'}
-                        onValueChange={(value) => handleAttendanceChange(student.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="present">Hadir</SelectItem>
-                          <SelectItem value="absent">Tidak Hadir</SelectItem>
-                          <SelectItem value="late">Terlambat</SelectItem>
-                          <SelectItem value="sick">Sakit</SelectItem>
-                          <SelectItem value="permission">Izin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Badge variant={getStatusBadgeVariant(attendance[student.id] || 'present')}>
-                        {getStatusLabel(attendance[student.id] || 'present')}
-                      </Badge>
-                    </div>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserCheck className="h-5 w-5 text-blue-500" />
+          Input Presensi Manual
+          {hasRole('wali_kelas') && !hasRole('admin') && !hasRole('tppk') && (
+            <span className="text-sm font-normal text-gray-500">(Siswa Perwalian)</span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <Label>Siswa *</Label>
+            <StudentSearchWithQR
+              value={formData.student_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}
+              placeholder={hasRole('wali_kelas') && !hasRole('admin') && !hasRole('tppk') 
+                ? "Cari siswa perwalian Anda..." 
+                : "Cari siswa berdasarkan nama atau NIS"
+              }
+              students={students}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="attendance_date">Tanggal Presensi *</Label>
+            <Input
+              id="attendance_date"
+              type="date"
+              value={formData.attendance_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, attendance_date: e.target.value }))}
+              max={format(new Date(), 'yyyy-MM-dd')}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="status">Status Kehadiran *</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value: 'present' | 'absent' | 'sick' | 'permission') => 
+                setFormData(prev => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="present">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Hadir
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                </SelectItem>
+                <SelectItem value="sick">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                    Sakit
+                  </div>
+                </SelectItem>
+                <SelectItem value="permission">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                    Izin
+                  </div>
+                </SelectItem>
+                <SelectItem value="absent">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    Alfa (Tanpa Keterangan)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Save Button */}
-      {students.length > 0 && (
-        <div className="flex justify-end">
+          <div>
+            <Label htmlFor="notes">Catatan (Opsional)</Label>
+            <Input
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Catatan tambahan..."
+            />
+          </div>
+
           <Button 
-            onClick={saveAttendance} 
-            disabled={saving}
-            className="flex items-center gap-2"
+            type="submit" 
+            disabled={submitting || !formData.student_id || !formData.attendance_date} 
+            className="w-full"
           >
-            <Save className="h-4 w-4" />
-            {saving ? 'Menyimpan...' : 'Simpan Presensi'}
+            {submitting ? 'Menyimpan...' : 'Simpan Presensi'}
           </Button>
-        </div>
-      )}
-    </div>
+        </form>
+      </CardContent>
+    </Card>
   );
-}
+};
