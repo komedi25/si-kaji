@@ -580,12 +580,12 @@ export const StudentSelfAttendance = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               <strong>Data Siswa Tidak Ditemukan</strong><br/>
-              {studentError}<br/><br/>
+              {studentError instanceof Error ? studentError.message : String(studentError)}<br/><br/>
               Silakan hubungi admin untuk menghubungkan akun Anda dengan data siswa.
             </AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={refetch} variant="outline">
+            <Button onClick={() => refetch()} variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />
               Coba Lagi
             </Button>

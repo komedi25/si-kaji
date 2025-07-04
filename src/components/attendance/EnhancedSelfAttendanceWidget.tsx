@@ -471,7 +471,7 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <strong>Data Siswa Tidak Ditemukan</strong><br/>
                 User ID: {user?.id}<br/>
                 Email: {user?.email}<br/>
-                Error: {studentError}<br/><br/>
+                Error: {studentError instanceof Error ? studentError.message : String(studentError)}<br/><br/>
                 <strong>Informasi Debug Lengkap:</strong><br/>
                 Sistem telah mencoba berbagai metode untuk menghubungkan akun Anda dengan data siswa namun tidak berhasil.
               </AlertDescription>
@@ -500,14 +500,14 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <div className="text-xs text-blue-600 space-y-1">
                   <div>User ID: {user?.id}</div>
                   <div>Email: {user?.email}</div>
-                  <div>Error Detail: {studentError}</div>
+                  <div>Error Detail: {studentError instanceof Error ? studentError.message : String(studentError)}</div>
                   <div>Timestamp: {new Date().toISOString()}</div>
                 </div>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={refetch} variant="outline" className="flex-1">
+              <Button onClick={() => refetch()} variant="outline" className="flex-1">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Coba Lagi
               </Button>

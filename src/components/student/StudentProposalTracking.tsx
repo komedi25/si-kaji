@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -114,7 +113,7 @@ export const StudentProposalTracking = () => {
   }
 
   if (studentError || !studentData) {
-    return <StudentDataError error={studentError || 'Unknown error'} onRetry={refetch} />;
+    return <StudentDataError error={studentError instanceof Error ? studentError.message : String(studentError || 'Unknown error')} onRetry={refetch} />;
   }
 
   return (
