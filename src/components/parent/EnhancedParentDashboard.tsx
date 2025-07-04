@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,7 @@ import { ParentHeader } from './ParentHeader';
 import { ParentQuickStats } from './ParentQuickStats';
 import { ParentOverviewTab } from './ParentOverviewTab';
 
-// Simple, clean interfaces
+// Simple, clean interfaces to avoid deep type instantiation
 interface Student {
   id: string;
   full_name: string;
@@ -24,7 +25,7 @@ interface Student {
   class?: {
     name: string;
     grade: number;
-  };
+  } | null;
 }
 
 interface AttendanceData {
@@ -84,8 +85,8 @@ export const EnhancedParentDashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch student data
-      const { data: parentAccess } = await supabase
+      // Fetch student data with explicit type handling
+      const { data: parentAccess, error: parentError } = await supabase
         .from('parent_access')
         .select(`
           student:students(
@@ -99,21 +100,35 @@ export const EnhancedParentDashboard = () => {
         .eq('is_active', true)
         .single();
 
+      if (parentError) {
+        console.error('Parent access error:', parentError);
+        setLoading(false);
+        return;
+      }
+
       if (!parentAccess?.student) {
         setLoading(false);
         return;
       }
 
-      const student = parentAccess.student as any;
-      setStudentData({
-        ...student,
-        class: student.student_enrollments?.[0]?.class || null
-      });
+      // Type-safe data processing
+      const rawStudent = parentAccess.student as any;
+      const processedStudent: Student = {
+        id: rawStudent.id,
+        full_name: rawStudent.full_name,
+        nis: rawStudent.nis,
+        user_id: rawStudent.user_id,
+        class: rawStudent.student_enrollments?.[0]?.class || null
+      };
+      
+      setStudentData(processedStudent);
 
-      // Fetch attendance and discipline data
-      await fetchAttendanceStats(student.id);
-      await fetchDisciplineData(student.id);
-      await fetchNotifications(student.user_id);
+      // Fetch other data
+      await Promise.all([
+        fetchAttendanceStats(processedStudent.id),
+        fetchDisciplineData(processedStudent.id),
+        fetchNotifications(processedStudent.user_id)
+      ]);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -123,111 +138,160 @@ export const EnhancedParentDashboard = () => {
   };
 
   const fetchAttendanceStats = async (studentId: string) => {
-    const now = new Date();
-    const startMonth = startOfMonth(now);
-    const endMonth = endOfMonth(now);
-    
-    const { data: monthlyAttendance } = await supabase
-      .from('student_self_attendances')
-      .select('attendance_date, check_in_time, check_out_time, status')
-      .eq('student_id', studentId)
-      .gte('attendance_date', format(startMonth, 'yyyy-MM-dd'))
-      .lte('attendance_date', format(endMonth, 'yyyy-MM-dd'))
-      .order('attendance_date', { ascending: false });
-
-    const weekAgo = subDays(now, 7);
-    const { data: weeklyData } = await supabase
-      .from('student_self_attendances')
-      .select('attendance_date, status')
-      .eq('student_id', studentId)
-      .gte('attendance_date', format(weekAgo, 'yyyy-MM-dd'))
-      .order('attendance_date', { ascending: true });
-
-    if (monthlyAttendance) {
-      const totalDays = monthlyAttendance.length;
-      const presentDays = monthlyAttendance.filter(a => a.status === 'present').length;
-      const absentDays = monthlyAttendance.filter(a => a.status === 'absent').length;
-      const lateDays = monthlyAttendance.filter(a => a.status === 'late').length;
+    try {
+      const now = new Date();
+      const startMonth = startOfMonth(now);
+      const endMonth = endOfMonth(now);
       
-      setAttendanceStats({
-        total_days: totalDays,
-        present_days: presentDays,
-        absent_days: absentDays,
-        late_days: lateDays,
-        percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
-        weekly_trend: (weeklyData || []).map(item => ({
-          date: item.attendance_date,
-          status: item.status
-        }))
-      });
+      const { data: monthlyAttendance, error: monthlyError } = await supabase
+        .from('student_self_attendances')
+        .select('attendance_date, check_in_time, check_out_time, status')
+        .eq('student_id', studentId)
+        .gte('attendance_date', format(startMonth, 'yyyy-MM-dd'))
+        .lte('attendance_date', format(endMonth, 'yyyy-MM-dd'))
+        .order('attendance_date', { ascending: false });
+
+      if (monthlyError) {
+        console.error('Monthly attendance error:', monthlyError);
+        return;
+      }
+
+      const weekAgo = subDays(now, 7);
+      const { data: weeklyData, error: weeklyError } = await supabase
+        .from('student_self_attendances')
+        .select('attendance_date, status')
+        .eq('student_id', studentId)
+        .gte('attendance_date', format(weekAgo, 'yyyy-MM-dd'))
+        .order('attendance_date', { ascending: true });
+
+      if (weeklyError) {
+        console.error('Weekly attendance error:', weeklyError);
+        return;
+      }
+
+      if (monthlyAttendance) {
+        const totalDays = monthlyAttendance.length;
+        const presentDays = monthlyAttendance.filter(a => a.status === 'present').length;
+        const absentDays = monthlyAttendance.filter(a => a.status === 'absent').length;
+        const lateDays = monthlyAttendance.filter(a => a.status === 'late').length;
+        
+        const attendanceData: AttendanceData = {
+          total_days: totalDays,
+          present_days: presentDays,
+          absent_days: absentDays,
+          late_days: lateDays,
+          percentage: totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0,
+          weekly_trend: (weeklyData || []).map(item => ({
+            date: item.attendance_date,
+            status: item.status
+          }))
+        };
+        
+        setAttendanceStats(attendanceData);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance stats:', error);
     }
   };
 
   const fetchDisciplineData = async (studentId: string) => {
-    const { data: disciplinePoints } = await supabase
-      .from('student_discipline_points')
-      .select('*')
-      .eq('student_id', studentId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    try {
+      const { data: disciplinePoints, error: disciplineError } = await supabase
+        .from('student_discipline_points')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const { data: violations } = await supabase
-      .from('student_violations')
-      .select(`
-        id, violation_date, point_deduction,
-        violation_types(name)
-      `)
-      .eq('student_id', studentId)
-      .eq('status', 'active')
-      .order('violation_date', { ascending: false })
-      .limit(5);
+      if (disciplineError) {
+        console.error('Discipline points error:', disciplineError);
+        return;
+      }
 
-    const { data: achievements } = await supabase
-      .from('student_achievements')
-      .select(`
-        id, achievement_date, point_reward,
-        achievement_types(name)
-      `)
-      .eq('student_id', studentId)
-      .eq('status', 'verified')
-      .order('achievement_date', { ascending: false })
-      .limit(5);
+      const { data: violations, error: violationsError } = await supabase
+        .from('student_violations')
+        .select(`
+          id, violation_date, point_deduction,
+          violation_types(name)
+        `)
+        .eq('student_id', studentId)
+        .eq('status', 'active')
+        .order('violation_date', { ascending: false })
+        .limit(5);
 
-    if (disciplinePoints) {
-      setDisciplineData({
-        final_score: disciplinePoints.final_score,
-        total_violations: disciplinePoints.total_violation_points,
-        total_achievements: disciplinePoints.total_achievement_points,
-        status: disciplinePoints.discipline_status,
+      if (violationsError) {
+        console.error('Violations error:', violationsError);
+      }
+
+      const { data: achievements, error: achievementsError } = await supabase
+        .from('student_achievements')
+        .select(`
+          id, achievement_date, point_reward,
+          achievement_types(name)
+        `)
+        .eq('student_id', studentId)
+        .eq('status', 'verified')
+        .order('achievement_date', { ascending: false })
+        .limit(5);
+
+      if (achievementsError) {
+        console.error('Achievements error:', achievementsError);
+      }
+
+      const disciplineInfo: DisciplineInfo = {
+        final_score: disciplinePoints?.final_score || 100,
+        total_violations: disciplinePoints?.total_violation_points || 0,
+        total_achievements: disciplinePoints?.total_achievement_points || 0,
+        status: disciplinePoints?.discipline_status || 'good',
         recent_violations: (violations || []).map((v: any) => ({
           id: v.id,
           violation_date: v.violation_date,
-          violation_type: v.violation_types?.name || '',
+          violation_type: v.violation_types?.name || 'Unknown',
           point_deduction: v.point_deduction
         })),
         recent_achievements: (achievements || []).map((a: any) => ({
           id: a.id,
           achievement_date: a.achievement_date,
-          achievement_type: a.achievement_types?.name || '',
+          achievement_type: a.achievement_types?.name || 'Unknown',
           point_reward: a.point_reward
         }))
-      });
+      };
+
+      setDisciplineData(disciplineInfo);
+    } catch (error) {
+      console.error('Error fetching discipline data:', error);
     }
   };
 
   const fetchNotifications = async (studentUserId?: string) => {
     if (!studentUserId) return;
 
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', studentUserId)
-      .eq('is_read', false)
-      .order('created_at', { ascending: false })
-      .limit(10);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', studentUserId)
+        .eq('read', false)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-    setNotifications(data || []);
+      if (error) {
+        console.error('Notifications error:', error);
+        return;
+      }
+
+      const processedNotifications: NotificationInfo[] = (data || []).map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        created_at: n.created_at || new Date().toISOString()
+      }));
+
+      setNotifications(processedNotifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
   };
 
   if (loading) {
@@ -302,8 +366,8 @@ export const EnhancedParentDashboard = () => {
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-3">Tren Kehadiran 7 Hari Terakhir</h4>
                 <div className="space-y-2">
-                  {attendanceStats?.weekly_trend.map((day) => (
-                    <div key={day.date} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
+                  {attendanceStats?.weekly_trend.map((day, index) => (
+                    <div key={`${day.date}-${index}`} className="flex items-center justify-between p-2 rounded hover:bg-gray-50">
                       <span className="text-sm">{format(new Date(day.date), 'EEEE, dd MMM', { locale: id })}</span>
                       <Badge 
                         variant={day.status === 'present' ? 'default' : day.status === 'late' ? 'secondary' : 'destructive'}
@@ -329,8 +393,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-8">Belum ada prestasi yang dicatat</p>
                 ) : (
                   <div className="space-y-4">
-                    {disciplineData?.recent_achievements.map((achievement) => (
-                      <div key={achievement.id} className="flex justify-between items-start p-4 border rounded">
+                    {disciplineData?.recent_achievements.map((achievement, index) => (
+                      <div key={`${achievement.id}-${index}`} className="flex justify-between items-start p-4 border rounded">
                         <div>
                           <div className="font-medium">{achievement.achievement_type}</div>
                           <div className="text-sm text-muted-foreground">
@@ -354,8 +418,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-8">Tidak ada catatan pelanggaran</p>
                 ) : (
                   <div className="space-y-4">
-                    {disciplineData?.recent_violations.map((violation) => (
-                      <div key={violation.id} className="flex justify-between items-start p-4 border rounded">
+                    {disciplineData?.recent_violations.map((violation, index) => (
+                      <div key={`${violation.id}-${index}`} className="flex justify-between items-start p-4 border rounded">
                         <div>
                           <div className="font-medium">{violation.violation_type}</div>
                           <div className="text-sm text-muted-foreground">
@@ -384,7 +448,7 @@ export const EnhancedParentDashboard = () => {
                   <div>
                     <div className="font-medium">Pak/Bu Wali Kelas</div>
                     <div className="text-sm text-muted-foreground">
-                      Kelas {studentData.class?.grade} {studentData.class?.name}
+                      Kelas {studentData.class?.grade || ''} {studentData.class?.name || ''}
                     </div>
                   </div>
                 </div>
@@ -410,8 +474,8 @@ export const EnhancedParentDashboard = () => {
                   <p className="text-center text-muted-foreground py-4">Tidak ada notifikasi baru</p>
                 ) : (
                   <div className="space-y-3">
-                    {notifications.slice(0, 5).map((notification) => (
-                      <div key={notification.id} className="p-3 border rounded">
+                    {notifications.slice(0, 5).map((notification, index) => (
+                      <div key={`${notification.id}-${index}`} className="p-3 border rounded">
                         <div className="font-medium text-sm">{notification.title}</div>
                         <div className="text-sm text-muted-foreground">{notification.message}</div>
                         <div className="text-xs text-muted-foreground mt-1">
