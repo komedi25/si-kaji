@@ -35,11 +35,7 @@ export interface StudentData {
   photo_url: string | null;
   created_at: string;
   updated_at: string;
-}
-
-// Helper function to validate gender
-function validateGender(gender: any): gender is 'L' | 'P' {
-  return gender === 'L' || gender === 'P';
+  email?: string | null;
 }
 
 export function useUserProfile() {
@@ -177,14 +173,15 @@ export function useUserProfile() {
         }
 
         if (studentDetails) {
-          // Validate gender before setting state
-          if (!validateGender(studentDetails.gender)) {
-            console.error('Invalid gender value:', studentDetails.gender);
-            // Set default gender if invalid
-            studentDetails.gender = 'L';
-          }
+          // Validate and set student data
+          const validatedStudent: StudentData = {
+            ...studentDetails,
+            gender: (studentDetails.gender === 'L' || studentDetails.gender === 'P') 
+              ? studentDetails.gender 
+              : 'L' // Default to 'L' if invalid
+          };
 
-          setStudentData(studentDetails as StudentData);
+          setStudentData(validatedStudent);
         } else {
           console.warn('Could not create or find student data');
         }
