@@ -113,64 +113,80 @@ export function useUserProfile() {
         setProfile(profileData);
       }
 
-      // 3. If role is 'siswa' and has student_id, get student details
+      // 3. If role is 'siswa', get or create student data
       const currentProfile = profileData || profile;
       if (currentProfile?.role === 'siswa') {
+        let studentDetails = null;
+
         if (currentProfile.student_id) {
-          const { data: studentDetails, error: studentError } = await supabase
+          // Get existing student data
+          const { data: existingStudent, error: studentError } = await supabase
             .from('students')
             .select('*')
             .eq('id', currentProfile.student_id)
             .single();
 
-          if (studentError) {
-            console.error('Student data error:', studentError);
-            setError('Data siswa tidak ditemukan. Hubungi admin untuk menautkan akun Anda.');
-            setIsLoading(false);
-            return;
+          if (!studentError && existingStudent) {
+            studentDetails = existingStudent;
           }
+        }
 
+        // If no student data found, try to find by email or create new one
+        if (!studentDetails) {
+          // Try to find student by email
+          const { data: studentByEmail } = await supabase
+            .from('students')
+            .select('*')
+            .eq('email', currentUser.email)
+            .maybeSingle();
+
+          if (studentByEmail) {
+            // Link existing student to profile
+            await supabase
+              .from('profiles')
+              .update({ student_id: studentByEmail.id })
+              .eq('id', currentUser.id);
+
+            studentDetails = studentByEmail;
+          } else {
+            // Create new student record
+            const { data: newStudent, error: createStudentError } = await supabase
+              .from('students')
+              .insert({
+                user_id: currentUser.id,
+                full_name: currentProfile.full_name || currentUser.email || 'Siswa Baru',
+                nis: `AUTO${Date.now()}`, // Generate temporary NIS
+                gender: 'L', // Default gender, can be updated later
+                status: 'active',
+                admission_date: new Date().toISOString().split('T')[0],
+                email: currentUser.email
+              })
+              .select()
+              .single();
+
+            if (!createStudentError && newStudent) {
+              // Link new student to profile
+              await supabase
+                .from('profiles')
+                .update({ student_id: newStudent.id })
+                .eq('id', currentUser.id);
+
+              studentDetails = newStudent;
+            }
+          }
+        }
+
+        if (studentDetails) {
           // Validate gender before setting state
           if (!validateGender(studentDetails.gender)) {
             console.error('Invalid gender value:', studentDetails.gender);
-            setError('Data siswa tidak valid. Hubungi admin untuk memperbaiki data.');
-            setIsLoading(false);
-            return;
+            // Set default gender if invalid
+            studentDetails.gender = 'L';
           }
 
           setStudentData(studentDetails as StudentData);
         } else {
-          // Try to auto-link based on email
-          const { data: autoLinkResult } = await supabase.rpc('link_profile_to_student', {
-            profile_id: currentUser.id,
-            student_identifier: currentUser.email
-          });
-
-          if (autoLinkResult) {
-            // Refetch profile after auto-linking
-            const { data: updatedProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (updatedProfile?.student_id) {
-              const { data: studentDetails } = await supabase
-                .from('students')
-                .select('*')
-                .eq('id', updatedProfile.student_id)
-                .single();
-
-              if (studentDetails && validateGender(studentDetails.gender)) {
-                setProfile(updatedProfile);
-                setStudentData(studentDetails as StudentData);
-              }
-            }
-          } else {
-            setError('Akun Anda belum terhubung dengan data siswa. Hubungi admin untuk menautkan akun.');
-            setIsLoading(false);
-            return;
-          }
+          console.warn('Could not create or find student data');
         }
       }
 

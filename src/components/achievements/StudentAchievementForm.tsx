@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,12 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Trophy, Upload, Calendar, FileText, Award } from 'lucide-react';
+import { Trophy, Upload, Calendar, FileText, Award, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 export const StudentAchievementForm = () => {
-  const { user } = useAuth();
+  const { studentData, isLoading: userLoading, error: userError } = useUserProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -25,22 +25,6 @@ export const StudentAchievementForm = () => {
     achievement_date: '',
     description: '',
     certificate_url: ''
-  });
-
-  // Get student data
-  const { data: studentData } = useQuery({
-    queryKey: ['student-profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user && user.roles?.includes('siswa'),
   });
 
   // Get achievement types
@@ -144,6 +128,44 @@ export const StudentAchievementForm = () => {
         return <Badge variant="secondary">Menunggu Verifikasi</Badge>;
     }
   };
+
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (userError) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-red-600">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+            <p className="font-medium">Terjadi Kesalahan</p>
+            <p className="text-sm mt-2">{userError}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-orange-600">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+            <p className="font-medium">Data Siswa Tidak Ditemukan</p>
+            <p className="text-sm mt-2">
+              Sistem sedang menyiapkan data siswa Anda. Silakan refresh halaman dalam beberapa saat.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 md:p-6">

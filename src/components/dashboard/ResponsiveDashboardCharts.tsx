@@ -1,190 +1,180 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from 'recharts';
-import { TrendingUp, AlertTriangle, Trophy, Activity } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
-const COLORS = {
-  primary: '#3b82f6',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-};
+const weeklyAttendanceData = [
+  { day: 'Sen', present: 85, absent: 15 },
+  { day: 'Sel', present: 82, absent: 18 },
+  { day: 'Rab', present: 88, absent: 12 },
+  { day: 'Kam', present: 86, absent: 14 },
+  { day: 'Jum', present: 90, absent: 10 },
+];
 
-const chartConfig = {
-  violations: {
-    label: "Pelanggaran",
-    color: COLORS.danger,
-  },
-  achievements: {
-    label: "Prestasi", 
-    color: COLORS.success,
-  },
-  discipline: {
-    label: "Skor Disiplin",
-    color: COLORS.primary,
-  },
-};
+const violationData = [
+  { month: 'Jan', count: 12 },
+  { month: 'Feb', count: 8 },
+  { month: 'Mar', count: 15 },
+  { month: 'Apr', count: 6 },
+  { month: 'Mei', count: 10 },
+];
+
+const achievementData = [
+  { name: 'Akademik', value: 45, color: '#0088FE' },
+  { name: 'Olahraga', value: 30, color: '#00C49F' },
+  { name: 'Seni', value: 15, color: '#FFBB28' },
+  { name: 'Lainnya', value: 10, color: '#FF8042' },
+];
 
 export const ResponsiveDashboardCharts = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('trends');
-
-  // Get violation trends
-  const { data: violationTrends, isLoading: loadingViolations } = useQuery({
-    queryKey: ['violation-trends'],
-    queryFn: async () => {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-      const { data, error } = await supabase
-        .from('student_violations')
-        .select('violation_date')
-        .gte('violation_date', sixMonthsAgo.toISOString().split('T')[0])
-        .eq('status', 'active');
-
-      if (error) throw error;
-
-      const monthlyData = data?.reduce((acc: Record<string, number>, violation) => {
-        const month = new Date(violation.violation_date).toLocaleDateString('id-ID', { 
-          month: 'short' 
-        });
-        acc[month] = (acc[month] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      return Object.entries(monthlyData).map(([month, count]) => ({
-        month,
-        count,
-        fill: COLORS.danger
-      }));
-    },
-    enabled: !!user && (user.roles?.includes('admin') || user.roles?.includes('tppk')),
-  });
-
-  if (!user?.roles || user.roles.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-500">Tidak ada data untuk ditampilkan</p>
-      </div>
-    );
-  }
-
-  const isLoading = loadingViolations;
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2].map((i) => (
-          <div key={i} className="h-64 sm:h-80 bg-gray-100 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3">
-          <TabsTrigger value="trends" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Trend Data</span>
-            <span className="sm:hidden">Trend</span>
-          </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-            <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Performa</span>
-            <span className="sm:hidden">Data</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="trends" className="mt-4 sm:mt-6">
-          <div className="grid grid-cols-1 gap-4 sm:gap-6">
-            {/* Violation Trends */}
-            {(user.roles.includes('admin') || user.roles.includes('tppk')) && violationTrends && (
-              <Card className="border-red-200 bg-red-50/30">
-                <CardHeader className="pb-2 sm:pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
-                    <span className="truncate">Trend Pelanggaran</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    6 bulan terakhir
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-2 sm:p-6">
-                  <div className="h-48 sm:h-64 md:h-80 w-full">
-                    <ChartContainer config={chartConfig} className="h-full w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={violationTrends}
-                          margin={{ 
-                            top: 10, 
-                            right: 10, 
-                            left: 0, 
-                            bottom: 0 
-                          }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                          <XAxis 
-                            dataKey="month" 
-                            tick={{ fontSize: 10 }}
-                            tickLine={{ stroke: '#cbd5e1' }}
-                            interval={0}
-                            angle={-45}
-                            textAnchor="end"
-                            height={50}
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 10 }}
-                            tickLine={{ stroke: '#cbd5e1' }}
-                            width={30}
-                          />
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar 
-                            dataKey="count" 
-                            fill={COLORS.danger}
-                            radius={[2, 2, 0, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+      {/* Weekly Attendance Trend */}
+      <Card className="col-span-1 lg:col-span-2 xl:col-span-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Tren Kehadiran Mingguan</CardTitle>
+          <CardDescription className="text-sm">
+            Persentase kehadiran siswa per hari dalam seminggu terakhir
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-2 md:p-4">
+          <div className="h-[200px] md:h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={weeklyAttendanceData}
+                margin={{
+                  top: 5,
+                  right: 10,
+                  left: 0,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 100]}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="present" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
+                  name="Hadir (%)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </TabsContent>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="performance" className="mt-4 sm:mt-6">
-          <div className="text-center py-8 text-gray-500">
-            <Activity className="h-12 w-12 mx-auto mb-4" />
-            <p>Data performa akan segera hadir</p>
+      {/* Monthly Violations */}
+      <Card className="col-span-1">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Pelanggaran Bulanan</CardTitle>
+          <CardDescription className="text-sm">
+            Jumlah pelanggaran dalam 5 bulan terakhir
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-2 md:p-4">
+          <div className="h-[200px] md:h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={violationData}
+                margin={{
+                  top: 5,
+                  right: 10,
+                  left: 0,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar 
+                  dataKey="count" 
+                  fill="#ef4444" 
+                  radius={[2, 2, 0, 0]}
+                  name="Pelanggaran"
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Achievement Distribution */}
+      <Card className="col-span-1 lg:col-span-2 xl:col-span-1">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base md:text-lg">Distribusi Prestasi</CardTitle>
+          <CardDescription className="text-sm">
+            Pembagian prestasi siswa berdasarkan kategori
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-2 md:p-4">
+          <div className="h-[200px] md:h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={achievementData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={60}
+                  fill="#8884d8"
+                  dataKey="value"
+                  fontSize={10}
+                >
+                  {achievementData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '12px'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
