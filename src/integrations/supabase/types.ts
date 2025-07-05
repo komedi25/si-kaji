@@ -1565,35 +1565,55 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           created_at: string | null
           full_name: string
           id: string
           nip: string | null
           nis: string | null
           phone: string | null
+          role: string | null
+          student_id: string | null
+          teacher_id: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           full_name: string
           id: string
           nip?: string | null
           nis?: string | null
           phone?: string | null
+          role?: string | null
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
           nip?: string | null
           nis?: string | null
           phone?: string | null
+          role?: string | null
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_approvals: {
         Row: {
@@ -2727,6 +2747,10 @@ export type Database = {
       }
       is_within_location_radius: {
         Args: { student_lat: number; student_lng: number; location_id: string }
+        Returns: boolean
+      }
+      link_profile_to_student: {
+        Args: { profile_id: string; student_identifier: string }
         Returns: boolean
       }
       log_activity: {
