@@ -37,6 +37,11 @@ export interface StudentData {
   updated_at: string;
 }
 
+// Helper function to validate gender
+function validateGender(gender: any): gender is 'L' | 'P' {
+  return gender === 'L' || gender === 'P';
+}
+
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -125,7 +130,15 @@ export function useUserProfile() {
             return;
           }
 
-          setStudentData(studentDetails);
+          // Validate gender before setting state
+          if (!validateGender(studentDetails.gender)) {
+            console.error('Invalid gender value:', studentDetails.gender);
+            setError('Data siswa tidak valid. Hubungi admin untuk memperbaiki data.');
+            setIsLoading(false);
+            return;
+          }
+
+          setStudentData(studentDetails as StudentData);
         } else {
           // Try to auto-link based on email
           const { data: autoLinkResult } = await supabase.rpc('link_profile_to_student', {
@@ -148,9 +161,9 @@ export function useUserProfile() {
                 .eq('id', updatedProfile.student_id)
                 .single();
 
-              if (studentDetails) {
+              if (studentDetails && validateGender(studentDetails.gender)) {
                 setProfile(updatedProfile);
-                setStudentData(studentDetails);
+                setStudentData(studentDetails as StudentData);
               }
             }
           } else {
