@@ -74,6 +74,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           return ['admin'];
         }
         
+        // For other users, check their profile role
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single();
+        
+        if (profileData?.role) {
+          return [profileData.role as AppRole];
+        }
+        
         // For other users, return empty array if no roles found
         console.warn('No roles found for user:', userId);
         return [];
@@ -184,7 +195,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: fullName
+          full_name: fullName,
+          role: 'siswa' // Default role for new signups
         }
       }
     });

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,8 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, Shield, Brain, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useStudentDetails } from '@/hooks/useStudentData';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { attendanceSecurityManager } from './SecurityEnhancements';
@@ -45,9 +45,8 @@ interface SelfAttendance {
 }
 
 export const EnhancedSelfAttendanceWidget = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const { data: studentData, isLoading: studentLoading, error: studentError, refetch } = useStudentDetails(user?.id || null);
+  const { user, profile, studentData, isLoading: userLoading, error: userError, refetch } = useUserProfile();
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [locations, setLocations] = useState<AttendanceLocation[]>([]);
@@ -452,7 +451,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     canCheckOut: canCheckOut()
   });
 
-  if (studentLoading) {
+  if (userLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -460,7 +459,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     );
   }
 
-  if (studentError || !studentData) {
+  if (userError || !studentData) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -471,7 +470,7 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <strong>Data Siswa Tidak Ditemukan</strong><br/>
                 User ID: {user?.id}<br/>
                 Email: {user?.email}<br/>
-                Error: {studentError instanceof Error ? studentError.message : String(studentError)}<br/><br/>
+                Error: {userError}<br/><br/>
                 <strong>Informasi Debug Lengkap:</strong><br/>
                 Sistem telah mencoba berbagai metode untuk menghubungkan akun Anda dengan data siswa namun tidak berhasil.
               </AlertDescription>
@@ -500,7 +499,7 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <div className="text-xs text-blue-600 space-y-1">
                   <div>User ID: {user?.id}</div>
                   <div>Email: {user?.email}</div>
-                  <div>Error Detail: {studentError instanceof Error ? studentError.message : String(studentError)}</div>
+                  <div>Error Detail: {userError}</div>
                   <div>Timestamp: {new Date().toISOString()}</div>
                 </div>
               </div>
