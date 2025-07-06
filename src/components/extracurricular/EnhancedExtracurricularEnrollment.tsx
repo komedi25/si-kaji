@@ -7,12 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  Users, Clock, MapPin, User, Plus, Search, Filter,
+  Users, Clock, MapPin, User, Plus, Search,
   CheckCircle, XCircle, Eye
 } from 'lucide-react';
 
@@ -56,7 +55,6 @@ export const EnhancedExtracurricularEnrollment = () => {
   const [selectedStudent, setSelectedStudent] = useState('');
   const [students, setStudents] = useState<Array<{id: string; full_name: string; nis: string; class_name?: string}>>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,45 +76,47 @@ export const EnhancedExtracurricularEnrollment = () => {
           schedule_day,
           schedule_time,
           location,
-          max_participants,
-          extracurricular_enrollments!inner (
-            id,
-            enrollment_date,
-            status,
-            students!inner (
-              id,
-              full_name,
-              nis
-            )
-          )
+          max_participants
         `)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      const processedData: ExtracurricularWithDetails[] = (data || []).map(item => {
-        const activeEnrollments = item.extracurricular_enrollments?.filter(e => e.status === 'active') || [];
-        
-        return {
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          schedule_day: item.schedule_day,
-          schedule_time: item.schedule_time,
-          location: item.location,
-          max_participants: item.max_participants,
-          current_participants: activeEnrollments.length,
-          enrollments: activeEnrollments.map(enrollment => ({
-            id: enrollment.id,
-            student_name: enrollment.students.full_name,
-            student_nis: enrollment.students.nis,
-            enrollment_date: enrollment.enrollment_date,
-            status: enrollment.status
-          }))
-        };
-      });
+      // Get enrollments separately to avoid complex join
+      const extracurricularsWithEnrollments: ExtracurricularWithDetails[] = [];
+      
+      for (const extra of data || []) {
+        const { data: enrollments } = await supabase
+          .from('extracurricular_enrollments')
+          .select(`
+            id,
+            enrollment_date,
+            status,
+            students (
+              id,
+              full_name,
+              nis
+            )
+          `)
+          .eq('extracurricular_id', extra.id)
+          .eq('status', 'active');
 
-      setExtracurriculars(processedData);
+        const processedEnrollments = (enrollments || []).map(enrollment => ({
+          id: enrollment.id,
+          student_name: enrollment.students?.full_name || '',
+          student_nis: enrollment.students?.nis || '',
+          enrollment_date: enrollment.enrollment_date,
+          status: enrollment.status
+        }));
+
+        extracurricularsWithEnrollments.push({
+          ...extra,
+          current_participants: processedEnrollments.length,
+          enrollments: processedEnrollments
+        });
+      }
+
+      setExtracurriculars(extracurricularsWithEnrollments);
     } catch (error) {
       console.error('Error fetching extracurriculars:', error);
       toast({
@@ -131,8 +131,7 @@ export const EnhancedExtracurricularEnrollment = () => {
 
   const fetchEnrollmentRequests = async () => {
     try {
-      // This would fetch pending enrollment requests
-      // For now, we'll use sample data
+      // Using sample data for now since enrollment requests table doesn't exist yet
       const sampleRequests: EnrollmentRequest[] = [
         {
           id: '1',
@@ -159,28 +158,13 @@ export const EnhancedExtracurricularEnrollment = () => {
         .select(`
           id,
           full_name,
-          nis,
-          student_enrollments!inner (
-            classes!inner (
-              name,
-              grade
-            )
-          )
+          nis
         `)
         .eq('is_active', true);
 
       if (error) throw error;
 
-      const processedStudents = (data || []).map(student => ({
-        id: student.id,
-        full_name: student.full_name,
-        nis: student.nis,
-        class_name: student.student_enrollments?.[0]?.classes ? 
-          `${student.student_enrollments[0].classes.grade} ${student.student_enrollments[0].classes.name}` : 
-          undefined
-      }));
-
-      setStudents(processedStudents);
+      setStudents(data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
     }
@@ -234,7 +218,6 @@ export const EnhancedExtracurricularEnrollment = () => {
 
   const handleApproveRequest = async (requestId: string, approved: boolean) => {
     try {
-      // Update request status
       setEnrollmentRequests(prev => 
         prev.map(req => 
           req.id === requestId 
@@ -266,10 +249,6 @@ export const EnhancedExtracurricularEnrollment = () => {
     extra.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredRequests = enrollmentRequests.filter(req =>
-    filterStatus === 'all' || req.status === filterStatus
-  );
-
   if (loading) {
     return <div>Memuat data ekstrakurikuler...</div>;
   }
@@ -294,13 +273,10 @@ export const EnhancedExtracurricularEnrollment = () => {
       </Card>
 
       <Tabs defaultValue="extracurriculars" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="extracurriculars">Ekstrakurikuler</TabsTrigger>
           {(hasRole('koordinator_ekstrakurikuler') || hasRole('admin')) && (
-            <>
-              <TabsTrigger value="requests">Permohonan Pendaftaran</TabsTrigger>
-              <TabsTrigger value="bulk-manage">Kelola Massal</TabsTrigger>
-            </>
+            <TabsTrigger value="requests">Permohonan Pendaftaran</TabsTrigger>
           )}
         </TabsList>
 
@@ -435,32 +411,18 @@ export const EnhancedExtracurricularEnrollment = () => {
 
         {(hasRole('koordinator_ekstrakurikuler') || hasRole('admin')) && (
           <TabsContent value="requests" className="space-y-4">
-            <div className="flex gap-4">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua Status</SelectItem>
-                  <SelectItem value="pending">Menunggu</SelectItem>
-                  <SelectItem value="approved">Disetujui</SelectItem>
-                  <SelectItem value="rejected">Ditolak</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <Card>
               <CardHeader>
                 <CardTitle>Permohonan Pendaftaran</CardTitle>
               </CardHeader>
               <CardContent>
-                {filteredRequests.length === 0 ? (
+                {enrollmentRequests.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    {filterStatus === 'all' ? 'Belum ada permohonan pendaftaran' : `Tidak ada permohonan dengan status ${filterStatus}`}
+                    Belum ada permohonan pendaftaran
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {filteredRequests.map((request) => (
+                    {enrollmentRequests.map((request) => (
                       <div key={request.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="space-y-1">
