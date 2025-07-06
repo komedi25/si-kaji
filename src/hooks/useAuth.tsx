@@ -55,42 +55,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
-    try {
-      // Prioritas 1: Ambil role dari profile table (simplified approach)
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-      
-      if (profileData?.role) {
-        console.log('Role from profile:', profileData.role);
-        return [profileData.role as AppRole];
-      }
-
-      // Fallback: Cek user_roles table
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-      
-      if (rolesData && rolesData.length > 0) {
-        const roles = rolesData.map(item => item.role as AppRole);
-        console.log('Roles from user_roles:', roles);
-        return roles;
-      }
-      
-      // Default role untuk user baru
-      console.log('No roles found, defaulting to siswa');
-      return ['siswa'];
-    } catch (error) {
-      console.error('Error in fetchUserRoles:', error);
-      return ['siswa'];
-    }
-  };
-
   const updateAuthUser = async (authUser: User | null) => {
     if (!authUser) {
       setUser(null);
@@ -100,7 +64,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     console.log('Updating auth user:', authUser.id, authUser.email);
     
     const profile = await fetchUserProfile(authUser.id);
-    const roles = await fetchUserRoles(authUser.id);
+    
+    // Simplified role system: just use the role from profile, default to 'siswa'
+    const userRole = profile?.role || 'siswa';
+    const roles = [userRole] as AppRole[];
 
     const userData: AuthUser = {
       id: authUser.id,
@@ -109,7 +76,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       roles
     };
     
-    console.log('Final user data:', userData);
+    console.log('Final user data with simplified roles:', userData);
     setUser(userData);
   };
 

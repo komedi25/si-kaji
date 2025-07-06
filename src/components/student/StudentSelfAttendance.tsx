@@ -10,7 +10,6 @@ import { Clock, MapPin, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { StudentDataError } from './StudentDataError';
 
 export const StudentSelfAttendance = () => {
   const { studentData, isLoading: userLoading, error: userError, refetch } = useUserProfile();
@@ -183,31 +182,14 @@ export const StudentSelfAttendance = () => {
     );
   }
 
-  if (userError) {
+  if (userError || !studentData) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Data Siswa Tidak Ditemukan</h3>
-            <p className="text-gray-600 mb-4">{userError}</p>
-            <Button onClick={refetch} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Coba Lagi
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!studentData) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-orange-600 mb-2">Data Siswa Belum Tersedia</h3>
+            <h3 className="text-lg font-semibold text-red-600 mb-2">Sedang Menyiapkan Data Siswa</h3>
             <p className="text-gray-600 mb-4">
-              Sistem sedang memproses data siswa Anda. Silakan refresh halaman atau coba lagi.
+              Sistem sedang menghubungkan akun Anda dengan data siswa. Silakan tunggu sebentar atau refresh halaman.
             </p>
             <Button onClick={refetch} variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />

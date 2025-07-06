@@ -68,22 +68,22 @@ export const ResponsiveDashboardCharts = () => {
         </CardContent>
       </Card>
 
-      {/* Weekly Trend Chart - Fixed responsive layout */}
+      {/* Weekly Trend Chart - Fixed with proper container */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-base">Tren Kehadiran Mingguan</CardTitle>
           <CardDescription className="text-sm">Persentase kehadiran per minggu</CardDescription>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="h-[250px] w-full overflow-hidden">
+          <div className="h-[250px] w-full min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={weeklyTrendData}
                 margin={{
-                  top: 10,
-                  right: 15,
-                  left: 10,
-                  bottom: 10,
+                  top: 20,
+                  right: 20,
+                  left: 20,
+                  bottom: 20,
                 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -91,12 +91,13 @@ export const ResponsiveDashboardCharts = () => {
                   dataKey="week" 
                   fontSize={11}
                   tick={{ fontSize: 11 }}
+                  interval={0}
                 />
                 <YAxis 
                   domain={['dataMin - 2', 'dataMax + 2']}
                   fontSize={11}
                   tick={{ fontSize: 11 }}
-                  width={40}
+                  width={50}
                 />
                 <Tooltip 
                   formatter={(value) => [`${value}%`, 'Kehadiran']}
@@ -122,7 +123,7 @@ export const ResponsiveDashboardCharts = () => {
           <CardDescription className="text-sm">Jenis pelanggaran bulan ini</CardDescription>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="h-[250px] w-full overflow-hidden">
+          <div className="h-[250px] w-full min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie

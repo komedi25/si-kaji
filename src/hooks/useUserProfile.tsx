@@ -38,30 +38,6 @@ export interface StudentData {
   email?: string | null;
 }
 
-// Database row type (what we get from Supabase)
-interface StudentDatabaseRow {
-  id: string;
-  user_id: string | null;
-  nis: string;
-  nisn: string | null;
-  full_name: string;
-  gender: string;
-  birth_place: string | null;
-  birth_date: string | null;
-  religion: string | null;
-  address: string | null;
-  phone: string | null;
-  parent_name: string | null;
-  parent_phone: string | null;
-  parent_address: string | null;
-  admission_date: string;
-  graduation_date: string | null;
-  status: string;
-  photo_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -98,116 +74,99 @@ export function useUserProfile() {
     }
   };
 
-  const convertDatabaseRowToStudentData = (row: StudentDatabaseRow): StudentData => {
-    return {
-      ...row,
-      gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L', // Default to 'L' if invalid
-      status: (row.status === 'active' || row.status === 'graduated' || row.status === 'transferred' || row.status === 'dropped') 
-        ? row.status as 'active' | 'graduated' | 'transferred' | 'dropped'
-        : 'active' // Default to 'active' if invalid
-    };
-  };
-
-  const findStudentByUserId = async (userId: string): Promise<StudentData | null> => {
+  const findOrCreateStudentRecord = async (userId: string, userEmail: string): Promise<StudentData> => {
     try {
-      console.log('Finding student by user_id:', userId);
+      console.log('Finding/creating student record for:', userId, userEmail);
       
-      const { data, error } = await supabase
+      // 1. Cari student yang sudah terhubung dengan user_id
+      const { data: existingStudent, error: findError } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error finding student by user_id:', error);
-        throw error;
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding student:', findError);
+        throw findError;
       }
 
-      if (data) {
-        console.log('Found student by user_id:', data);
-        return convertDatabaseRowToStudentData(data);
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error in findStudentByUserId:', error);
-      throw error;
-    }
-  };
-
-  const findOrCreateStudentRecord = async (userId: string, userEmail: string, profileId: string) => {
-    try {
-      // 1. Cari student yang sudah ada berdasarkan user_id
-      let existingStudent = await findStudentByUserId(userId);
       if (existingStudent) {
-        console.log('Found existing student by user_id:', existingStudent);
-        return existingStudent;
+        console.log('Found existing linked student:', existingStudent);
+        return {
+          ...existingStudent,
+          gender: (existingStudent.gender === 'L' || existingStudent.gender === 'P') ? existingStudent.gender : 'L',
+          status: (['active', 'graduated', 'transferred', 'dropped'].includes(existingStudent.status)) 
+            ? existingStudent.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
+            : 'active'
+        };
       }
 
-      // 2. Jika belum ada, cari berdasarkan email pattern di NIS
-      const emailPrefix = userEmail.split('@')[0];
-      const { data: studentByNis, error: nisError } = await supabase
+      // 2. Cari student berdasarkan email
+      const { data: studentByEmail, error: emailError } = await supabase
         .from('students')
         .select('*')
-        .ilike('nis', `%${emailPrefix}%`)
+        .eq('email', userEmail)
         .is('user_id', null)
-        .eq('status', 'active')
         .maybeSingle();
 
-      if (nisError && nisError.code !== 'PGRST116') {
-        console.error('Error finding student by NIS:', nisError);
+      if (emailError && emailError.code !== 'PGRST116') {
+        console.error('Error finding student by email:', emailError);
       }
 
-      if (studentByNis) {
-        console.log('Found student by NIS pattern, linking...', studentByNis);
+      if (studentByEmail) {
+        console.log('Found student by email, linking:', studentByEmail);
         
-        // Link student ke user
-        const { error: updateError } = await supabase
+        // Link student dengan user
+        const { error: linkError } = await supabase
           .from('students')
           .update({ user_id: userId })
-          .eq('id', studentByNis.id);
+          .eq('id', studentByEmail.id);
 
-        if (updateError) {
-          console.error('Error linking student to user:', updateError);
-          throw updateError;
+        if (linkError) {
+          console.error('Error linking student:', linkError);
+          throw linkError;
         }
 
-        // Update profile dengan student_id
-        await supabase
-          .from('profiles')
-          .update({ student_id: studentByNis.id })
-          .eq('id', profileId);
-
-        return convertDatabaseRowToStudentData({ ...studentByNis, user_id: userId });
+        console.log('Successfully linked student to user');
+        return {
+          ...studentByEmail,
+          user_id: userId,
+          gender: (studentByEmail.gender === 'L' || studentByEmail.gender === 'P') ? studentByEmail.gender : 'L',
+          status: (['active', 'graduated', 'transferred', 'dropped'].includes(studentByEmail.status)) 
+            ? studentByEmail.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
+            : 'active'
+        };
       }
 
-      // 3. Buat student record baru sebagai fallback
+      // 3. Buat student baru jika tidak ditemukan
       console.log('Creating new student record for:', userEmail);
       const newStudentData = {
         user_id: userId,
         full_name: userEmail.split('@')[0] || 'Siswa Baru',
-        nis: `SIS${Date.now()}`,
+        nis: `AUTO${Date.now()}`,
+        email: userEmail,
         gender: 'L',
         status: 'active',
         admission_date: new Date().toISOString().split('T')[0]
       };
 
-      const { data: newStudent, error } = await supabase
+      const { data: newStudent, error: createError } = await supabase
         .from('students')
         .insert(newStudentData)
         .select()
         .single();
 
-      if (error) throw error;
-
-      // Update profile dengan student_id baru
-      await supabase
-        .from('profiles')
-        .update({ student_id: newStudent.id })
-        .eq('id', profileId);
+      if (createError) {
+        console.error('Error creating new student:', createError);
+        throw createError;
+      }
 
       console.log('Created new student:', newStudent);
-      return convertDatabaseRowToStudentData(newStudent);
+      return {
+        ...newStudent,
+        gender: 'L' as 'L' | 'P',
+        status: 'active' as 'active' | 'graduated' | 'transferred' | 'dropped'
+      };
 
     } catch (error) {
       console.error('Error in findOrCreateStudentRecord:', error);
@@ -261,15 +220,19 @@ export function useUserProfile() {
       // Jika role adalah siswa, pastikan data siswa tersedia
       if (currentProfile.role === 'siswa' && currentUser.email) {
         try {
-          const studentRecord = await findOrCreateStudentRecord(
-            currentUser.id, 
-            currentUser.email, 
-            currentUser.id
-          );
+          const studentRecord = await findOrCreateStudentRecord(currentUser.id, currentUser.email);
           setStudentData(studentRecord);
+          
+          // Update profile dengan student_id jika belum ada
+          if (!currentProfile.student_id) {
+            await supabase
+              .from('profiles')
+              .update({ student_id: studentRecord.id })
+              .eq('id', currentUser.id);
+          }
         } catch (studentError) {
           console.error('Error handling student data:', studentError);
-          setError('Error linking student data');
+          setError('Error linking student data: ' + (studentError as Error).message);
         }
       }
 
