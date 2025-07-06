@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,23 +87,23 @@ export function useUserProfile() {
     }
   };
 
-  const findStudentByEmail = async (email: string) => {
+  const findStudentByUserId = async (userId: string) => {
     try {
-      // Use a simple direct query to avoid type issues
+      // Find student by user_id instead of email since email column doesn't exist
       const { data, error } = await supabase
         .from('students')
-        .select('id, user_id, nis, full_name, email, status, created_at')
-        .eq('email', email)
+        .select('id, user_id, nis, full_name, status, created_at')
+        .eq('user_id', userId)
         .maybeSingle();
       
       if (error) {
-        console.error('Error finding student by email:', error);
+        console.error('Error finding student by user_id:', error);
         return null;
       }
       
       return data;
     } catch (err) {
-      console.error('Exception in findStudentByEmail:', err);
+      console.error('Exception in findStudentByUserId:', err);
       return null;
     }
   };
@@ -114,8 +115,7 @@ export function useUserProfile() {
       nis: `AUTO${Date.now()}`,
       gender: 'L' as const,
       status: 'active' as const,
-      admission_date: new Date().toISOString().split('T')[0],
-      email: email
+      admission_date: new Date().toISOString().split('T')[0]
     };
 
     try {
@@ -194,22 +194,22 @@ export function useUserProfile() {
         }
       }
 
-      // If no student data found, try to find by email or create new one
-      if (!studentDetails && currentUser.email) {
-        // Try to find student by email
-        const studentByEmail = await findStudentByEmail(currentUser.email);
+      // If no student data found, try to find by user_id or create new one
+      if (!studentDetails) {
+        // Try to find student by user_id
+        const studentByUserId = await findStudentByUserId(currentUser.id);
 
-        if (studentByEmail) {
+        if (studentByUserId) {
           // Link existing student to profile
-          await linkProfileToStudent(currentUser.id, studentByEmail.id);
-          studentDetails = studentByEmail;
+          await linkProfileToStudent(currentUser.id, studentByUserId.id);
+          studentDetails = studentByUserId;
         } else {
           // Create new student record
           try {
             const newStudent = await createNewStudent(
               currentUser.id,
               currentProfile.full_name || currentUser.email || '',
-              currentUser.email
+              currentUser.email || ''
             );
             
             // Link new student to profile
