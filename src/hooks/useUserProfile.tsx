@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -89,12 +88,13 @@ export function useUserProfile() {
 
   const findStudentByEmail = async (email: string): Promise<any | null> => {
     try {
-      // Use a simpler query approach to avoid deep type inference
-      const response = await supabase
+      // Use explicit typing to avoid deep type inference
+      const query = supabase
         .from('students')
         .select('*')
-        .eq('email', email)
-        .limit(1);
+        .eq('email', email);
+      
+      const response: { data: any[] | null; error: any } = await query;
       
       if (response.error) {
         console.error('Error finding student by email:', response.error);
