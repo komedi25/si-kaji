@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, AlertCircle, Info, CheckCircle, X, Calendar, Award, AlertTriangle } from 'lucide-react';
+import { Bell, AlertCircle, Info, CheckCircle, Calendar, Award, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -15,7 +16,7 @@ interface ParentNotification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';
-  is_read: boolean;
+  read: boolean;
   created_at: string;
   data?: any;
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -43,10 +44,15 @@ export const ParentNotificationCenter = () => {
       }, (payload) => {
         const newNotification = payload.new as any;
         const parsedNotification: ParentNotification = {
-          ...newNotification,
+          id: newNotification.id,
+          title: newNotification.title,
+          message: newNotification.message,
+          type: newNotification.type,
+          read: newNotification.read || false,
+          created_at: newNotification.created_at,
+          data: newNotification.data,
           priority: newNotification.data?.priority || 'medium',
-          category: newNotification.data?.category || 'general',
-          is_read: newNotification.is_read || false
+          category: newNotification.data?.category || 'general'
         };
         setNotifications(prev => [parsedNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
@@ -81,14 +87,19 @@ export const ParentNotificationCenter = () => {
       if (error) throw error;
 
       const typedNotifications = (data || []).map(notification => ({
-        ...notification,
+        id: notification.id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type as 'info' | 'warning' | 'success' | 'error',
+        read: notification.read || false,
+        created_at: notification.created_at,
+        data: notification.data,
         priority: (notification.data as any)?.priority || 'medium',
-        category: (notification.data as any)?.category || 'general',
-        is_read: notification.is_read || notification.read || false
+        category: (notification.data as any)?.category || 'general'
       })) as ParentNotification[];
 
       setNotifications(typedNotifications);
-      setUnreadCount(typedNotifications.filter(n => !n.is_read).length);
+      setUnreadCount(typedNotifications.filter(n => !n.read).length);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -100,14 +111,14 @@ export const ParentNotificationCenter = () => {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read: true })
         .eq('id', notificationId);
 
       if (error) throw error;
 
       setNotifications(prev => 
         prev.map(n => 
-          n.id === notificationId ? { ...n, is_read: true } : n
+          n.id === notificationId ? { ...n, read: true } : n
         )
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -118,16 +129,16 @@ export const ParentNotificationCenter = () => {
 
   const markAllAsRead = async () => {
     try {
-      const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+      const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
       
       const { error } = await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read: true })
         .in('id', unreadIds);
 
       if (error) throw error;
 
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -150,7 +161,7 @@ export const ParentNotificationCenter = () => {
       medium: { label: 'Sedang', variant: 'outline' as const },
       low: { label: 'Rendah', variant: 'outline' as const }
     };
-    return <Badge variant={config[priority as keyof typeof config]?.variant}>{config[priority as keyof typeof config]?.label}</Badge>;
+    return <Badge variant={config[priority as keyof typeof config]?.variant || 'outline'}>{config[priority as keyof typeof config]?.label || 'Sedang'}</Badge>;
   };
 
   const getCategoryIcon = (category: string) => {
@@ -213,7 +224,7 @@ export const ParentNotificationCenter = () => {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 border rounded-lg ${!notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
+                    className={`p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex gap-3 flex-1">
@@ -233,7 +244,7 @@ export const ParentNotificationCenter = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!notification.is_read && (
+                        {!notification.read && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -256,7 +267,7 @@ export const ParentNotificationCenter = () => {
                 {filterNotifications(category).map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 border rounded-lg ${!notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
+                    className={`p-4 border rounded-lg ${!notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex gap-3 flex-1">
@@ -275,7 +286,7 @@ export const ParentNotificationCenter = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!notification.is_read && (
+                        {!notification.read && (
                           <Button
                             variant="ghost"
                             size="sm"
