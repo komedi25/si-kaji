@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, Clock, CheckCircle, XCircle, AlertTriangle, Shield, Brain, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { useStudentData } from '@/hooks/useStudentData';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { attendanceSecurityManager } from './SecurityEnhancements';
@@ -45,8 +45,9 @@ interface SelfAttendance {
 }
 
 export const EnhancedSelfAttendanceWidget = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { user, profile, studentData, isLoading: userLoading, error: userError, refetch } = useUserProfile();
+  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
   const [locations, setLocations] = useState<AttendanceLocation[]>([]);
@@ -451,7 +452,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     canCheckOut: canCheckOut()
   });
 
-  if (userLoading) {
+  if (studentLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -459,7 +460,7 @@ export const EnhancedSelfAttendanceWidget = () => {
     );
   }
 
-  if (userError || !studentData) {
+  if (studentError || !studentData) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -470,7 +471,7 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <strong>Data Siswa Tidak Ditemukan</strong><br/>
                 User ID: {user?.id}<br/>
                 Email: {user?.email}<br/>
-                Error: {userError}<br/><br/>
+                Error: {studentError}<br/><br/>
                 <strong>Informasi Debug Lengkap:</strong><br/>
                 Sistem telah mencoba berbagai metode untuk menghubungkan akun Anda dengan data siswa namun tidak berhasil.
               </AlertDescription>
@@ -499,14 +500,14 @@ export const EnhancedSelfAttendanceWidget = () => {
                 <div className="text-xs text-blue-600 space-y-1">
                   <div>User ID: {user?.id}</div>
                   <div>Email: {user?.email}</div>
-                  <div>Error Detail: {userError}</div>
+                  <div>Error Detail: {studentError}</div>
                   <div>Timestamp: {new Date().toISOString()}</div>
                 </div>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={() => refetch()} variant="outline" className="flex-1">
+              <Button onClick={refetch} variant="outline" className="flex-1">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Coba Lagi
               </Button>

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,8 +40,7 @@ export const ViolationReport = () => {
         .select(`
           *,
           students(id, full_name, nis),
-          violation_types(id, name, category, point_deduction),
-          recorder:recorded_by(full_name)
+          violation_types(id, name, category, point_deduction)
         `)
         .gte('violation_date', startDate)
         .lte('violation_date', endDate)
@@ -51,7 +49,7 @@ export const ViolationReport = () => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as (StudentViolation & { students: any, violation_types: any, recorder: any })[];
+      return data as (StudentViolation & { students: any, violation_types: any })[];
     },
     enabled: !!startDate && !!endDate
   });
@@ -210,9 +208,6 @@ export const ViolationReport = () => {
                         </div>
                         <div className="text-sm text-gray-500 mt-1">
                           Tanggal: {format(new Date(violation.violation_date), 'dd MMMM yyyy', { locale: id })}
-                          {violation.recorder && (
-                            <span className="ml-2">• Dicatat oleh: {violation.recorder.full_name}</span>
-                          )}
                         </div>
                         {violation.description && (
                           <div className="text-sm mt-2">{violation.description}</div>

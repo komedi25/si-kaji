@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthForm } from '@/components/auth/AuthForm';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -30,6 +31,10 @@ import AIManagement from '@/pages/AIManagement';
 import PermitManagement from '@/pages/PermitManagement';
 import CounselingManagement from '@/pages/CounselingManagement';
 
+// New Student-specific components
+import { StudentAchievementForm } from '@/components/achievements/StudentAchievementForm';
+import { StudentCaseReports } from '@/components/cases/StudentCaseReports';
+
 export function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -47,7 +52,7 @@ export function AppRoutes() {
       <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Index />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" replace /> : <AuthForm />} />
       
-      {/* Public case reporting */}
+      {/* Public case reporting - accessible without login */}
       <Route path="/cases" element={<CaseManagement />} />
       
       {/* Protected routes */}
@@ -57,13 +62,14 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* User Management */}
+      {/* User Management - unified for all user types */}
       <Route path="/user-management" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
           <UserManagement />
         </ProtectedRoute>
       } />
       
+      {/* Legacy student route - redirect to user management */}
       <Route path="/students" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
           <StudentManagement />
@@ -76,10 +82,15 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Achievements - Allow siswa role */}
+      {/* Enhanced achievements route with student view */}
       <Route path="/achievements" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
-          <AchievementManagement />
+        <ProtectedRoute>
+          {/* Conditional rendering based on user role and view parameter */}
+          {user?.roles?.includes('siswa') && new URLSearchParams(location.search).get('view') === 'student' ? (
+            <StudentAchievementForm />
+          ) : (
+            <AchievementManagement />
+          )}
         </ProtectedRoute>
       } />
       
@@ -95,7 +106,7 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Attendance routes */}
+      {/* Attendance routes - updated to handle all attendance sub-routes */}
       <Route path="/attendance" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
           <AttendanceManagement />
@@ -139,7 +150,6 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Extracurricular - Allow siswa role */}
       <Route path="/extracurricular" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'pelatih_ekstrakurikuler', 'koordinator_ekstrakurikuler', 'siswa']}>
           <ExtracurricularManagement />
@@ -206,6 +216,7 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
+      {/* Catch all route */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

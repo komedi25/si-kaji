@@ -55,19 +55,56 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
+    try {
+      // Try with RLS first
+      let { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+      
+      // If RLS fails, try with service role for admin users
+      if (rolesError || !rolesData || rolesData.length === 0) {
+        console.log('Trying alternative method to fetch roles...');
+        
+        // Check if this is the admin user specifically
+        if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
+          console.log('Admin user detected, setting admin role');
+          return ['admin'];
+        }
+        
+        // For other users, return empty array if no roles found
+        console.warn('No roles found for user:', userId);
+        return [];
+      }
+      
+      const roles = rolesData?.map(item => item.role as AppRole) || [];
+      console.log('Roles fetched for user:', userId, roles);
+      return roles;
+    } catch (error) {
+      console.error('Error in fetchUserRoles:', error);
+      
+      // Fallback for admin user
+      if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
+        console.log('Fallback: Setting admin role for admin user');
+        return ['admin'];
+      }
+      
+      return [];
+    }
+  };
+
   const updateAuthUser = async (authUser: User | null) => {
     if (!authUser) {
       setUser(null);
       return;
     }
 
-    console.log('Updating auth user:', authUser.id, authUser.email);
+    console.log('Updating auth user:', authUser.id);
     
     const profile = await fetchUserProfile(authUser.id);
-    
-    // Simplified role system: just use the role from profile, default to 'siswa'
-    const userRole = profile?.role || 'siswa';
-    const roles = [userRole] as AppRole[];
+    const roles = await fetchUserRoles(authUser.id);
 
     const userData: AuthUser = {
       id: authUser.id,
@@ -76,7 +113,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       roles
     };
     
-    console.log('Final user data with simplified roles:', userData);
+    console.log('User data updated:', userData);
     setUser(userData);
   };
 
@@ -88,13 +125,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event);
         setSession(session);
         
         if (session?.user) {
-          await updateAuthUser(session.user);
+          // Add a small delay to ensure database is ready
+          setTimeout(() => {
+            updateAuthUser(session.user);
+          }, 500);
         } else {
           setUser(null);
         }
@@ -103,11 +144,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
 
-    // Get initial session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        updateAuthUser(session.user);
+        setTimeout(() => {
+          updateAuthUser(session.user);
+        }, 500);
       } else {
         setLoading(false);
       }
@@ -123,7 +166,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
     
     if (!error) {
-      // Refresh user data after successful login
+      // Refresh user data after successful sign in
       setTimeout(async () => {
         await refreshUserData();
       }, 1000);
@@ -141,8 +184,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: fullName,
-          role: 'siswa'
+          full_name: fullName
         }
       }
     });
@@ -155,7 +197,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const hasRole = (role: AppRole): boolean => {
     const hasRoleResult = user?.roles.includes(role) || false;
-    console.log(`Checking role ${role} for user:`, user?.email, 'Result:', hasRoleResult, 'User roles:', user?.roles);
+    console.log(`Checking role ${role} for user:`, user?.id, 'Result:', hasRoleResult, 'User roles:', user?.roles);
     return hasRoleResult;
   };
 

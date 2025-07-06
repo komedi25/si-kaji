@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentDetails } from '@/hooks/useStudentData';
+import { useStudentData } from '@/hooks/useStudentData';
 import { FileText, Calendar, Clock, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -29,7 +30,7 @@ interface StudentPermit {
 export const StudentPermitManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: studentData, isLoading: studentLoading, error: studentError, refetch } = useStudentDetails(user?.id || null);
+  const { studentData, loading: studentLoading, error: studentError, refetch } = useStudentData();
   const [permits, setPermits] = useState<StudentPermit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -108,7 +109,7 @@ export const StudentPermitManagement = () => {
   }
 
   if (studentError || !studentData) {
-    return <StudentDataError error={studentError instanceof Error ? studentError.message : String(studentError || 'Unknown error')} onRetry={refetch} />;
+    return <StudentDataError error={studentError || 'Unknown error'} onRetry={refetch} />;
   }
 
   return (

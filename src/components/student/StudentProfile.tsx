@@ -8,19 +8,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentDetails } from '@/hooks/useStudentData';
+import { useStudentData } from '@/hooks/useStudentData';
 import { User, Save, Mail } from 'lucide-react';
 import { StudentDataError } from './StudentDataError';
 
 export const StudentProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: studentData, isLoading: loading, error, refetch } = useStudentDetails(user?.id || null);
+  const { studentData, loading, error, refetch } = useStudentData();
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     phone: '',
-    address: ''
+    address: '',
+    parent_name: '',
+    parent_phone: '',
+    parent_address: ''
   });
 
   // Update form data when student data changes
@@ -28,7 +31,10 @@ export const StudentProfile = () => {
     if (studentData) {
       setFormData({
         phone: studentData.phone || '',
-        address: studentData.address || ''
+        address: studentData.address || '',
+        parent_name: studentData.parent_name || '',
+        parent_phone: studentData.parent_phone || '',
+        parent_address: studentData.parent_address || ''
       });
     }
   }, [studentData]);
@@ -72,7 +78,7 @@ export const StudentProfile = () => {
   }
 
   if (error || !studentData) {
-    return <StudentDataError error={error instanceof Error ? error.message : String(error || 'Unknown error')} onRetry={refetch} />;
+    return <StudentDataError error={error || 'Unknown error'} onRetry={refetch} />;
   }
 
   return (
@@ -111,8 +117,20 @@ export const StudentProfile = () => {
               <Input value={studentData.full_name} disabled />
             </div>
             <div>
-              <Label>Status</Label>
-              <Input value={studentData.status} disabled />
+              <Label>Jenis Kelamin</Label>
+              <Input value={studentData.gender} disabled />
+            </div>
+            <div>
+              <Label>Tempat Lahir</Label>
+              <Input value={studentData.birth_place || '-'} disabled />
+            </div>
+            <div>
+              <Label>Tanggal Lahir</Label>
+              <Input value={studentData.birth_date || '-'} disabled />
+            </div>
+            <div>
+              <Label>Agama</Label>
+              <Input value={studentData.religion || '-'} disabled />
             </div>
             <div>
               <Label>No. Telepon</Label>
@@ -137,6 +155,44 @@ export const StudentProfile = () => {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Orang Tua / Wali</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Nama Orang Tua / Wali</Label>
+              <Input 
+                value={formData.parent_name} 
+                disabled={!isEditing}
+                onChange={(e) => setFormData({...formData, parent_name: e.target.value})}
+                placeholder="Masukkan nama orang tua/wali"
+              />
+            </div>
+            <div>
+              <Label>No. Telepon Orang Tua</Label>
+              <Input 
+                value={formData.parent_phone} 
+                disabled={!isEditing}
+                onChange={(e) => setFormData({...formData, parent_phone: e.target.value})}
+                placeholder="Masukkan nomor telepon orang tua"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <Label>Alamat Orang Tua</Label>
+            <Textarea 
+              value={formData.parent_address} 
+              disabled={!isEditing}
+              onChange={(e) => setFormData({...formData, parent_address: e.target.value})}
+              placeholder="Masukkan alamat orang tua/wali"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex gap-2">
         {!isEditing ? (
           <Button onClick={() => setIsEditing(true)}>
@@ -156,7 +212,10 @@ export const StudentProfile = () => {
                 if (studentData) {
                   setFormData({
                     phone: studentData.phone || '',
-                    address: studentData.address || ''
+                    address: studentData.address || '',
+                    parent_name: studentData.parent_name || '',
+                    parent_phone: studentData.parent_phone || '',
+                    parent_address: studentData.parent_address || ''
                   });
                 }
               }}

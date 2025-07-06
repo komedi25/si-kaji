@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,7 +111,7 @@ export const ViolationRecorder = () => {
           violation_date: format(formData.violation_date, 'yyyy-MM-dd'),
           description: formData.description || null,
           point_deduction: selectedViolationType?.point_deduction || 0,
-          recorded_by: user?.id,
+          reported_by: user?.id,
           status: 'active'
         });
 
