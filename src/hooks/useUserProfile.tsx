@@ -38,6 +38,30 @@ export interface StudentData {
   email?: string | null;
 }
 
+// Database row type (what we get from Supabase)
+interface StudentDatabaseRow {
+  id: string;
+  user_id: string | null;
+  nis: string;
+  nisn: string | null;
+  full_name: string;
+  gender: string;
+  birth_place: string | null;
+  birth_date: string | null;
+  religion: string | null;
+  address: string | null;
+  phone: string | null;
+  parent_name: string | null;
+  parent_phone: string | null;
+  parent_address: string | null;
+  admission_date: string;
+  graduation_date: string | null;
+  status: string;
+  photo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -74,15 +98,47 @@ export function useUserProfile() {
     }
   };
 
-  const findOrCreateStudentRecord = async (userId: string, userEmail: string, profileId: string) => {
+  const convertDatabaseRowToStudentData = (row: StudentDatabaseRow): StudentData => {
+    return {
+      ...row,
+      gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L', // Default to 'L' if invalid
+      status: (row.status === 'active' || row.status === 'graduated' || row.status === 'transferred' || row.status === 'dropped') 
+        ? row.status as 'active' | 'graduated' | 'transferred' | 'dropped'
+        : 'active' // Default to 'active' if invalid
+    };
+  };
+
+  const findStudentByUserId = async (userId: string): Promise<StudentData | null> => {
     try {
-      // 1. Cari student yang sudah ada berdasarkan user_id
-      let { data: existingStudent } = await supabase
+      console.log('Finding student by user_id:', userId);
+      
+      const { data, error } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
 
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error finding student by user_id:', error);
+        throw error;
+      }
+
+      if (data) {
+        console.log('Found student by user_id:', data);
+        return convertDatabaseRowToStudentData(data);
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in findStudentByUserId:', error);
+      throw error;
+    }
+  };
+
+  const findOrCreateStudentRecord = async (userId: string, userEmail: string, profileId: string) => {
+    try {
+      // 1. Cari student yang sudah ada berdasarkan user_id
+      let existingStudent = await findStudentByUserId(userId);
       if (existingStudent) {
         console.log('Found existing student by user_id:', existingStudent);
         return existingStudent;
@@ -90,7 +146,7 @@ export function useUserProfile() {
 
       // 2. Jika belum ada, cari berdasarkan email pattern di NIS
       const emailPrefix = userEmail.split('@')[0];
-      const { data: studentByNis } = await supabase
+      const { data: studentByNis, error: nisError } = await supabase
         .from('students')
         .select('*')
         .ilike('nis', `%${emailPrefix}%`)
@@ -98,14 +154,23 @@ export function useUserProfile() {
         .eq('status', 'active')
         .maybeSingle();
 
+      if (nisError && nisError.code !== 'PGRST116') {
+        console.error('Error finding student by NIS:', nisError);
+      }
+
       if (studentByNis) {
         console.log('Found student by NIS pattern, linking...', studentByNis);
         
         // Link student ke user
-        await supabase
+        const { error: updateError } = await supabase
           .from('students')
           .update({ user_id: userId })
           .eq('id', studentByNis.id);
+
+        if (updateError) {
+          console.error('Error linking student to user:', updateError);
+          throw updateError;
+        }
 
         // Update profile dengan student_id
         await supabase
@@ -113,7 +178,7 @@ export function useUserProfile() {
           .update({ student_id: studentByNis.id })
           .eq('id', profileId);
 
-        return { ...studentByNis, user_id: userId };
+        return convertDatabaseRowToStudentData({ ...studentByNis, user_id: userId });
       }
 
       // 3. Buat student record baru sebagai fallback
@@ -122,8 +187,8 @@ export function useUserProfile() {
         user_id: userId,
         full_name: userEmail.split('@')[0] || 'Siswa Baru',
         nis: `SIS${Date.now()}`,
-        gender: 'L' as const,
-        status: 'active' as const,
+        gender: 'L',
+        status: 'active',
         admission_date: new Date().toISOString().split('T')[0]
       };
 
@@ -142,7 +207,7 @@ export function useUserProfile() {
         .eq('id', profileId);
 
       console.log('Created new student:', newStudent);
-      return newStudent;
+      return convertDatabaseRowToStudentData(newStudent);
 
     } catch (error) {
       console.error('Error in findOrCreateStudentRecord:', error);
