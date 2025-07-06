@@ -38,6 +38,33 @@ export interface StudentData {
   email?: string | null;
 }
 
+// Helper function to create student data
+const createStudentData = (rawStudent: any): StudentData => {
+  return {
+    id: rawStudent.id,
+    user_id: rawStudent.user_id,
+    nis: rawStudent.nis,
+    nisn: rawStudent.nisn,
+    full_name: rawStudent.full_name,
+    gender: rawStudent.gender === 'P' ? 'P' : 'L',
+    birth_place: rawStudent.birth_place,
+    birth_date: rawStudent.birth_date,
+    religion: rawStudent.religion,
+    address: rawStudent.address,
+    phone: rawStudent.phone,
+    parent_name: rawStudent.parent_name,
+    parent_phone: rawStudent.parent_phone,
+    parent_address: rawStudent.parent_address,
+    admission_date: rawStudent.admission_date,
+    graduation_date: rawStudent.graduation_date,
+    status: rawStudent.status,
+    photo_url: rawStudent.photo_url,
+    created_at: rawStudent.created_at,
+    updated_at: rawStudent.updated_at,
+    email: rawStudent.email
+  };
+};
+
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -99,14 +126,14 @@ export function useUserProfile() {
             return;
           }
 
-          setProfile(newProfile);
+          setProfile(newProfile as UserProfile);
         } else {
           setError('Profil tidak ditemukan. Hubungi admin untuk bantuan.');
           setIsLoading(false);
           return;
         }
       } else {
-        setProfile(profileData);
+        setProfile(profileData as UserProfile);
       }
 
       // 3. If role is 'siswa', get or create student data
@@ -173,31 +200,7 @@ export function useUserProfile() {
         }
 
         if (studentDetails) {
-          // Create a clean StudentData object
-          const cleanStudentData: StudentData = {
-            id: studentDetails.id,
-            user_id: studentDetails.user_id,
-            nis: studentDetails.nis,
-            nisn: studentDetails.nisn,
-            full_name: studentDetails.full_name,
-            gender: studentDetails.gender === 'P' ? 'P' : 'L', // Ensure valid gender
-            birth_place: studentDetails.birth_place,
-            birth_date: studentDetails.birth_date,
-            religion: studentDetails.religion,
-            address: studentDetails.address,
-            phone: studentDetails.phone,
-            parent_name: studentDetails.parent_name,
-            parent_phone: studentDetails.parent_phone,
-            parent_address: studentDetails.parent_address,
-            admission_date: studentDetails.admission_date,
-            graduation_date: studentDetails.graduation_date,
-            status: studentDetails.status,
-            photo_url: studentDetails.photo_url,
-            created_at: studentDetails.created_at,
-            updated_at: studentDetails.updated_at,
-            email: studentDetails.email
-          };
-
+          const cleanStudentData = createStudentData(studentDetails);
           setStudentData(cleanStudentData);
         } else {
           console.warn('Could not create or find student data');
