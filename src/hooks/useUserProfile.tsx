@@ -86,25 +86,33 @@ export function useUserProfile() {
     }
   };
 
-  const findStudentByEmail = async (email: string): Promise<any | null> => {
+  const findStudentByEmail = async (email: string) => {
     try {
-      // Use explicit typing to avoid deep type inference
-      const query = supabase
-        .from('students')
-        .select('*')
-        .eq('email', email);
+      // Use the most basic query possible to avoid type inference issues
+      const result = await supabase.rpc('find_student_by_email', { email_param: email });
       
-      const response: { data: any[] | null; error: any } = await query;
-      
-      if (response.error) {
-        console.error('Error finding student by email:', response.error);
+      if (result.error) {
+        console.error('Error finding student by email:', result.error);
         return null;
       }
       
-      return response.data && response.data.length > 0 ? response.data[0] : null;
+      return result.data && result.data.length > 0 ? result.data[0] : null;
     } catch (err) {
       console.error('Exception in findStudentByEmail:', err);
-      return null;
+      
+      // Fallback to direct query if RPC fails
+      try {
+        const directResult = await supabase
+          .from('students')
+          .select('id, user_id, nis, full_name, email, status, created_at')
+          .eq('email', email)
+          .maybeSingle();
+        
+        return directResult.data;
+      } catch (fallbackErr) {
+        console.error('Fallback query also failed:', fallbackErr);
+        return null;
+      }
     }
   };
 
