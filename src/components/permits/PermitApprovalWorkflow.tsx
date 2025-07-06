@@ -12,13 +12,15 @@ import { CheckCircle, XCircle, Clock, FileText, User, Calendar, AlertTriangle } 
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
+type PermitApprovalStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
+
 interface PermitApproval {
   id: string;
   permit_id: string;
   approver_role: string;
   approver_id: string | null;
   approval_order: number;
-  status: 'pending' | 'approved' | 'rejected' | 'skipped';
+  status: PermitApprovalStatus;
   approved_at: string | null;
   notes: string | null;
   permit: {
@@ -97,10 +99,13 @@ export const PermitApprovalWorkflow = () => {
 
       if (error) throw error;
 
-      // Filter permits where current stage matches approval order
+      // Filter permits where current stage matches approval order and cast status type
       const currentStagePermits = data?.filter(approval => 
         approval.permit?.current_approval_stage === approval.approval_order
-      ) || [];
+      ).map(approval => ({
+        ...approval,
+        status: approval.status as PermitApprovalStatus
+      })) || [];
 
       setPermits(currentStagePermits);
     } catch (error) {
