@@ -38,39 +38,32 @@ export interface StudentData {
   email?: string | null;
 }
 
-// Simple interface for database row to avoid type complexity
-interface StudentRow {
-  id: string;
-  user_id: string | null;
-  nis: string;
-  nisn: string | null;
-  full_name: string;
-  gender: string;
-  birth_place: string | null;
-  birth_date: string | null;
-  religion: string | null;
-  address: string | null;
-  phone: string | null;
-  parent_name: string | null;
-  parent_phone: string | null;
-  parent_address: string | null;
-  admission_date: string;
-  graduation_date: string | null;
-  status: string;
-  photo_url: string | null;
-  created_at: string;
-  updated_at: string;
-  email?: string | null;
-}
-
-// Helper function to safely convert database row to StudentData
-const convertRowToStudentData = (row: StudentRow): StudentData => {
+// Helper function to safely convert any database row to StudentData
+const convertToStudentData = (row: any): StudentData => {
   return {
-    ...row,
+    id: row.id,
+    user_id: row.user_id,
+    nis: row.nis,
+    nisn: row.nisn,
+    full_name: row.full_name,
     gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L',
+    birth_place: row.birth_place,
+    birth_date: row.birth_date,
+    religion: row.religion,
+    address: row.address,
+    phone: row.phone,
+    parent_name: row.parent_name,
+    parent_phone: row.parent_phone,
+    parent_address: row.parent_address,
+    admission_date: row.admission_date,
+    graduation_date: row.graduation_date,
     status: (['active', 'graduated', 'transferred', 'dropped'].includes(row.status)) 
-      ? row.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
-      : 'active'
+      ? row.status 
+      : 'active',
+    photo_url: row.photo_url,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    email: row.email
   };
 };
 
@@ -123,7 +116,7 @@ export function useUserProfile() {
 
       if (existingStudent) {
         console.log('Found existing linked student:', existingStudent);
-        return convertRowToStudentData(existingStudent as StudentRow);
+        return convertToStudentData(existingStudent);
       }
 
       // 2. Look for student by email (unlinked)
@@ -153,8 +146,8 @@ export function useUserProfile() {
         }
 
         console.log('Successfully linked student to user');
-        return convertRowToStudentData({ 
-          ...(studentByEmail as StudentRow), 
+        return convertToStudentData({ 
+          ...studentByEmail, 
           user_id: userId 
         });
       }
@@ -183,7 +176,7 @@ export function useUserProfile() {
       }
 
       console.log('Created new student:', newStudent);
-      return convertRowToStudentData(newStudent as StudentRow);
+      return convertToStudentData(newStudent);
 
     } catch (error) {
       console.error('Error in findOrCreateStudentRecord:', error);
