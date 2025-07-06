@@ -173,15 +173,32 @@ export function useUserProfile() {
         }
 
         if (studentDetails) {
-          // Validate and set student data
-          const validatedStudent: StudentData = {
-            ...studentDetails,
-            gender: (studentDetails.gender === 'L' || studentDetails.gender === 'P') 
-              ? studentDetails.gender 
-              : 'L' // Default to 'L' if invalid
+          // Create a clean StudentData object
+          const cleanStudentData: StudentData = {
+            id: studentDetails.id,
+            user_id: studentDetails.user_id,
+            nis: studentDetails.nis,
+            nisn: studentDetails.nisn,
+            full_name: studentDetails.full_name,
+            gender: studentDetails.gender === 'P' ? 'P' : 'L', // Ensure valid gender
+            birth_place: studentDetails.birth_place,
+            birth_date: studentDetails.birth_date,
+            religion: studentDetails.religion,
+            address: studentDetails.address,
+            phone: studentDetails.phone,
+            parent_name: studentDetails.parent_name,
+            parent_phone: studentDetails.parent_phone,
+            parent_address: studentDetails.parent_address,
+            admission_date: studentDetails.admission_date,
+            graduation_date: studentDetails.graduation_date,
+            status: studentDetails.status,
+            photo_url: studentDetails.photo_url,
+            created_at: studentDetails.created_at,
+            updated_at: studentDetails.updated_at,
+            email: studentDetails.email
           };
 
-          setStudentData(validatedStudent);
+          setStudentData(cleanStudentData);
         } else {
           console.warn('Could not create or find student data');
         }
