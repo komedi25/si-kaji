@@ -95,19 +95,14 @@ export function useUserProfile() {
       updated_at: now
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert(insertData)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert(insertData)
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data as UserProfile;
-    } catch (err) {
-      console.error('Error creating profile:', err);
-      throw err;
-    }
+    if (error) throw error;
+    return data as UserProfile;
   };
 
   const findOrCreateStudentRecord = async (userId: string, userEmail: string): Promise<StudentData> => {
