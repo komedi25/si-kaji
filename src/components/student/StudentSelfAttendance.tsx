@@ -6,7 +6,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Clock, MapPin, CheckCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -18,6 +18,9 @@ export const StudentSelfAttendance = () => {
   const queryClient = useQueryClient();
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
+
+  console.log('StudentSelfAttendance - studentData:', studentData);
+  console.log('StudentSelfAttendance - userError:', userError);
 
   // Get today's attendance
   const { data: todayAttendance, isLoading: attendanceLoading } = useQuery({
@@ -171,18 +174,48 @@ export const StudentSelfAttendance = () => {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-500">Memuat data...</p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (userError || !studentData) {
+  if (userError) {
     return (
-      <StudentDataError 
-        error={userError || 'Data siswa tidak ditemukan'} 
-        onRetry={refetch}
-      />
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">Data Siswa Tidak Ditemukan</h3>
+            <p className="text-gray-600 mb-4">{userError}</p>
+            <Button onClick={refetch} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Coba Lagi
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-orange-600 mb-2">Data Siswa Belum Tersedia</h3>
+            <p className="text-gray-600 mb-4">
+              Sistem sedang memproses data siswa Anda. Silakan refresh halaman atau coba lagi.
+            </p>
+            <Button onClick={refetch} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Data
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 

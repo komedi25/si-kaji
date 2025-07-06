@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
     try {
-      // First check profile table for role
+      // Prioritas 1: Ambil role dari profile table (simplified approach)
       const { data: profileData } = await supabase
         .from('profiles')
         .select('role')
@@ -65,38 +65,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .single();
       
       if (profileData?.role) {
-        // Simple role from profile table
+        console.log('Role from profile:', profileData.role);
         return [profileData.role as AppRole];
       }
 
-      // Fallback to user_roles table
-      let { data: rolesData, error: rolesError } = await supabase
+      // Fallback: Cek user_roles table
+      const { data: rolesData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('is_active', true);
       
-      if (rolesError || !rolesData || rolesData.length === 0) {
-        // Admin user fallback
-        if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
-          return ['admin'];
-        }
-        
-        console.warn('No roles found for user:', userId);
-        return ['siswa']; // Default role for new users
+      if (rolesData && rolesData.length > 0) {
+        const roles = rolesData.map(item => item.role as AppRole);
+        console.log('Roles from user_roles:', roles);
+        return roles;
       }
       
-      const roles = rolesData?.map(item => item.role as AppRole) || [];
-      return roles;
+      // Default role untuk user baru
+      console.log('No roles found, defaulting to siswa');
+      return ['siswa'];
     } catch (error) {
       console.error('Error in fetchUserRoles:', error);
-      
-      // Fallback for admin user
-      if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
-        return ['admin'];
-      }
-      
-      return ['siswa']; // Default role
+      return ['siswa'];
     }
   };
 
@@ -106,7 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       return;
     }
 
-    console.log('Updating auth user:', authUser.id);
+    console.log('Updating auth user:', authUser.id, authUser.email);
     
     const profile = await fetchUserProfile(authUser.id);
     const roles = await fetchUserRoles(authUser.id);
@@ -118,7 +109,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       roles
     };
     
-    console.log('User data updated:', userData);
+    console.log('Final user data:', userData);
     setUser(userData);
   };
 
@@ -136,9 +127,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setSession(session);
         
         if (session?.user) {
-          setTimeout(() => {
-            updateAuthUser(session.user);
-          }, 500);
+          await updateAuthUser(session.user);
         } else {
           setUser(null);
         }
@@ -147,12 +136,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        setTimeout(() => {
-          updateAuthUser(session.user);
-        }, 500);
+        updateAuthUser(session.user);
       } else {
         setLoading(false);
       }
@@ -168,6 +156,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
     
     if (!error) {
+      // Refresh user data after successful login
       setTimeout(async () => {
         await refreshUserData();
       }, 1000);
@@ -199,7 +188,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const hasRole = (role: AppRole): boolean => {
     const hasRoleResult = user?.roles.includes(role) || false;
-    console.log(`Checking role ${role} for user:`, user?.id, 'Result:', hasRoleResult, 'User roles:', user?.roles);
+    console.log(`Checking role ${role} for user:`, user?.email, 'Result:', hasRoleResult, 'User roles:', user?.roles);
     return hasRoleResult;
   };
 

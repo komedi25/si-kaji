@@ -68,21 +68,21 @@ export const ResponsiveDashboardCharts = () => {
         </CardContent>
       </Card>
 
-      {/* Weekly Trend Chart */}
-      <Card>
+      {/* Weekly Trend Chart - Fixed responsive layout */}
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-base">Tren Kehadiran Mingguan</CardTitle>
           <CardDescription className="text-sm">Persentase kehadiran per minggu</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="h-[250px] w-full">
+        <CardContent className="p-4">
+          <div className="h-[250px] w-full overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={weeklyTrendData}
                 margin={{
                   top: 10,
-                  right: 10,
-                  left: 0,
+                  right: 15,
+                  left: 10,
                   bottom: 10,
                 }}
               >
@@ -96,6 +96,7 @@ export const ResponsiveDashboardCharts = () => {
                   domain={['dataMin - 2', 'dataMax + 2']}
                   fontSize={11}
                   tick={{ fontSize: 11 }}
+                  width={40}
                 />
                 <Tooltip 
                   formatter={(value) => [`${value}%`, 'Kehadiran']}
@@ -114,22 +115,22 @@ export const ResponsiveDashboardCharts = () => {
         </CardContent>
       </Card>
 
-      {/* Violation Distribution */}
-      <Card className="md:col-span-2 lg:col-span-1">
+      {/* Violation Distribution - Fixed responsive layout */}
+      <Card className="md:col-span-2 lg:col-span-1 w-full">
         <CardHeader>
           <CardTitle className="text-base">Distribusi Pelanggaran</CardTitle>
           <CardDescription className="text-sm">Jenis pelanggaran bulan ini</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="h-[250px] w-full">
+        <CardContent className="p-4">
+          <div className="h-[250px] w-full overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={violationData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
+                  innerRadius={30}
+                  outerRadius={70}
                   paddingAngle={5}
                   dataKey="value"
                 >
@@ -142,7 +143,7 @@ export const ResponsiveDashboardCharts = () => {
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend 
-                  wrapperStyle={{ fontSize: '11px' }}
+                  wrapperStyle={{ fontSize: '10px' }}
                 />
               </PieChart>
             </ResponsiveContainer>

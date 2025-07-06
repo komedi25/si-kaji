@@ -67,193 +67,86 @@ export function useUserProfile() {
         .single();
 
       if (error) throw error;
-
-      const result: UserProfile = {
-        id: data.id,
-        role: data.role,
-        student_id: data.student_id,
-        teacher_id: data.teacher_id,
-        full_name: data.full_name,
-        avatar_url: data.avatar_url,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      };
-
-      return result;
+      return data;
     } catch (err) {
       console.error('Error creating profile:', err);
       throw err;
     }
   };
 
-  const findStudentByUserId = async (userId: string) => {
+  const findOrCreateStudentRecord = async (userId: string, userEmail: string, profileId: string) => {
     try {
-      const { data, error } = await supabase
+      // 1. Cari student yang sudah ada berdasarkan user_id
+      let { data: existingStudent } = await supabase
         .from('students')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
-      if (error) {
-        console.error('Error finding student by user_id:', error);
-        return null;
-      }
-      
-      return data;
-    } catch (err) {
-      console.error('Exception in findStudentByUserId:', err);
-      return null;
-    }
-  };
 
-  const findStudentByEmail = async (email: string) => {
-    try {
-      // Try to find student by matching email patterns in NIS or full_name
-      const { data, error } = await supabase
+      if (existingStudent) {
+        console.log('Found existing student by user_id:', existingStudent);
+        return existingStudent;
+      }
+
+      // 2. Jika belum ada, cari berdasarkan email pattern di NIS
+      const emailPrefix = userEmail.split('@')[0];
+      const { data: studentByNis } = await supabase
         .from('students')
         .select('*')
-        .or(`nis.ilike.%${email.split('@')[0]}%,full_name.ilike.%${email.split('@')[0]}%`)
+        .ilike('nis', `%${emailPrefix}%`)
+        .is('user_id', null)
         .eq('status', 'active')
         .maybeSingle();
-      
-      if (error) {
-        console.error('Error finding student by email pattern:', error);
-        return null;
+
+      if (studentByNis) {
+        console.log('Found student by NIS pattern, linking...', studentByNis);
+        
+        // Link student ke user
+        await supabase
+          .from('students')
+          .update({ user_id: userId })
+          .eq('id', studentByNis.id);
+
+        // Update profile dengan student_id
+        await supabase
+          .from('profiles')
+          .update({ student_id: studentByNis.id })
+          .eq('id', profileId);
+
+        return { ...studentByNis, user_id: userId };
       }
-      
-      return data;
-    } catch (err) {
-      console.error('Exception in findStudentByEmail:', err);
-      return null;
-    }
-  };
 
-  const createStudentRecord = async (userId: string, fullName: string, email: string) => {
-    const studentInsertData = {
-      user_id: userId,
-      full_name: fullName || 'Siswa Baru',
-      nis: `${Date.now()}`,
-      gender: 'L' as const,
-      status: 'active' as const,
-      admission_date: new Date().toISOString().split('T')[0]
-    };
+      // 3. Buat student record baru sebagai fallback
+      console.log('Creating new student record for:', userEmail);
+      const newStudentData = {
+        user_id: userId,
+        full_name: userEmail.split('@')[0] || 'Siswa Baru',
+        nis: `SIS${Date.now()}`,
+        gender: 'L' as const,
+        status: 'active' as const,
+        admission_date: new Date().toISOString().split('T')[0]
+      };
 
-    try {
-      const { data, error } = await supabase
+      const { data: newStudent, error } = await supabase
         .from('students')
-        .insert(studentInsertData)
+        .insert(newStudentData)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error creating student:', err);
-      throw err;
-    }
-  };
 
-  const linkProfileToStudent = async (profileId: string, studentId: string) => {
-    try {
-      const { error } = await supabase
+      // Update profile dengan student_id baru
+      await supabase
         .from('profiles')
-        .update({ student_id: studentId })
+        .update({ student_id: newStudent.id })
         .eq('id', profileId);
-      
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error linking profile to student:', err);
-      throw err;
-    }
-  };
 
-  const convertToStudentData = (rawData: any): StudentData => {
-    return {
-      id: rawData.id || '',
-      user_id: rawData.user_id || null,
-      nis: rawData.nis || '',
-      nisn: rawData.nisn || null,
-      full_name: rawData.full_name || '',
-      gender: rawData.gender === 'P' ? 'P' : 'L',
-      birth_place: rawData.birth_place || null,
-      birth_date: rawData.birth_date || null,
-      religion: rawData.religion || null,
-      address: rawData.address || null,
-      phone: rawData.phone || null,
-      parent_name: rawData.parent_name || null,
-      parent_phone: rawData.parent_phone || null,
-      parent_address: rawData.parent_address || null,
-      admission_date: rawData.admission_date || '',
-      graduation_date: rawData.graduation_date || null,
-      status: rawData.status || 'active',
-      photo_url: rawData.photo_url || null,
-      created_at: rawData.created_at || '',
-      updated_at: rawData.updated_at || '',
-      email: rawData.email || null
-    };
-  };
+      console.log('Created new student:', newStudent);
+      return newStudent;
 
-  const handleStudentData = async (currentUser: User, currentProfile: UserProfile) => {
-    try {
-      let studentDetails = null;
-
-      // 1. Try to get existing student data if already linked
-      if (currentProfile.student_id) {
-        try {
-          const { data: existingStudent } = await supabase
-            .from('students')
-            .select('*')
-            .eq('id', currentProfile.student_id)
-            .single();
-
-          if (existingStudent) {
-            studentDetails = existingStudent;
-          }
-        } catch (err) {
-          console.error('Error fetching existing student:', err);
-        }
-      }
-
-      // 2. If no student data found, try various methods to find or create
-      if (!studentDetails) {
-        // Try to find by user_id first
-        studentDetails = await findStudentByUserId(currentUser.id);
-
-        // If not found by user_id, try by email pattern
-        if (!studentDetails && currentUser.email) {
-          studentDetails = await findStudentByEmail(currentUser.email);
-        }
-
-        // If still not found, create new student record
-        if (!studentDetails) {
-          try {
-            studentDetails = await createStudentRecord(
-              currentUser.id,
-              currentProfile.full_name || currentUser.email || '',
-              currentUser.email || ''
-            );
-            console.log('Created new student record:', studentDetails);
-          } catch (createStudentError) {
-            console.error('Error creating student:', createStudentError);
-          }
-        }
-
-        // Link the found/created student to profile
-        if (studentDetails) {
-          await linkProfileToStudent(currentUser.id, studentDetails.id);
-        }
-      }
-
-      if (studentDetails) {
-        const cleanStudentData = convertToStudentData(studentDetails);
-        setStudentData(cleanStudentData);
-        setError(null);
-      } else {
-        setError('Tidak dapat menemukan atau membuat data siswa');
-      }
     } catch (error) {
-      console.error('Error handling student data:', error);
-      setError('Terjadi kesalahan saat memproses data siswa');
+      console.error('Error in findOrCreateStudentRecord:', error);
+      throw error;
     }
   };
 
@@ -278,7 +171,8 @@ export function useUserProfile() {
       const currentUser = session.user;
       setUser(currentUser);
 
-      const { data: profileData, error: profileError } = await supabase
+      // Fetch atau create profile
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
@@ -286,38 +180,32 @@ export function useUserProfile() {
 
       let currentProfile: UserProfile;
 
-      if (profileError) {
-        if (profileError.code === 'PGRST116') {
-          try {
-            currentProfile = await createProfile(currentUser.id, currentUser.email || '');
-          } catch (createError) {
-            setError('Gagal membuat profil. Hubungi admin untuk bantuan.');
-            setIsLoading(false);
-            return;
-          }
-        } else {
-          setError('Profil tidak ditemukan. Hubungi admin untuk bantuan.');
-          setIsLoading(false);
-          return;
-        }
+      if (profileError?.code === 'PGRST116') {
+        // Profile tidak ada, buat baru
+        currentProfile = await createProfile(currentUser.id, currentUser.email || '');
+      } else if (profileError) {
+        setError('Error fetching profile');
+        setIsLoading(false);
+        return;
       } else {
-        currentProfile = {
-          id: profileData.id,
-          role: profileData.role,
-          student_id: profileData.student_id,
-          teacher_id: profileData.teacher_id,
-          full_name: profileData.full_name,
-          avatar_url: profileData.avatar_url,
-          created_at: profileData.created_at,
-          updated_at: profileData.updated_at
-        };
+        currentProfile = profileData;
       }
 
       setProfile(currentProfile);
 
-      // Always try to handle student data for users with siswa role
-      if (currentProfile.role === 'siswa') {
-        await handleStudentData(currentUser, currentProfile);
+      // Jika role adalah siswa, pastikan data siswa tersedia
+      if (currentProfile.role === 'siswa' && currentUser.email) {
+        try {
+          const studentRecord = await findOrCreateStudentRecord(
+            currentUser.id, 
+            currentUser.email, 
+            currentUser.id
+          );
+          setStudentData(studentRecord);
+        } catch (studentError) {
+          console.error('Error handling student data:', studentError);
+          setError('Error linking student data');
+        }
       }
 
       setIsLoading(false);
