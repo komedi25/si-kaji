@@ -39,31 +39,31 @@ export interface StudentData {
 }
 
 // Helper function to safely convert any database row to StudentData
-const convertToStudentData = (row: any): StudentData => {
+const convertToStudentData = (row: Record<string, any>): StudentData => {
   return {
-    id: row.id,
-    user_id: row.user_id,
-    nis: row.nis,
-    nisn: row.nisn,
-    full_name: row.full_name,
+    id: row.id || '',
+    user_id: row.user_id || null,
+    nis: row.nis || '',
+    nisn: row.nisn || null,
+    full_name: row.full_name || '',
     gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L',
-    birth_place: row.birth_place,
-    birth_date: row.birth_date,
-    religion: row.religion,
-    address: row.address,
-    phone: row.phone,
-    parent_name: row.parent_name,
-    parent_phone: row.parent_phone,
-    parent_address: row.parent_address,
-    admission_date: row.admission_date,
-    graduation_date: row.graduation_date,
+    birth_place: row.birth_place || null,
+    birth_date: row.birth_date || null,
+    religion: row.religion || null,
+    address: row.address || null,
+    phone: row.phone || null,
+    parent_name: row.parent_name || null,
+    parent_phone: row.parent_phone || null,
+    parent_address: row.parent_address || null,
+    admission_date: row.admission_date || '',
+    graduation_date: row.graduation_date || null,
     status: (['active', 'graduated', 'transferred', 'dropped'].includes(row.status)) 
       ? row.status 
       : 'active',
-    photo_url: row.photo_url,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    email: row.email
+    photo_url: row.photo_url || null,
+    created_at: row.created_at || '',
+    updated_at: row.updated_at || '',
+    email: row.email || null
   };
 };
 
@@ -95,7 +95,7 @@ export function useUserProfile() {
       .single();
 
     if (error) throw error;
-    return data as UserProfile;
+    return data;
   };
 
   const findOrCreateStudentRecord = async (userId: string, userEmail: string): Promise<StudentData> => {
@@ -146,10 +146,8 @@ export function useUserProfile() {
         }
 
         console.log('Successfully linked student to user');
-        return convertToStudentData({ 
-          ...studentByEmail, 
-          user_id: userId 
-        });
+        const linkedStudent = { ...studentByEmail, user_id: userId };
+        return convertToStudentData(linkedStudent);
       }
 
       // 3. Create new student record
@@ -222,7 +220,7 @@ export function useUserProfile() {
         setIsLoading(false);
         return;
       } else {
-        currentProfile = profileData as UserProfile;
+        currentProfile = profileData;
       }
 
       setProfile(currentProfile);
