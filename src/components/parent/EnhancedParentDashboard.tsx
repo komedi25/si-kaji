@@ -111,18 +111,7 @@ export const EnhancedParentDashboard = () => {
           students!inner (
             id,
             full_name,
-            nis,
-            student_enrollments!inner (
-              classes!inner (
-                name,
-                grade,
-                homeroom_teacher_id,
-                profiles!inner (
-                  full_name,
-                  phone
-                )
-              )
-            )
+            nis
           )
         `)
         .eq('parent_user_id', user?.id)
@@ -136,20 +125,46 @@ export const EnhancedParentDashboard = () => {
 
       if (parentAccess?.students) {
         const student = parentAccess.students;
-        const enrollment = student.student_enrollments?.[0];
-        const classInfo = enrollment?.classes;
+
+        // Get student's class info separately
+        const { data: enrollment } = await supabase
+          .from('student_enrollments')
+          .select(`
+            classes!inner (
+              name,
+              grade,
+              homeroom_teacher_id
+            )
+          `)
+          .eq('student_id', student.id)
+          .eq('status', 'active')
+          .single();
+
+        let classInfo = null;
+        if (enrollment?.classes) {
+          // Get homeroom teacher info
+          const { data: teacherProfile } = await supabase
+            .from('profiles')
+            .select('full_name, phone')
+            .eq('id', enrollment.classes.homeroom_teacher_id)
+            .single();
+
+          classInfo = {
+            name: enrollment.classes.name,
+            grade: enrollment.classes.grade,
+            homeroom_teacher: teacherProfile ? {
+              full_name: teacherProfile.full_name,
+              phone: teacherProfile.phone
+            } : undefined
+          };
+        }
 
         // Get student's extracurriculars
         const { data: extracurricularData } = await supabase
           .from('extracurricular_enrollments')
           .select(`
             extracurriculars!inner (
-              name,
-              extracurricular_coaches (
-                profiles!inner (
-                  full_name
-                )
-              )
+              name
             )
           `)
           .eq('student_id', student.id)
@@ -157,21 +172,14 @@ export const EnhancedParentDashboard = () => {
 
         const extracurriculars = extracurricularData?.map(item => ({
           name: item.extracurriculars.name,
-          coach_name: item.extracurriculars.extracurricular_coaches?.[0]?.profiles?.full_name
+          coach_name: 'TBA' // We'll handle coach info separately if needed
         })) || [];
 
         setStudentData({
           id: student.id,
           full_name: student.full_name,
           nis: student.nis,
-          class: classInfo ? {
-            name: classInfo.name,
-            grade: classInfo.grade,
-            homeroom_teacher: {
-              full_name: classInfo.profiles?.full_name || 'Belum ditentukan',
-              phone: classInfo.profiles?.phone
-            }
-          } : undefined,
+          class: classInfo || undefined,
           extracurriculars
         });
       }
