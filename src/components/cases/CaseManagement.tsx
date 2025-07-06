@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,10 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CaseReportForm } from './CaseReportForm';
+import { EnhancedCaseReportForm } from './EnhancedCaseReportForm';
+import { CaseWorkflowManager } from './CaseWorkflowManager';
+import { CaseTrackingDashboard } from './CaseTrackingDashboard';
 import { CaseDetails } from './CaseDetails';
 import { CaseTracker } from './CaseTracker';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Search, Plus, Filter, BarChart3, Users, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -42,7 +45,7 @@ export const CaseManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
-  // Check if user has management access - ensure it's always a boolean
+  // Check if user has management access
   const hasManagementAccess = Boolean(user && (hasRole('admin') || hasRole('guru_bk') || hasRole('tppk') || hasRole('arps') || hasRole('p4gn')));
 
   const { data: cases, isLoading, refetch } = useQuery({
@@ -135,13 +138,10 @@ export const CaseManagement = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">
-            {hasManagementAccess ? 'Manajemen Kasus' : 'Pelaporan Kasus'}
+            Sistem Kasus & Pengaduan
           </h1>
           <p className="text-muted-foreground">
-            {hasManagementAccess ? 
-              'Sistem pengaduan dan penanganan kasus siswa' : 
-              'Laporkan kasus atau masalah yang terjadi'
-            }
+            Sistem pelaporan dan penanganan kasus siswa yang terintegrasi
           </p>
         </div>
         <div className="flex gap-2">
@@ -149,11 +149,45 @@ export const CaseManagement = () => {
         </div>
       </div>
 
-      <Tabs defaultValue={hasManagementAccess ? "list" : "report"} className="space-y-4">
-        <TabsList>
-          {hasManagementAccess && <TabsTrigger value="list">Daftar Kasus</TabsTrigger>}
-          <TabsTrigger value="report">Lapor Kasus</TabsTrigger>
+      <Tabs defaultValue={hasManagementAccess ? "dashboard" : "report"} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+          {hasManagementAccess && (
+            <>
+              <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="workflow" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Workflow
+              </TabsTrigger>
+              <TabsTrigger value="list" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Daftar Kasus
+              </TabsTrigger>
+            </>
+          )}
+          <TabsTrigger value="report" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Lapor Kasus
+          </TabsTrigger>
+          <TabsTrigger value="track" className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Lacak Kasus
+          </TabsTrigger>
         </TabsList>
+
+        {hasManagementAccess && (
+          <TabsContent value="dashboard">
+            <CaseTrackingDashboard />
+          </TabsContent>
+        )}
+
+        {hasManagementAccess && (
+          <TabsContent value="workflow">
+            <CaseWorkflowManager />
+          </TabsContent>
+        )}
 
         {hasManagementAccess && (
           <TabsContent value="list" className="space-y-4">
@@ -284,7 +318,11 @@ export const CaseManagement = () => {
         )}
 
         <TabsContent value="report">
-          <CaseReportForm />
+          <EnhancedCaseReportForm />
+        </TabsContent>
+
+        <TabsContent value="track">
+          <CaseTrackingDashboard />
         </TabsContent>
       </Tabs>
     </div>
