@@ -88,31 +88,22 @@ export function useUserProfile() {
 
   const findStudentByEmail = async (email: string) => {
     try {
-      // Use the most basic query possible to avoid type inference issues
-      const result = await supabase.rpc('find_student_by_email', { email_param: email });
+      // Use a simple direct query to avoid type issues
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, user_id, nis, full_name, email, status, created_at')
+        .eq('email', email)
+        .maybeSingle();
       
-      if (result.error) {
-        console.error('Error finding student by email:', result.error);
+      if (error) {
+        console.error('Error finding student by email:', error);
         return null;
       }
       
-      return result.data && result.data.length > 0 ? result.data[0] : null;
+      return data;
     } catch (err) {
       console.error('Exception in findStudentByEmail:', err);
-      
-      // Fallback to direct query if RPC fails
-      try {
-        const directResult = await supabase
-          .from('students')
-          .select('id, user_id, nis, full_name, email, status, created_at')
-          .eq('email', email)
-          .maybeSingle();
-        
-        return directResult.data;
-      } catch (fallbackErr) {
-        console.error('Fallback query also failed:', fallbackErr);
-        return null;
-      }
+      return null;
     }
   };
 
