@@ -46,26 +46,29 @@ export function useUserProfile() {
   const [error, setError] = useState<string | null>(null);
 
   const createProfile = async (userId: string, email: string): Promise<UserProfile> => {
-    const profileData = {
+    const now = new Date().toISOString();
+    
+    const insertData = {
       id: userId,
       role: 'siswa',
       full_name: email || 'Unknown User',
       student_id: null,
       teacher_id: null,
       avatar_url: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: now,
+      updated_at: now
     };
 
     const { data, error } = await supabase
       .from('profiles')
-      .insert(profileData)
+      .insert(insertData)
       .select()
       .single();
 
     if (error) throw error;
 
-    return {
+    // Explicitly construct the return object
+    const result: UserProfile = {
       id: data.id,
       role: data.role,
       student_id: data.student_id,
@@ -75,6 +78,8 @@ export function useUserProfile() {
       created_at: data.created_at,
       updated_at: data.updated_at
     };
+
+    return result;
   };
 
   const findStudentByEmail = async (email: string) => {
@@ -88,7 +93,7 @@ export function useUserProfile() {
   };
 
   const createNewStudent = async (userId: string, fullName: string, email: string) => {
-    const studentData = {
+    const studentInsertData = {
       user_id: userId,
       full_name: fullName || 'Siswa Baru',
       nis: `AUTO${Date.now()}`,
@@ -100,7 +105,7 @@ export function useUserProfile() {
 
     const { data, error } = await supabase
       .from('students')
-      .insert(studentData)
+      .insert(studentInsertData)
       .select()
       .single();
 
@@ -245,6 +250,7 @@ export function useUserProfile() {
           return;
         }
       } else {
+        // Explicitly construct the profile object
         currentProfile = {
           id: profileData.id,
           role: profileData.role,
