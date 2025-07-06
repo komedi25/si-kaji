@@ -124,186 +124,250 @@ export const EnhancedParentDashboard = () => {
   };
 
   const fetchStudentData = async () => {
-    const { data: parentAccess, error } = await supabase
-      .from('parent_access')
-      .select(`
-        student:students(
-          id, full_name, nis,
-          student_enrollments(
-            class:classes(
-              name, grade,
-              homeroom_teacher:profiles(full_name, phone)
-            )
+    try {
+      // Get parent access to student
+      const { data: parentAccess, error: accessError } = await supabase
+        .from('parent_access')
+        .select('student_id')
+        .eq('parent_user_id', user?.id)
+        .eq('is_active', true)
+        .single();
+
+      if (accessError || !parentAccess) {
+        console.error('No student access found for parent');
+        return;
+      }
+
+      // Get student basic data
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id, full_name, nis')
+        .eq('id', parentAccess.student_id)
+        .single();
+
+      if (studentError || !student) {
+        console.error('Student not found');
+        return;
+      }
+
+      // Get class enrollment data
+      const { data: enrollment } = await supabase
+        .from('student_enrollments')
+        .select('class_id')
+        .eq('student_id', student.id)
+        .eq('status', 'active')
+        .single();
+
+      let classData = null;
+      if (enrollment) {
+        // Get class and homeroom teacher info
+        const { data: classInfo } = await supabase
+          .from('classes')
+          .select('name, grade, homeroom_teacher_id')
+          .eq('id', enrollment.class_id)
+          .single();
+
+        if (classInfo) {
+          // Get homeroom teacher profile
+          const { data: teacher } = await supabase
+            .from('profiles')
+            .select('full_name, phone')
+            .eq('id', classInfo.homeroom_teacher_id)
+            .single();
+
+          classData = {
+            name: classInfo.name,
+            grade: classInfo.grade,
+            homeroom_teacher: teacher ? {
+              full_name: teacher.full_name,
+              phone: teacher.phone
+            } : undefined
+          };
+        }
+      }
+
+      // Get extracurricular activities
+      const { data: extracurriculars } = await supabase
+        .from('student_extracurriculars')
+        .select(`
+          extracurricular:extracurriculars(
+            name,
+            coach:profiles(full_name)
           )
-        )
-      `)
-      .eq('parent_user_id', user?.id)
-      .eq('is_active', true)
-      .single();
+        `)
+        .eq('student_id', student.id)
+        .eq('status', 'active');
 
-    if (error) throw error;
+      const extracurricularList = extracurriculars?.map(e => ({
+        name: (e.extracurricular as any)?.name || 'Unknown',
+        coach_name: (e.extracurricular as any)?.coach?.full_name
+      })) || [];
 
-    const student = parentAccess.student;
-    
-    // Fetch extracurriculars
-    const { data: extracurriculars } = await supabase
-      .from('student_extracurriculars')
-      .select(`
-        extracurricular:extracurriculars(
-          name,
-          coach:profiles(full_name)
-        )
-      `)
-      .eq('student_id', student.id)
-      .eq('status', 'active');
-
-    setStudentData({
-      ...student,
-      class: student.student_enrollments?.[0]?.class || null,
-      extracurriculars: extracurriculars?.map(e => ({
-        name: e.extracurricular.name,
-        coach_name: e.extracurricular.coach?.full_name
-      })) || []
-    });
+      setStudentData({
+        ...student,
+        class: classData || undefined,
+        extracurriculars: extracurricularList
+      });
+    } catch (error) {
+      console.error('Error fetching student data:', error);
+    }
   };
 
   const fetchAcademicSummary = async () => {
-    // Get current academic year and semester
-    const { data: currentYear } = await supabase
-      .from('academic_years')
-      .select('name')
-      .eq('is_active', true)
-      .single();
+    try {
+      // Get current academic year and semester
+      const { data: currentYear } = await supabase
+        .from('academic_years')
+        .select('name')
+        .eq('is_active', true)
+        .single();
 
-    const { data: currentSemester } = await supabase
-      .from('semesters')
-      .select('name')
-      .eq('is_active', true)
-      .single();
+      const { data: currentSemester } = await supabase
+        .from('semesters')
+        .select('name')
+        .eq('is_active', true)
+        .single();
 
-    setAcademicSummary({
-      current_semester: currentSemester?.name || 'Tidak diketahui',
-      academic_year: currentYear?.name || 'Tidak diketahui'
-    });
+      setAcademicSummary({
+        current_semester: currentSemester?.name || 'Tidak diketahui',
+        academic_year: currentYear?.name || 'Tidak diketahui'
+      });
+    } catch (error) {
+      console.error('Error fetching academic summary:', error);
+    }
   };
 
   const fetchAttendanceData = async () => {
     if (!studentData?.id) return;
 
-    const currentMonth = new Date();
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
+    try {
+      const currentMonth = new Date();
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
 
-    const { data: attendanceData } = await supabase
-      .from('student_attendances')
-      .select('status, attendance_date')
-      .eq('student_id', studentData.id)
-      .gte('attendance_date', monthStart.toISOString().split('T')[0])
-      .lte('attendance_date', monthEnd.toISOString().split('T')[0]);
+      const { data: attendanceData } = await supabase
+        .from('student_attendances')
+        .select('status, attendance_date')
+        .eq('student_id', studentData.id)
+        .gte('attendance_date', monthStart.toISOString().split('T')[0])
+        .lte('attendance_date', monthEnd.toISOString().split('T')[0]);
 
-    if (attendanceData) {
-      const totalDays = attendanceData.length;
-      const present = attendanceData.filter(a => a.status === 'present').length;
-      const absent = attendanceData.filter(a => a.status === 'absent').length;
-      const late = attendanceData.filter(a => a.status === 'late').length;
-      const sick = attendanceData.filter(a => a.status === 'sick').length;
-      const permission = attendanceData.filter(a => a.status === 'permission').length;
+      if (attendanceData) {
+        const totalDays = attendanceData.length;
+        const present = attendanceData.filter(a => a.status === 'present').length;
+        const absent = attendanceData.filter(a => a.status === 'absent').length;
+        const late = attendanceData.filter(a => a.status === 'late').length;
+        const sick = attendanceData.filter(a => a.status === 'sick').length;
+        const permission = attendanceData.filter(a => a.status === 'permission').length;
 
-      setAttendance({
-        total_days: totalDays,
-        present_days: present,
-        absent_days: absent,
-        late_days: late,
-        sick_days: sick,
-        permission_days: permission,
-        percentage: totalDays > 0 ? Math.round((present / totalDays) * 100) : 0,
-        monthly_trend: [] // Could be implemented with historical data
-      });
+        setAttendance({
+          total_days: totalDays,
+          present_days: present,
+          absent_days: absent,
+          late_days: late,
+          sick_days: sick,
+          permission_days: permission,
+          percentage: totalDays > 0 ? Math.round((present / totalDays) * 100) : 0,
+          monthly_trend: [] // Could be implemented with historical data
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
     }
   };
 
   const fetchDisciplineData = async () => {
     if (!studentData?.id) return;
 
-    // Get current discipline points
-    const { data: disciplinePoints } = await supabase
-      .from('student_discipline_points')
-      .select('final_score, discipline_status')
-      .eq('student_id', studentData.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    try {
+      // Get current discipline points
+      const { data: disciplinePoints } = await supabase
+        .from('student_discipline_points')
+        .select('final_score, discipline_status')
+        .eq('student_id', studentData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    // Get recent violations
-    const { data: violations } = await supabase
-      .from('student_violations')
-      .select(`
-        id, violation_date, point_deduction,
-        violation_types(name)
-      `)
-      .eq('student_id', studentData.id)
-      .eq('status', 'active')
-      .order('violation_date', { ascending: false })
-      .limit(5);
+      // Get recent violations
+      const { data: violations } = await supabase
+        .from('student_violations')
+        .select(`
+          id, violation_date, point_deduction,
+          violation_types(name)
+        `)
+        .eq('student_id', studentData.id)
+        .eq('status', 'active')
+        .order('violation_date', { ascending: false })
+        .limit(5);
 
-    // Get recent achievements
-    const { data: achievements } = await supabase
-      .from('student_achievements')
-      .select(`
-        id, achievement_date, point_reward,
-        achievement_types(name, level)
-      `)
-      .eq('student_id', studentData.id)
-      .eq('status', 'verified')
-      .order('achievement_date', { ascending: false })
-      .limit(5);
+      // Get recent achievements
+      const { data: achievements } = await supabase
+        .from('student_achievements')
+        .select(`
+          id, achievement_date, point_reward,
+          achievement_types(name, level)
+        `)
+        .eq('student_id', studentData.id)
+        .eq('status', 'verified')
+        .order('achievement_date', { ascending: false })
+        .limit(5);
 
-    setDiscipline({
-      current_points: disciplinePoints?.final_score || 100,
-      total_violations: violations?.length || 0,
-      total_achievements: achievements?.length || 0,
-      status: disciplinePoints?.discipline_status || 'good',
-      recent_violations: violations?.map(v => ({
-        id: v.id,
-        violation_type: v.violation_types.name,
-        date: v.violation_date,
-        points: v.point_deduction
-      })) || [],
-      recent_achievements: achievements?.map(a => ({
-        id: a.id,
-        achievement_type: a.achievement_types.name,
-        date: a.achievement_date,
-        points: a.point_reward,
-        level: a.achievement_types.level
-      })) || []
-    });
+      const disciplineStatus = disciplinePoints?.discipline_status as 'excellent' | 'good' | 'warning' | 'probation' | 'critical' || 'good';
+
+      setDiscipline({
+        current_points: disciplinePoints?.final_score || 100,
+        total_violations: violations?.length || 0,
+        total_achievements: achievements?.length || 0,
+        status: disciplineStatus,
+        recent_violations: violations?.map(v => ({
+          id: v.id,
+          violation_type: (v.violation_types as any)?.name || 'Unknown',
+          date: v.violation_date,
+          points: v.point_deduction
+        })) || [],
+        recent_achievements: achievements?.map(a => ({
+          id: a.id,
+          achievement_type: (a.achievement_types as any)?.name || 'Unknown',
+          date: a.achievement_date,
+          points: a.point_reward,
+          level: (a.achievement_types as any)?.level || 'Unknown'
+        })) || []
+      });
+    } catch (error) {
+      console.error('Error fetching discipline data:', error);
+    }
   };
 
   const fetchUpcomingEvents = async () => {
     if (!studentData?.id) return;
 
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    try {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
 
-    // Get upcoming permits
-    const { data: permits } = await supabase
-      .from('student_permits')
-      .select('permit_type, start_date, end_date, status')
-      .eq('student_id', studentData.id)
-      .gte('start_date', new Date().toISOString().split('T')[0])
-      .lte('start_date', nextWeek.toISOString().split('T')[0])
-      .order('start_date', { ascending: true });
+      // Get upcoming permits
+      const { data: permits } = await supabase
+        .from('student_permits')
+        .select('permit_type, start_date, end_date, status')
+        .eq('student_id', studentData.id)
+        .gte('start_date', new Date().toISOString().split('T')[0])
+        .lte('start_date', nextWeek.toISOString().split('T')[0])
+        .order('start_date', { ascending: true });
 
-    setUpcomingEvents({
-      exams: [], // Could be implemented with exam schedule
-      activities: [], // Could be implemented with school activities
-      permits: permits?.map(p => ({
-        type: p.permit_type,
-        start_date: p.start_date,
-        end_date: p.end_date,
-        status: p.status
-      })) || []
-    });
+      setUpcomingEvents({
+        exams: [], // Could be implemented with exam schedule
+        activities: [], // Could be implemented with school activities
+        permits: permits?.map(p => ({
+          type: p.permit_type,
+          start_date: p.start_date,
+          end_date: p.end_date,
+          status: p.status
+        })) || []
+      });
+    } catch (error) {
+      console.error('Error fetching upcoming events:', error);
+    }
   };
 
   const getDisciplineStatusColor = (status: string) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,16 +41,22 @@ export const ParentNotificationCenter = () => {
         table: 'notifications',
         filter: `user_id=eq.${user?.id}`
       }, (payload) => {
-        const newNotification = payload.new as ParentNotification;
-        setNotifications(prev => [newNotification, ...prev]);
+        const newNotification = payload.new as any;
+        const parsedNotification: ParentNotification = {
+          ...newNotification,
+          priority: newNotification.data?.priority || 'medium',
+          category: newNotification.data?.category || 'general',
+          is_read: newNotification.is_read || false
+        };
+        setNotifications(prev => [parsedNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
         
         // Show toast for urgent notifications
-        if (newNotification.priority === 'urgent') {
+        if (parsedNotification.priority === 'urgent') {
           toast({
-            title: newNotification.title,
-            description: newNotification.message,
-            variant: newNotification.type === 'error' ? 'destructive' : 'default'
+            title: parsedNotification.title,
+            description: parsedNotification.message,
+            variant: parsedNotification.type === 'error' ? 'destructive' : 'default'
           });
         }
       })
@@ -75,10 +80,11 @@ export const ParentNotificationCenter = () => {
 
       if (error) throw error;
 
-      const typedNotifications = data.map(notification => ({
+      const typedNotifications = (data || []).map(notification => ({
         ...notification,
-        priority: notification.data?.priority || 'medium',
-        category: notification.data?.category || 'general'
+        priority: (notification.data as any)?.priority || 'medium',
+        category: (notification.data as any)?.category || 'general',
+        is_read: notification.is_read || notification.read || false
       })) as ParentNotification[];
 
       setNotifications(typedNotifications);

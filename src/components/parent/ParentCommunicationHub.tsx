@@ -86,18 +86,24 @@ export const ParentCommunicationHub = () => {
       const { data, error } = await supabase
         .from('parent_messages')
         .select(`
-          id, subject, message, recipient_type, priority, status, created_at,
-          replies:message_replies(
-            id, message, sender_name, created_at
-          )
+          id, subject, message, recipient_type, priority, status, created_at
         `)
         .eq('sender_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Transform data to match our interface
+      const transformedMessages: Message[] = (data || []).map(msg => ({
+        ...msg,
+        status: msg.status as 'sent' | 'read' | 'replied',
+        replies: [] // Would need to fetch from message_replies table
+      }));
+      
+      setMessages(transformedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setMessages([]);
     }
   };
 
@@ -108,69 +114,88 @@ export const ParentCommunicationHub = () => {
       // Get student data first
       const { data: parentAccess } = await supabase
         .from('parent_access')
-        .select('student:students(id, class_id)')
+        .select('student_id')
         .eq('parent_user_id', user.id)
         .eq('is_active', true)
         .single();
 
-      if (!parentAccess?.student) return;
+      if (!parentAccess) return;
 
-      // Get class info and homeroom teacher
-      const { data: classInfo } = await supabase
-        .from('classes')
-        .select(`
-          homeroom_teacher_id,
-          homeroom_teacher:profiles(full_name, phone)
-        `)
-        .eq('id', parentAccess.student.class_id)
+      // Get student enrollment to find class
+      const { data: enrollment } = await supabase
+        .from('student_enrollments')
+        .select('class_id')
+        .eq('student_id', parentAccess.student_id)
+        .eq('status', 'active')
         .single();
 
-      // Get other relevant teachers (BK, Waka Kesiswaan)
-      const { data: otherTeachers } = await supabase
+      const teacherContacts: TeacherContact[] = [];
+
+      // Get homeroom teacher if student has a class
+      if (enrollment) {
+        const { data: classInfo } = await supabase
+          .from('classes')
+          .select('homeroom_teacher_id')
+          .eq('id', enrollment.class_id)
+          .single();
+
+        if (classInfo?.homeroom_teacher_id) {
+          const { data: teacher } = await supabase
+            .from('profiles')
+            .select('id, full_name, phone')
+            .eq('id', classInfo.homeroom_teacher_id)
+            .single();
+
+          if (teacher) {
+            teacherContacts.push({
+              id: teacher.id,
+              full_name: teacher.full_name,
+              role: 'wali_kelas',
+              phone: teacher.phone
+            });
+          }
+        }
+      }
+
+      // Get other relevant staff (BK, Waka Kesiswaan, Admin)
+      const { data: otherStaff } = await supabase
         .from('user_roles')
         .select(`
-          user:profiles(id, full_name, phone),
-          role
+          role,
+          profiles!inner(id, full_name, phone)
         `)
         .in('role', ['guru_bk', 'waka_kesiswaan', 'admin'])
         .eq('is_active', true);
 
-      const teacherContacts: TeacherContact[] = [];
-
-      // Add homeroom teacher
-      if (classInfo?.homeroom_teacher) {
-        teacherContacts.push({
-          id: classInfo.homeroom_teacher_id,
-          full_name: classInfo.homeroom_teacher.full_name,
-          role: 'wali_kelas',
-          phone: classInfo.homeroom_teacher.phone
+      if (otherStaff) {
+        otherStaff.forEach((staff) => {
+          const profile = staff.profiles as any;
+          if (profile) {
+            teacherContacts.push({
+              id: profile.id,
+              full_name: profile.full_name,
+              role: staff.role,
+              phone: profile.phone
+            });
+          }
         });
       }
-
-      // Add other teachers
-      otherTeachers?.forEach((teacher) => {
-        if (teacher.user) {
-          teacherContacts.push({
-            id: teacher.user.id,
-            full_name: teacher.user.full_name,
-            role: teacher.role,
-            phone: teacher.user.phone
-          });
-        }
-      });
 
       setContacts(teacherContacts);
     } catch (error) {
       console.error('Error fetching teacher contacts:', error);
+      setContacts([]);
     }
   };
 
   const onSubmit = async (data: MessageFormData) => {
+    if (!user?.id) return;
+
     try {
       const { error } = await supabase
         .from('parent_messages')
         .insert({
-          sender_id: user?.id,
+          sender_id: user.id,
           subject: data.subject,
           message: data.message,
           recipient_type: data.recipient_type,
