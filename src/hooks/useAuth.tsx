@@ -57,52 +57,46 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
     try {
-      // Try with RLS first
+      // First check profile table for role
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+      
+      if (profileData?.role) {
+        // Simple role from profile table
+        return [profileData.role as AppRole];
+      }
+
+      // Fallback to user_roles table
       let { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .eq('is_active', true);
       
-      // If RLS fails, try with service role for admin users
       if (rolesError || !rolesData || rolesData.length === 0) {
-        console.log('Trying alternative method to fetch roles...');
-        
-        // Check if this is the admin user specifically
+        // Admin user fallback
         if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
-          console.log('Admin user detected, setting admin role');
           return ['admin'];
         }
         
-        // For other users, check their profile role
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', userId)
-          .single();
-        
-        if (profileData?.role) {
-          return [profileData.role as AppRole];
-        }
-        
-        // For other users, return empty array if no roles found
         console.warn('No roles found for user:', userId);
-        return [];
+        return ['siswa']; // Default role for new users
       }
       
       const roles = rolesData?.map(item => item.role as AppRole) || [];
-      console.log('Roles fetched for user:', userId, roles);
       return roles;
     } catch (error) {
       console.error('Error in fetchUserRoles:', error);
       
       // Fallback for admin user
       if (userId === '5f52a676-a947-42f8-a20e-40b766c11e72') {
-        console.log('Fallback: Setting admin role for admin user');
         return ['admin'];
       }
       
-      return [];
+      return ['siswa']; // Default role
     }
   };
 
@@ -136,14 +130,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event);
         setSession(session);
         
         if (session?.user) {
-          // Add a small delay to ensure database is ready
           setTimeout(() => {
             updateAuthUser(session.user);
           }, 500);
@@ -155,7 +147,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
@@ -177,7 +168,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
     
     if (!error) {
-      // Refresh user data after successful sign in
       setTimeout(async () => {
         await refreshUserData();
       }, 1000);
@@ -196,7 +186,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          role: 'siswa' // Default role for new signups
+          role: 'siswa'
         }
       }
     });

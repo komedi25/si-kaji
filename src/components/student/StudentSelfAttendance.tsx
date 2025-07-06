@@ -6,13 +6,14 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, MapPin, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { StudentDataError } from './StudentDataError';
 
 export const StudentSelfAttendance = () => {
-  const { studentData, isLoading: userLoading, error: userError } = useUserProfile();
+  const { studentData, isLoading: userLoading, error: userError, refetch } = useUserProfile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -87,7 +88,7 @@ export const StudentSelfAttendance = () => {
     onError: (error) => {
       toast({
         title: "Gagal Check-in",
-        description: "Terjadi kesalahan saat mencatat presensi masuk.",
+        description: error.message,
         variant: "destructive",
       });
       console.error('Check-in error:', error);
@@ -124,7 +125,7 @@ export const StudentSelfAttendance = () => {
     onError: (error) => {
       toast({
         title: "Gagal Check-out",
-        description: "Terjadi kesalahan saat mencatat presensi pulang.",
+        description: error.message,
         variant: "destructive",
       });
       console.error('Check-out error:', error);
@@ -176,33 +177,12 @@ export const StudentSelfAttendance = () => {
     );
   }
 
-  if (userError) {
+  if (userError || !studentData) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-red-600">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4" />
-            <p className="font-medium">Terjadi Kesalahan</p>
-            <p className="text-sm mt-2">{userError}</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!studentData) {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-orange-600">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4" />
-            <p className="font-medium">Data Siswa Tidak Ditemukan</p>
-            <p className="text-sm mt-2">
-              Sistem sedang menyiapkan data siswa Anda. Silakan refresh halaman dalam beberapa saat.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <StudentDataError 
+        error={userError || 'Data siswa tidak ditemukan'} 
+        onRetry={refetch}
+      />
     );
   }
 
@@ -223,6 +203,16 @@ export const StudentSelfAttendance = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Student Info */}
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="text-sm font-medium text-blue-800">
+              {studentData.full_name} - {studentData.nis}
+            </div>
+            <div className="text-xs text-blue-600">
+              Status: {studentData.status}
+            </div>
+          </div>
+
           {/* Current Status */}
           {todayAttendance && (
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -253,7 +243,7 @@ export const StudentSelfAttendance = () => {
             <MapPin className="h-4 w-4 text-gray-500" />
             <span className="text-sm">
               {location 
-                ? `Lokasi terdeteksi (${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)})` 
+                ? `Lokasi terdeteksi` 
                 : 'Lokasi belum terdeteksi'}
             </span>
           </div>

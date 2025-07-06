@@ -1,81 +1,112 @@
 
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-const weeklyAttendanceData = [
-  { day: 'Sen', present: 85, absent: 15 },
-  { day: 'Sel', present: 82, absent: 18 },
-  { day: 'Rab', present: 88, absent: 12 },
-  { day: 'Kam', present: 86, absent: 14 },
-  { day: 'Jum', present: 90, absent: 10 },
+// Sample data
+const attendanceData = [
+  { day: 'Sen', hadir: 450, izin: 12, alpha: 8 },
+  { day: 'Sel', hadir: 445, izin: 15, alpha: 10 },
+  { day: 'Rab', hadir: 448, izin: 10, alpha: 12 },
+  { day: 'Kam', hadir: 442, izin: 18, alpha: 10 },
+  { day: 'Jum', hadir: 440, izin: 20, alpha: 10 },
+];
+
+const weeklyTrendData = [
+  { week: 'W1', kehadiran: 95.2 },
+  { week: 'W2', kehadiran: 94.8 },
+  { week: 'W3', kehadiran: 96.1 },
+  { week: 'W4', kehadiran: 93.5 },
 ];
 
 const violationData = [
-  { month: 'Jan', count: 12 },
-  { month: 'Feb', count: 8 },
-  { month: 'Mar', count: 15 },
-  { month: 'Apr', count: 6 },
-  { month: 'Mei', count: 10 },
-];
-
-const achievementData = [
-  { name: 'Akademik', value: 45, color: '#0088FE' },
-  { name: 'Olahraga', value: 30, color: '#00C49F' },
-  { name: 'Seni', value: 15, color: '#FFBB28' },
-  { name: 'Lainnya', value: 10, color: '#FF8042' },
+  { name: 'Terlambat', value: 45, color: '#ef4444' },
+  { name: 'Tidak Hadir', value: 23, color: '#f97316' },
+  { name: 'Seragam', value: 12, color: '#eab308' },
+  { name: 'Lainnya', value: 8, color: '#6b7280' },
 ];
 
 export const ResponsiveDashboardCharts = () => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-      {/* Weekly Attendance Trend */}
-      <Card className="col-span-1 lg:col-span-2 xl:col-span-2">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">Tren Kehadiran Mingguan</CardTitle>
-          <CardDescription className="text-sm">
-            Persentase kehadiran siswa per hari dalam seminggu terakhir
-          </CardDescription>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Daily Attendance Chart */}
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle>Presensi Harian</CardTitle>
+          <CardDescription>Data kehadiran siswa per hari dalam seminggu</CardDescription>
         </CardHeader>
-        <CardContent className="p-2 md:p-4">
-          <div className="h-[200px] md:h-[250px] w-full">
+        <CardContent>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={weeklyAttendanceData}
+              <BarChart
+                data={attendanceData}
                 margin={{
-                  top: 5,
-                  right: 10,
+                  top: 20,
+                  right: 20,
                   left: 0,
-                  bottom: 5,
+                  bottom: 20,
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="day" 
+                  fontSize={12}
                   tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
                 />
                 <YAxis 
+                  fontSize={12}
                   tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[0, 100]}
+                />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="hadir" stackId="a" fill="#22c55e" name="Hadir" />
+                <Bar dataKey="izin" stackId="a" fill="#f59e0b" name="Izin" />
+                <Bar dataKey="alpha" stackId="a" fill="#ef4444" name="Alpha" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Trend Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Tren Kehadiran Mingguan</CardTitle>
+          <CardDescription className="text-sm">Persentase kehadiran per minggu</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={weeklyTrendData}
+                margin={{
+                  top: 10,
+                  right: 10,
+                  left: 0,
+                  bottom: 10,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="week" 
+                  fontSize={11}
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis 
+                  domain={['dataMin - 2', 'dataMax + 2']}
+                  fontSize={11}
+                  tick={{ fontSize: 11 }}
                 />
                 <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
+                  formatter={(value) => [`${value}%`, 'Kehadiran']}
+                  contentStyle={{ fontSize: '12px' }}
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="present" 
-                  stroke="#10b981" 
+                  dataKey="kehadiran" 
+                  stroke="#3b82f6" 
                   strokeWidth={2}
-                  dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
-                  name="Hadir (%)"
+                  dot={{ r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -83,92 +114,35 @@ export const ResponsiveDashboardCharts = () => {
         </CardContent>
       </Card>
 
-      {/* Monthly Violations */}
-      <Card className="col-span-1">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">Pelanggaran Bulanan</CardTitle>
-          <CardDescription className="text-sm">
-            Jumlah pelanggaran dalam 5 bulan terakhir
-          </CardDescription>
+      {/* Violation Distribution */}
+      <Card className="md:col-span-2 lg:col-span-1">
+        <CardHeader>
+          <CardTitle className="text-base">Distribusi Pelanggaran</CardTitle>
+          <CardDescription className="text-sm">Jenis pelanggaran bulan ini</CardDescription>
         </CardHeader>
-        <CardContent className="p-2 md:p-4">
-          <div className="h-[200px] md:h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={violationData}
-                margin={{
-                  top: 5,
-                  right: 10,
-                  left: 0,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="month" 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar 
-                  dataKey="count" 
-                  fill="#ef4444" 
-                  radius={[2, 2, 0, 0]}
-                  name="Pelanggaran"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Achievement Distribution */}
-      <Card className="col-span-1 lg:col-span-2 xl:col-span-1">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base md:text-lg">Distribusi Prestasi</CardTitle>
-          <CardDescription className="text-sm">
-            Pembagian prestasi siswa berdasarkan kategori
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-2 md:p-4">
-          <div className="h-[200px] md:h-[250px] w-full">
+        <CardContent>
+          <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={achievementData}
+                  data={violationData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={60}
-                  fill="#8884d8"
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={5}
                   dataKey="value"
-                  fontSize={10}
                 >
-                  {achievementData.map((entry, index) => (
+                  {violationData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
+                  formatter={(value) => [value, 'Jumlah']}
+                  contentStyle={{ fontSize: '12px' }}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: '11px' }}
                 />
               </PieChart>
             </ResponsiveContainer>
