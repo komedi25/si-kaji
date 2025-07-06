@@ -38,97 +38,6 @@ export interface StudentData {
   email?: string | null;
 }
 
-// Helper function to create student data
-const createStudentData = (rawStudent: any): StudentData => {
-  return {
-    id: rawStudent.id,
-    user_id: rawStudent.user_id,
-    nis: rawStudent.nis,
-    nisn: rawStudent.nisn,
-    full_name: rawStudent.full_name,
-    gender: rawStudent.gender === 'P' ? 'P' : 'L',
-    birth_place: rawStudent.birth_place,
-    birth_date: rawStudent.birth_date,
-    religion: rawStudent.religion,
-    address: rawStudent.address,
-    phone: rawStudent.phone,
-    parent_name: rawStudent.parent_name,
-    parent_phone: rawStudent.parent_phone,
-    parent_address: rawStudent.parent_address,
-    admission_date: rawStudent.admission_date,
-    graduation_date: rawStudent.graduation_date,
-    status: rawStudent.status,
-    photo_url: rawStudent.photo_url,
-    created_at: rawStudent.created_at,
-    updated_at: rawStudent.updated_at,
-    email: rawStudent.email
-  };
-};
-
-// Helper function to create profile
-const createProfile = async (userId: string, email: string) => {
-  const profileData = {
-    id: userId,
-    role: 'siswa',
-    full_name: email || 'Unknown User',
-    student_id: null,
-    teacher_id: null,
-    avatar_url: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .insert(profileData)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-// Helper function to find student by email
-const findStudentByEmail = async (email: string) => {
-  const { data } = await supabase
-    .from('students')
-    .select('*')
-    .eq('email', email)
-    .maybeSingle();
-  
-  return data;
-};
-
-// Helper function to create new student
-const createNewStudent = async (userId: string, fullName: string, email: string) => {
-  const studentData = {
-    user_id: userId,
-    full_name: fullName || 'Siswa Baru',
-    nis: `AUTO${Date.now()}`,
-    gender: 'L' as const,
-    status: 'active' as const,
-    admission_date: new Date().toISOString().split('T')[0],
-    email: email
-  };
-
-  const { data, error } = await supabase
-    .from('students')
-    .insert(studentData)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-};
-
-// Helper function to link profile to student
-const linkProfileToStudent = async (profileId: string, studentId: string) => {
-  await supabase
-    .from('profiles')
-    .update({ student_id: studentId })
-    .eq('id', profileId);
-};
-
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -136,8 +45,155 @@ export function useUserProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = async () => {
-    await fetchData();
+  const createProfile = async (userId: string, email: string): Promise<UserProfile> => {
+    const profileData = {
+      id: userId,
+      role: 'siswa',
+      full_name: email || 'Unknown User',
+      student_id: null,
+      teacher_id: null,
+      avatar_url: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert(profileData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      role: data.role,
+      student_id: data.student_id,
+      teacher_id: data.teacher_id,
+      full_name: data.full_name,
+      avatar_url: data.avatar_url,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  };
+
+  const findStudentByEmail = async (email: string) => {
+    const { data } = await supabase
+      .from('students')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    
+    return data;
+  };
+
+  const createNewStudent = async (userId: string, fullName: string, email: string) => {
+    const studentData = {
+      user_id: userId,
+      full_name: fullName || 'Siswa Baru',
+      nis: `AUTO${Date.now()}`,
+      gender: 'L' as const,
+      status: 'active' as const,
+      admission_date: new Date().toISOString().split('T')[0],
+      email: email
+    };
+
+    const { data, error } = await supabase
+      .from('students')
+      .insert(studentData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  };
+
+  const linkProfileToStudent = async (profileId: string, studentId: string) => {
+    await supabase
+      .from('profiles')
+      .update({ student_id: studentId })
+      .eq('id', profileId);
+  };
+
+  const convertToStudentData = (rawData: any): StudentData => {
+    return {
+      id: rawData.id || '',
+      user_id: rawData.user_id || null,
+      nis: rawData.nis || '',
+      nisn: rawData.nisn || null,
+      full_name: rawData.full_name || '',
+      gender: rawData.gender === 'P' ? 'P' : 'L',
+      birth_place: rawData.birth_place || null,
+      birth_date: rawData.birth_date || null,
+      religion: rawData.religion || null,
+      address: rawData.address || null,
+      phone: rawData.phone || null,
+      parent_name: rawData.parent_name || null,
+      parent_phone: rawData.parent_phone || null,
+      parent_address: rawData.parent_address || null,
+      admission_date: rawData.admission_date || '',
+      graduation_date: rawData.graduation_date || null,
+      status: rawData.status || 'active',
+      photo_url: rawData.photo_url || null,
+      created_at: rawData.created_at || '',
+      updated_at: rawData.updated_at || '',
+      email: rawData.email || null
+    };
+  };
+
+  const handleStudentData = async (currentUser: User, currentProfile: UserProfile) => {
+    try {
+      let studentDetails = null;
+
+      // Try to get existing student data if linked
+      if (currentProfile.student_id) {
+        const { data: existingStudent } = await supabase
+          .from('students')
+          .select('*')
+          .eq('id', currentProfile.student_id)
+          .maybeSingle();
+
+        if (existingStudent) {
+          studentDetails = existingStudent;
+        }
+      }
+
+      // If no student data found, try to find by email or create new one
+      if (!studentDetails && currentUser.email) {
+        // Try to find student by email
+        const studentByEmail = await findStudentByEmail(currentUser.email);
+
+        if (studentByEmail) {
+          // Link existing student to profile
+          await linkProfileToStudent(currentUser.id, studentByEmail.id);
+          studentDetails = studentByEmail;
+        } else {
+          // Create new student record
+          try {
+            const newStudent = await createNewStudent(
+              currentUser.id,
+              currentProfile.full_name || currentUser.email || '',
+              currentUser.email
+            );
+            
+            // Link new student to profile
+            await linkProfileToStudent(currentUser.id, newStudent.id);
+            studentDetails = newStudent;
+          } catch (createStudentError) {
+            console.error('Error creating student:', createStudentError);
+          }
+        }
+      }
+
+      if (studentDetails) {
+        const cleanStudentData = convertToStudentData(studentDetails);
+        setStudentData(cleanStudentData);
+      } else {
+        console.warn('Could not create or find student data');
+      }
+    } catch (error) {
+      console.error('Error handling student data:', error);
+    }
   };
 
   const fetchData = async () => {
@@ -177,8 +233,7 @@ export function useUserProfile() {
         // If profile doesn't exist, try to create one
         if (profileError.code === 'PGRST116') {
           try {
-            const newProfile = await createProfile(currentUser.id, currentUser.email || '');
-            currentProfile = newProfile as UserProfile;
+            currentProfile = await createProfile(currentUser.id, currentUser.email || '');
           } catch (createError) {
             setError('Gagal membuat profil. Hubungi admin untuk bantuan.');
             setIsLoading(false);
@@ -190,7 +245,16 @@ export function useUserProfile() {
           return;
         }
       } else {
-        currentProfile = profileData as UserProfile;
+        currentProfile = {
+          id: profileData.id,
+          role: profileData.role,
+          student_id: profileData.student_id,
+          teacher_id: profileData.teacher_id,
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url,
+          created_at: profileData.created_at,
+          updated_at: profileData.updated_at
+        };
       }
 
       setProfile(currentProfile);
@@ -208,55 +272,8 @@ export function useUserProfile() {
     }
   };
 
-  const handleStudentData = async (currentUser: User, currentProfile: UserProfile) => {
-    let studentDetails = null;
-
-    // Try to get existing student data if linked
-    if (currentProfile.student_id) {
-      const { data: existingStudent } = await supabase
-        .from('students')
-        .select('*')
-        .eq('id', currentProfile.student_id)
-        .maybeSingle();
-
-      if (existingStudent) {
-        studentDetails = existingStudent;
-      }
-    }
-
-    // If no student data found, try to find by email or create new one
-    if (!studentDetails && currentUser.email) {
-      // Try to find student by email
-      const studentByEmail = await findStudentByEmail(currentUser.email);
-
-      if (studentByEmail) {
-        // Link existing student to profile
-        await linkProfileToStudent(currentUser.id, studentByEmail.id);
-        studentDetails = studentByEmail;
-      } else {
-        // Create new student record
-        try {
-          const newStudent = await createNewStudent(
-            currentUser.id,
-            currentProfile.full_name || currentUser.email || '',
-            currentUser.email
-          );
-          
-          // Link new student to profile
-          await linkProfileToStudent(currentUser.id, newStudent.id);
-          studentDetails = newStudent;
-        } catch (createStudentError) {
-          console.error('Error creating student:', createStudentError);
-        }
-      }
-    }
-
-    if (studentDetails) {
-      const cleanStudentData = createStudentData(studentDetails);
-      setStudentData(cleanStudentData);
-    } else {
-      console.warn('Could not create or find student data');
-    }
+  const refetch = async () => {
+    await fetchData();
   };
 
   useEffect(() => {
