@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,12 +98,22 @@ export const PermitApprovalWorkflow = () => {
 
       if (error) throw error;
 
-      // Filter permits where current stage matches approval order and cast status type
+      // Filter permits where current stage matches approval order and normalize the data
       const currentStagePermits = data?.filter(approval => 
         approval.permit?.current_approval_stage === approval.approval_order
       ).map(approval => ({
         ...approval,
-        status: approval.status as PermitApprovalStatus
+        status: approval.status as PermitApprovalStatus,
+        permit: {
+          ...approval.permit,
+          student: {
+            ...approval.permit.student,
+            // Handle current_class array from database and convert to single object
+            current_class: Array.isArray(approval.permit.student.current_class) 
+              ? approval.permit.student.current_class[0] 
+              : approval.permit.student.current_class
+          }
+        }
       })) || [];
 
       setPermits(currentStagePermits);
