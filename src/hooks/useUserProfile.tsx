@@ -59,43 +59,49 @@ export function useUserProfile() {
       updated_at: now
     };
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .insert(insertData)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(insertData)
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    // Explicitly construct the return object
-    const result: UserProfile = {
-      id: data.id,
-      role: data.role,
-      student_id: data.student_id,
-      teacher_id: data.teacher_id,
-      full_name: data.full_name,
-      avatar_url: data.avatar_url,
-      created_at: data.created_at,
-      updated_at: data.updated_at
-    };
+      // Explicitly construct the return object
+      const result: UserProfile = {
+        id: data.id,
+        role: data.role,
+        student_id: data.student_id,
+        teacher_id: data.teacher_id,
+        full_name: data.full_name,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
 
-    return result;
+      return result;
+    } catch (err) {
+      console.error('Error creating profile:', err);
+      throw err;
+    }
   };
 
   const findStudentByEmail = async (email: string): Promise<any | null> => {
     try {
-      const { data, error } = await supabase
+      // Use a simpler query approach to avoid deep type inference
+      const response = await supabase
         .from('students')
         .select('*')
         .eq('email', email)
-        .maybeSingle();
+        .limit(1);
       
-      if (error) {
-        console.error('Error finding student by email:', error);
+      if (response.error) {
+        console.error('Error finding student by email:', response.error);
         return null;
       }
       
-      return data;
+      return response.data && response.data.length > 0 ? response.data[0] : null;
     } catch (err) {
       console.error('Exception in findStudentByEmail:', err);
       return null;
@@ -113,21 +119,33 @@ export function useUserProfile() {
       email: email
     };
 
-    const { data, error } = await supabase
-      .from('students')
-      .insert(studentInsertData)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .insert(studentInsertData)
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error creating student:', err);
+      throw err;
+    }
   };
 
   const linkProfileToStudent = async (profileId: string, studentId: string) => {
-    await supabase
-      .from('profiles')
-      .update({ student_id: studentId })
-      .eq('id', profileId);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ student_id: studentId })
+        .eq('id', profileId);
+      
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error linking profile to student:', err);
+      throw err;
+    }
   };
 
   const convertToStudentData = (rawData: any): StudentData => {
@@ -162,14 +180,18 @@ export function useUserProfile() {
 
       // Try to get existing student data if linked
       if (currentProfile.student_id) {
-        const { data: existingStudent } = await supabase
-          .from('students')
-          .select('*')
-          .eq('id', currentProfile.student_id)
-          .maybeSingle();
+        try {
+          const { data: existingStudent } = await supabase
+            .from('students')
+            .select('*')
+            .eq('id', currentProfile.student_id)
+            .single();
 
-        if (existingStudent) {
-          studentDetails = existingStudent;
+          if (existingStudent) {
+            studentDetails = existingStudent;
+          }
+        } catch (err) {
+          console.error('Error fetching existing student:', err);
         }
       }
 
