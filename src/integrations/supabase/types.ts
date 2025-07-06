@@ -684,8 +684,208 @@ export type Database = {
           },
         ]
       }
+      counseling_bookings: {
+        Row: {
+          booking_reason: string
+          confirmed_at: string | null
+          counselor_id: string
+          created_at: string | null
+          id: string
+          priority_level: string | null
+          requested_date: string
+          requested_time: string
+          session_id: string | null
+          status: string | null
+          student_id: string
+          student_notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_reason: string
+          confirmed_at?: string | null
+          counselor_id: string
+          created_at?: string | null
+          id?: string
+          priority_level?: string | null
+          requested_date: string
+          requested_time: string
+          session_id?: string | null
+          status?: string | null
+          student_id: string
+          student_notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_reason?: string
+          confirmed_at?: string | null
+          counselor_id?: string
+          created_at?: string | null
+          id?: string
+          priority_level?: string | null
+          requested_date?: string
+          requested_time?: string
+          session_id?: string | null
+          status?: string | null
+          student_id?: string
+          student_notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counseling_bookings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counseling_bookings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counseling_referrals: {
+        Row: {
+          assigned_counselor: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          recommended_sessions: number | null
+          reference_id: string | null
+          referral_reason: string
+          referral_type: string
+          referred_by: string
+          status: string | null
+          student_id: string
+          updated_at: string | null
+          urgency_level: string | null
+        }
+        Insert: {
+          assigned_counselor?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          recommended_sessions?: number | null
+          reference_id?: string | null
+          referral_reason: string
+          referral_type: string
+          referred_by: string
+          status?: string | null
+          student_id: string
+          updated_at?: string | null
+          urgency_level?: string | null
+        }
+        Update: {
+          assigned_counselor?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          recommended_sessions?: number | null
+          reference_id?: string | null
+          referral_reason?: string
+          referral_type?: string
+          referred_by?: string
+          status?: string | null
+          student_id?: string
+          updated_at?: string | null
+          urgency_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counseling_referrals_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counseling_schedules: {
+        Row: {
+          counselor_id: string
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          max_sessions_per_slot: number | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          counselor_id: string
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          max_sessions_per_slot?: number | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          counselor_id?: string
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          max_sessions_per_slot?: number | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      counseling_session_notes: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          encrypted_content: string
+          encryption_key_hint: string | null
+          id: string
+          is_confidential: boolean | null
+          note_type: string
+          session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          encrypted_content: string
+          encryption_key_hint?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          note_type: string
+          session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          encrypted_content?: string
+          encryption_key_hint?: string | null
+          id?: string
+          is_confidential?: boolean | null
+          note_type?: string
+          session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counseling_session_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       counseling_sessions: {
         Row: {
+          booking_status: string | null
           case_id: string | null
           counselor_id: string
           created_at: string
@@ -693,16 +893,25 @@ export type Database = {
           follow_up_date: string | null
           follow_up_required: boolean | null
           id: string
+          is_emergency: boolean | null
+          next_session_scheduled: boolean | null
           notes_encrypted: string | null
+          parent_notification_sent: boolean | null
+          referred_from: string | null
+          reminder_sent: boolean | null
           session_date: string
+          session_location: string | null
+          session_outcome: string | null
           session_time: string
           session_type: string
           status: string
           student_id: string
+          student_phone: string | null
           topic: string | null
           updated_at: string
         }
         Insert: {
+          booking_status?: string | null
           case_id?: string | null
           counselor_id: string
           created_at?: string
@@ -710,16 +919,25 @@ export type Database = {
           follow_up_date?: string | null
           follow_up_required?: boolean | null
           id?: string
+          is_emergency?: boolean | null
+          next_session_scheduled?: boolean | null
           notes_encrypted?: string | null
+          parent_notification_sent?: boolean | null
+          referred_from?: string | null
+          reminder_sent?: boolean | null
           session_date: string
+          session_location?: string | null
+          session_outcome?: string | null
           session_time: string
           session_type: string
           status?: string
           student_id: string
+          student_phone?: string | null
           topic?: string | null
           updated_at?: string
         }
         Update: {
+          booking_status?: string | null
           case_id?: string | null
           counselor_id?: string
           created_at?: string
@@ -727,12 +945,20 @@ export type Database = {
           follow_up_date?: string | null
           follow_up_required?: boolean | null
           id?: string
+          is_emergency?: boolean | null
+          next_session_scheduled?: boolean | null
           notes_encrypted?: string | null
+          parent_notification_sent?: boolean | null
+          referred_from?: string | null
+          reminder_sent?: boolean | null
           session_date?: string
+          session_location?: string | null
+          session_outcome?: string | null
           session_time?: string
           session_type?: string
           status?: string
           student_id?: string
+          student_phone?: string | null
           topic?: string | null
           updated_at?: string
         }
