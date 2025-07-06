@@ -75,20 +75,31 @@ export const ParentCommunicationHub = () => {
     if (!user?.id) return;
 
     try {
-      // Use a simple approach with mock data until types are fixed
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          subject: 'Pertanyaan tentang nilai',
-          message: 'Saya ingin bertanya tentang nilai anak saya...',
-          recipient_type: 'wali_kelas',
-          priority: 'medium',
-          status: 'read',
-          created_at: new Date().toISOString()
-        }
-      ];
-      
-      setMessages(mockMessages);
+      const { data, error } = await supabase
+        .from('parent_messages')
+        .select('*')
+        .eq('sender_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        return;
+      }
+
+      if (data) {
+        const typedMessages: Message[] = data.map(msg => ({
+          id: msg.id,
+          subject: msg.subject,
+          message: msg.message,
+          recipient_type: msg.recipient_type,
+          priority: msg.priority,
+          status: msg.status as 'sent' | 'read' | 'replied',
+          created_at: msg.created_at
+        }));
+        
+        setMessages(typedMessages);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
       setMessages([]);
@@ -99,29 +110,70 @@ export const ParentCommunicationHub = () => {
     if (!user?.id) return;
 
     try {
-      // Mock teacher contacts data until database is properly set up
-      const mockContacts: TeacherContact[] = [
-        {
-          id: '1',
-          full_name: 'Pak Wali Kelas',
-          role: 'wali_kelas',
-          phone: '08123456789'
-        },
-        {
-          id: '2',
-          full_name: 'Bu Guru BK',
-          role: 'guru_bk',
-          phone: '08198765432'
-        },
-        {
-          id: '3',
-          full_name: 'Pak Waka Kesiswaan',
-          role: 'waka_kesiswaan',
-          phone: '08111222333'
-        }
-      ];
+      // Get student's class and homeroom teacher
+      const { data: parentAccess } = await supabase
+        .from('parent_access')
+        .select(`
+          students!inner (
+            student_enrollments!inner (
+              classes!inner (
+                homeroom_teacher_id,
+                profiles!inner (
+                  id,
+                  full_name,
+                  phone
+                )
+              )
+            )
+          )
+        `)
+        .eq('parent_user_id', user.id)
+        .eq('is_active', true)
+        .single();
 
-      setContacts(mockContacts);
+      // Get school staff contacts
+      const { data: staffData } = await supabase
+        .from('user_roles')
+        .select(`
+          user_id,
+          role,
+          profiles!inner (
+            id,
+            full_name,
+            phone
+          )
+        `)
+        .in('role', ['wali_kelas', 'guru_bk', 'waka_kesiswaan'])
+        .eq('is_active', true);
+
+      const contactsList: TeacherContact[] = [];
+
+      // Add homeroom teacher
+      if (parentAccess?.students?.student_enrollments?.[0]?.classes?.profiles) {
+        const homeroomTeacher = parentAccess.students.student_enrollments[0].classes.profiles;
+        contactsList.push({
+          id: homeroomTeacher.id,
+          full_name: homeroomTeacher.full_name,
+          role: 'wali_kelas',
+          phone: homeroomTeacher.phone || undefined
+        });
+      }
+
+      // Add other staff
+      if (staffData) {
+        staffData.forEach(staff => {
+          if (staff.profiles && !contactsList.find(c => c.id === staff.profiles.id)) {
+            contactsList.push({
+              id: staff.profiles.id,
+              full_name: staff.profiles.full_name,
+              role: staff.role,
+              phone: staff.profiles.phone || undefined
+            });
+          }
+        });
+      }
+
+      setContacts(contactsList);
     } catch (error) {
       console.error('Error fetching teacher contacts:', error);
       setContacts([]);
@@ -132,8 +184,18 @@ export const ParentCommunicationHub = () => {
     if (!user?.id) return;
 
     try {
-      // For now, we'll simulate sending a message
-      console.log('Sending message:', data);
+      const { error } = await supabase
+        .from('parent_messages')
+        .insert({
+          sender_id: user.id,
+          recipient_type: data.recipient_type,
+          subject: data.subject,
+          message: data.message,
+          priority: data.priority,
+          status: 'sent'
+        });
+
+      if (error) throw error;
 
       toast({
         title: 'Pesan Terkirim',

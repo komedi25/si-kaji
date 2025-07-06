@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ParentNotificationCenter } from './ParentNotificationCenter';
+import { ParentCommunicationHub } from './ParentCommunicationHub';
 import { 
   User, Award, AlertTriangle, Calendar, TrendingUp, Clock, 
   Phone, Users, Activity
@@ -103,9 +103,30 @@ export const EnhancedParentDashboard = () => {
 
   const fetchStudentData = async () => {
     try {
-      // Get parent access to student using raw query to avoid type issues
+      // Get student data through parent_access
       const { data: parentAccess, error: accessError } = await supabase
-        .rpc('debug_user_schedule_permissions')
+        .from('parent_access')
+        .select(`
+          student_id,
+          students!inner (
+            id,
+            full_name,
+            nis,
+            student_enrollments!inner (
+              classes!inner (
+                name,
+                grade,
+                homeroom_teacher_id,
+                profiles!inner (
+                  full_name,
+                  phone
+                )
+              )
+            )
+          )
+        `)
+        .eq('parent_user_id', user?.id)
+        .eq('is_active', true)
         .single();
 
       if (accessError) {
@@ -113,29 +134,47 @@ export const EnhancedParentDashboard = () => {
         return;
       }
 
-      // For now, let's use a simpler approach with mock data until types are updated
-      // This simulates the parent having access to a student
-      const mockStudentData: StudentData = {
-        id: 'mock-student-id',
-        full_name: 'Student Name',
-        nis: '2024001',
-        class: {
-          name: 'XII RPL 1',
-          grade: 12,
-          homeroom_teacher: {
-            full_name: 'Pak Guru',
-            phone: '08123456789'
-          }
-        },
-        extracurriculars: [
-          {
-            name: 'Programming Club',
-            coach_name: 'Bu Coach'
-          }
-        ]
-      };
+      if (parentAccess?.students) {
+        const student = parentAccess.students;
+        const enrollment = student.student_enrollments?.[0];
+        const classInfo = enrollment?.classes;
 
-      setStudentData(mockStudentData);
+        // Get student's extracurriculars
+        const { data: extracurricularData } = await supabase
+          .from('extracurricular_enrollments')
+          .select(`
+            extracurriculars!inner (
+              name,
+              extracurricular_coaches (
+                profiles!inner (
+                  full_name
+                )
+              )
+            )
+          `)
+          .eq('student_id', student.id)
+          .eq('status', 'active');
+
+        const extracurriculars = extracurricularData?.map(item => ({
+          name: item.extracurriculars.name,
+          coach_name: item.extracurriculars.extracurricular_coaches?.[0]?.profiles?.full_name
+        })) || [];
+
+        setStudentData({
+          id: student.id,
+          full_name: student.full_name,
+          nis: student.nis,
+          class: classInfo ? {
+            name: classInfo.name,
+            grade: classInfo.grade,
+            homeroom_teacher: {
+              full_name: classInfo.profiles?.full_name || 'Belum ditentukan',
+              phone: classInfo.profiles?.phone
+            }
+          } : undefined,
+          extracurriculars
+        });
+      }
     } catch (error) {
       console.error('Error fetching student data:', error);
     }
@@ -166,9 +205,46 @@ export const EnhancedParentDashboard = () => {
   };
 
   const fetchAttendanceData = async () => {
+    if (!studentData?.id) return;
+
     try {
-      // Mock attendance data for now
-      const mockAttendance: AttendanceSummary = {
+      const currentDate = new Date();
+      const startOfCurrentMonth = startOfMonth(currentDate);
+      const endOfCurrentMonth = endOfMonth(currentDate);
+
+      // Get attendance records for current month
+      const { data: attendanceRecords } = await supabase
+        .from('student_attendances')
+        .select('*')
+        .eq('student_id', studentData.id)
+        .gte('attendance_date', startOfCurrentMonth.toISOString().split('T')[0])
+        .lte('attendance_date', endOfCurrentMonth.toISOString().split('T')[0]);
+
+      if (attendanceRecords) {
+        const totalDays = attendanceRecords.length;
+        const presentDays = attendanceRecords.filter(r => r.status === 'present').length;
+        const lateDays = attendanceRecords.filter(r => r.status === 'late').length;
+        const absentDays = attendanceRecords.filter(r => r.status === 'absent').length;
+        const sickDays = attendanceRecords.filter(r => r.status === 'sick').length;
+        const permissionDays = attendanceRecords.filter(r => r.status === 'permission').length;
+
+        const percentage = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 100;
+
+        setAttendance({
+          total_days: totalDays,
+          present_days: presentDays,
+          absent_days: absentDays,
+          late_days: lateDays,
+          sick_days: sickDays,
+          permission_days: permissionDays,
+          percentage,
+          monthly_trend: []
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+      // Set default values if error
+      setAttendance({
         total_days: 20,
         present_days: 18,
         absent_days: 1,
@@ -177,44 +253,97 @@ export const EnhancedParentDashboard = () => {
         permission_days: 0,
         percentage: 90,
         monthly_trend: []
-      };
-
-      setAttendance(mockAttendance);
-    } catch (error) {
-      console.error('Error fetching attendance data:', error);
+      });
     }
   };
 
   const fetchDisciplineData = async () => {
+    if (!studentData?.id) return;
+
     try {
-      // Mock discipline data for now
-      const mockDiscipline: DisciplineData = {
+      // Get discipline points
+      const { data: disciplinePoints } = await supabase
+        .from('student_discipline_points')
+        .select('*')
+        .eq('student_id', studentData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Get recent violations
+      const { data: violations } = await supabase
+        .from('student_violations')
+        .select(`
+          id,
+          violation_date,
+          point_deduction,
+          description,
+          violation_types!inner (
+            name
+          )
+        `)
+        .eq('student_id', studentData.id)
+        .eq('status', 'active')
+        .order('violation_date', { ascending: false })
+        .limit(5);
+
+      // Get recent achievements
+      const { data: achievements } = await supabase
+        .from('student_achievements')
+        .select(`
+          id,
+          achievement_date,
+          point_reward,
+          description,
+          achievement_types!inner (
+            name,
+            level
+          )
+        `)
+        .eq('student_id', studentData.id)
+        .eq('status', 'verified')
+        .order('achievement_date', { ascending: false })
+        .limit(5);
+
+      const currentPoints = disciplinePoints?.final_score || 100;
+      const totalViolations = violations?.length || 0;
+      const totalAchievements = achievements?.length || 0;
+      const status = disciplinePoints?.discipline_status || 'good';
+
+      const recentViolations = violations?.map(v => ({
+        id: v.id,
+        violation_type: v.violation_types.name,
+        date: v.violation_date,
+        points: v.point_deduction
+      })) || [];
+
+      const recentAchievements = achievements?.map(a => ({
+        id: a.id,
+        achievement_type: a.achievement_types.name,
+        date: a.achievement_date,
+        points: a.point_reward,
+        level: a.achievement_types.level
+      })) || [];
+
+      setDiscipline({
+        current_points: currentPoints,
+        total_violations: totalViolations,
+        total_achievements: totalAchievements,
+        status: status as 'excellent' | 'good' | 'warning' | 'probation' | 'critical',
+        recent_violations: recentViolations,
+        recent_achievements: recentAchievements
+      });
+    } catch (error) {
+      console.error('Error fetching discipline data:', error);
+      // Set default values if error
+      setDiscipline({
         current_points: 95,
         total_violations: 1,
         total_achievements: 2,
         status: 'good',
-        recent_violations: [
-          {
-            id: 'v1',
-            violation_type: 'Terlambat',
-            date: '2024-07-01',
-            points: 5
-          }
-        ],
-        recent_achievements: [
-          {
-            id: 'a1',
-            achievement_type: 'Juara Lomba Programming',
-            date: '2024-06-15',
-            points: 10,
-            level: 'Sekolah'
-          }
-        ]
-      };
-
-      setDiscipline(mockDiscipline);
-    } catch (error) {
-      console.error('Error fetching discipline data:', error);
+        recent_violations: [],
+        recent_achievements: []
+      });
     }
   };
 
@@ -514,8 +643,12 @@ export const EnhancedParentDashboard = () => {
           <ParentNotificationCenter />
         </TabsContent>
 
+        <TabsContent value="communication">
+          <ParentCommunicationHub />
+        </TabsContent>
+
         {/* Placeholder for other tabs */}
-        {['attendance', 'discipline', 'achievements', 'activities', 'communication'].map((tab) => (
+        {['attendance', 'discipline', 'achievements', 'activities'].map((tab) => (
           <TabsContent key={tab} value={tab}>
             <Card>
               <CardContent className="flex items-center justify-center h-32">
