@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,20 +66,19 @@ export const EnhancedCounselingBooking = () => {
         .from('counseling_schedules')
         .select(`
           *,
-          counselor:profiles(full_name)
+          profiles!counseling_schedules_counselor_id_fkey(full_name)
         `)
         .eq('is_active', true);
 
       if (error) throw error;
       
-      // Type guard to ensure counselor data is properly structured
-      const validData = data?.filter(schedule => 
-        schedule.counselor && 
-        typeof schedule.counselor === 'object' && 
-        'full_name' in schedule.counselor
-      ) as CounselorSchedule[] || [];
+      // Transform the data to match our interface
+      const schedulesWithCounselor = data?.map(schedule => ({
+        ...schedule,
+        counselor: schedule.profiles ? { full_name: schedule.profiles.full_name } : null
+      })) || [];
       
-      setCounselorSchedules(validData);
+      setCounselorSchedules(schedulesWithCounselor);
     } catch (error) {
       console.error('Error fetching counselor schedules:', error);
       setCounselorSchedules([]);
