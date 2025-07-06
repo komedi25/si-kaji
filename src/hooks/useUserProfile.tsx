@@ -82,14 +82,24 @@ export function useUserProfile() {
     return result;
   };
 
-  const findStudentByEmail = async (email: string) => {
-    const { data } = await supabase
-      .from('students')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-    
-    return data;
+  const findStudentByEmail = async (email: string): Promise<any | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error finding student by email:', error);
+        return null;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Exception in findStudentByEmail:', err);
+      return null;
+    }
   };
 
   const createNewStudent = async (userId: string, fullName: string, email: string) => {
