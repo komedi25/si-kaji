@@ -38,8 +38,8 @@ export interface StudentData {
   email?: string | null;
 }
 
-// Separate interface for database row to avoid circular references
-interface StudentDatabaseRow {
+// Simple interface for database row to avoid type complexity
+interface StudentRow {
   id: string;
   user_id: string | null;
   nis: string;
@@ -63,8 +63,8 @@ interface StudentDatabaseRow {
   email?: string | null;
 }
 
-// Helper function to convert database row to StudentData
-const convertToStudentData = (row: StudentDatabaseRow): StudentData => {
+// Helper function to safely convert database row to StudentData
+const convertRowToStudentData = (row: StudentRow): StudentData => {
   return {
     ...row,
     gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L',
@@ -123,7 +123,7 @@ export function useUserProfile() {
 
       if (existingStudent) {
         console.log('Found existing linked student:', existingStudent);
-        return convertToStudentData(existingStudent);
+        return convertRowToStudentData(existingStudent as StudentRow);
       }
 
       // 2. Look for student by email (unlinked)
@@ -153,7 +153,10 @@ export function useUserProfile() {
         }
 
         console.log('Successfully linked student to user');
-        return convertToStudentData({ ...studentByEmail, user_id: userId });
+        return convertRowToStudentData({ 
+          ...(studentByEmail as StudentRow), 
+          user_id: userId 
+        });
       }
 
       // 3. Create new student record
@@ -180,7 +183,7 @@ export function useUserProfile() {
       }
 
       console.log('Created new student:', newStudent);
-      return convertToStudentData(newStudent);
+      return convertRowToStudentData(newStudent as StudentRow);
 
     } catch (error) {
       console.error('Error in findOrCreateStudentRecord:', error);
