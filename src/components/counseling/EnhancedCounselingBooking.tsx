@@ -62,21 +62,29 @@ export const EnhancedCounselingBooking = () => {
 
   const fetchCounselorSchedules = async () => {
     try {
-      const { data, error } = await supabase
+      // First, get the schedules
+      const { data: schedules, error: schedulesError } = await supabase
         .from('counseling_schedules')
-        .select(`
-          *,
-          profiles!counseling_schedules_counselor_id_fkey(full_name)
-        `)
+        .select('*')
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (schedulesError) throw schedulesError;
+
+      // Then, for each schedule, get the counselor info
+      const schedulesWithCounselor: CounselorSchedule[] = [];
       
-      // Transform the data to match our interface
-      const schedulesWithCounselor = data?.map(schedule => ({
-        ...schedule,
-        counselor: schedule.profiles ? { full_name: schedule.profiles.full_name } : null
-      })) || [];
+      for (const schedule of schedules || []) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', schedule.counselor_id)
+          .single();
+
+        schedulesWithCounselor.push({
+          ...schedule,
+          counselor: profile ? { full_name: profile.full_name } : null
+        });
+      }
       
       setCounselorSchedules(schedulesWithCounselor);
     } catch (error) {
