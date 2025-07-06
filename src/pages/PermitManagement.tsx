@@ -1,29 +1,42 @@
 
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { EnhancedStudentPermitForm } from '@/components/student/EnhancedStudentPermitForm';
-import { PermitApproval } from '@/components/permits/PermitApproval';
-import PermitReport from '@/components/permits/PermitReport';
+import { EnhancedPermitForm } from '@/components/permits/EnhancedPermitForm';
+import { EnhancedPermitApproval } from '@/components/permits/EnhancedPermitApproval';
+import { StudentPermitManagement } from '@/components/student/StudentPermitManagement';
 import { useAuth } from '@/hooks/useAuth';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const PermitManagement = () => {
   const { hasRole } = useAuth();
 
   const renderContent = () => {
-    // If user is a student, show enhanced permit form
+    // If user is a student, show student permit management
     if (hasRole('siswa')) {
       return (
-        <div className="max-w-2xl mx-auto">
-          <EnhancedStudentPermitForm />
-        </div>
+        <Tabs defaultValue="new-permit" className="w-full">
+          <TabsList>
+            <TabsTrigger value="new-permit">Ajukan Izin</TabsTrigger>
+            <TabsTrigger value="history">Riwayat Izin</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="new-permit">
+            <div className="max-w-4xl mx-auto">
+              <EnhancedPermitForm />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="history">
+            <StudentPermitManagement />
+          </TabsContent>
+        </Tabs>
       );
     }
 
-    // For admin and teachers, show the management interface
+    // For teachers and admin, show approval interface
     return (
       <div className="space-y-6">
-        <PermitApproval />
-        <PermitReport />
+        <EnhancedPermitApproval />
       </div>
     );
   };
@@ -33,12 +46,12 @@ const PermitManagement = () => {
       <div className="space-y-4 md:space-y-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            {hasRole('siswa') ? 'Perizinan Saya' : 'Manajemen Perizinan'}
+            {hasRole('siswa') ? 'Perizinan Siswa' : 'Manajemen Perizinan'}
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             {hasRole('siswa') 
-              ? 'Ajukan permohonan izin dengan mudah - termasuk kegiatan setelah jam sekolah'
-              : 'Kelola permohonan izin siswa dan proses persetujuan'
+              ? 'Ajukan permohonan izin dengan mudah dan pantau status persetujuan'
+              : 'Kelola permohonan izin siswa dengan workflow persetujuan bertingkat'
             }
           </p>
         </div>

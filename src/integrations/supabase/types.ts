@@ -1562,6 +1562,53 @@ export type Database = {
           },
         ]
       }
+      permit_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          notification_type: string
+          permit_id: string
+          read_at: string | null
+          recipient_id: string
+          recipient_role: string
+          sent_at: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          notification_type: string
+          permit_id: string
+          read_at?: string | null
+          recipient_id: string
+          recipient_role: string
+          sent_at?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          notification_type?: string
+          permit_id?: string
+          read_at?: string | null
+          recipient_id?: string
+          recipient_role?: string
+          sent_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_notifications_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "student_permits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -2228,55 +2275,94 @@ export type Database = {
       }
       student_permits: {
         Row: {
+          activity_location: string | null
           approval_letter_url: string | null
+          approval_workflow: Json | null
           created_at: string
+          current_approval_stage: number | null
+          dispensation_letter_url: string | null
+          emergency_contact: string | null
           end_date: string
+          end_time: string | null
+          final_approver_id: string | null
           id: string
+          parent_approval: boolean | null
+          parent_contact: string | null
+          permit_category: string | null
           permit_type: string
+          qr_code_url: string | null
           reason: string
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           start_date: string
+          start_time: string | null
           status: string
           student_id: string
           submitted_at: string
           supporting_document_url: string | null
           updated_at: string
+          urgency_level: string | null
         }
         Insert: {
+          activity_location?: string | null
           approval_letter_url?: string | null
+          approval_workflow?: Json | null
           created_at?: string
+          current_approval_stage?: number | null
+          dispensation_letter_url?: string | null
+          emergency_contact?: string | null
           end_date: string
+          end_time?: string | null
+          final_approver_id?: string | null
           id?: string
+          parent_approval?: boolean | null
+          parent_contact?: string | null
+          permit_category?: string | null
           permit_type: string
+          qr_code_url?: string | null
           reason: string
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           start_date: string
+          start_time?: string | null
           status?: string
           student_id: string
           submitted_at?: string
           supporting_document_url?: string | null
           updated_at?: string
+          urgency_level?: string | null
         }
         Update: {
+          activity_location?: string | null
           approval_letter_url?: string | null
+          approval_workflow?: Json | null
           created_at?: string
+          current_approval_stage?: number | null
+          dispensation_letter_url?: string | null
+          emergency_contact?: string | null
           end_date?: string
+          end_time?: string | null
+          final_approver_id?: string | null
           id?: string
+          parent_approval?: boolean | null
+          parent_contact?: string | null
+          permit_category?: string | null
           permit_type?: string
+          qr_code_url?: string | null
           reason?: string
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           start_date?: string
+          start_time?: string | null
           status?: string
           student_id?: string
           submitted_at?: string
           supporting_document_url?: string | null
           updated_at?: string
+          urgency_level?: string | null
         }
         Relationships: [
           {
@@ -2741,6 +2827,10 @@ export type Database = {
         Args: { _user_id: string; _permission_name: string }
         Returns: boolean
       }
+      initialize_permit_workflow: {
+        Args: { _permit_id: string }
+        Returns: undefined
+      }
       is_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -2790,6 +2880,15 @@ export type Database = {
         Args: {
           _request_id: string
           _processor_id: string
+          _status: string
+          _notes?: string
+        }
+        Returns: boolean
+      }
+      process_permit_approval: {
+        Args: {
+          _permit_id: string
+          _approver_id: string
           _status: string
           _notes?: string
         }
