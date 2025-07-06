@@ -4,10 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
-import { EnrollmentRequest } from './types';
+
+// Simple local interface to avoid type recursion
+interface EnrollmentRequestData {
+  id: string;
+  student_id: string;
+  student_name: string;
+  student_nis: string;
+  student_class?: string;
+  extracurricular_name: string;
+  requested_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
 
 interface EnrollmentRequestsListProps {
-  requests: EnrollmentRequest[];
+  requests: EnrollmentRequestData[];
   onApprove: (requestId: string, approved: boolean) => void;
 }
 

@@ -6,11 +6,39 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Clock, MapPin, User, Plus, Eye } from 'lucide-react';
-import { ExtracurricularDetails, StudentOption } from './types';
+
+// Simple local interfaces for props to avoid type recursion
+interface ExtracurricularCardData {
+  id: string;
+  name: string;
+  description?: string;
+  schedule_day?: string;
+  schedule_time?: string;
+  location?: string;
+  max_participants?: number;
+  current_participants: number;
+  enrollments: EnrollmentData[];
+}
+
+interface EnrollmentData {
+  id: string;
+  student_name: string;
+  student_nis: string;
+  student_class?: string;
+  enrollment_date: string;
+  status: string;
+}
+
+interface StudentData {
+  id: string;
+  full_name: string;
+  nis: string;
+  class_name?: string;
+}
 
 interface ExtracurricularCardProps {
-  extracurricular: ExtracurricularDetails;
-  students: StudentOption[];
+  extracurricular: ExtracurricularCardData;
+  students: StudentData[];
   selectedStudent: string;
   onStudentSelect: (studentId: string) => void;
   onEnroll: (extracurricularId: string) => void;
@@ -56,13 +84,6 @@ export const ExtracurricularCard: React.FC<ExtracurricularCardProps> = ({
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               <span>{extracurricular.location}</span>
-            </div>
-          )}
-
-          {extracurricular.coach_name && (
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              <span>{extracurricular.coach_name}</span>
             </div>
           )}
         </div>
