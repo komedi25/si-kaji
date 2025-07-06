@@ -323,75 +323,79 @@ export const StudentDashboard = () => {
         {/* Attendance Tab */}
         <TabsContent value="attendance" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                   <TrendingUp className="h-4 w-4 md:h-5 md:w-5" />
                   Tren Kehadiran Mingguan
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 md:p-6">
-                <ChartContainer config={chartConfig} className="h-64 md:h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart 
-                      data={attendanceStats?.weeklyData || []}
-                      margin={{ 
-                        top: 10, 
-                        right: 10, 
-                        left: 0, 
-                        bottom: 0 
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis 
-                        dataKey="day" 
-                        tick={{ fontSize: 10 }}
-                        tickLine={{ stroke: '#cbd5e1' }}
-                        axisLine={{ stroke: '#cbd5e1' }}
-                        interval={0}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 10 }}
-                        tickLine={{ stroke: '#cbd5e1' }}
-                        axisLine={{ stroke: '#cbd5e1' }}
-                        width={30}
-                      />
-                      <ChartTooltip 
-                        content={<ChartTooltipContent />}
-                        contentStyle={{
-                          fontSize: '12px',
-                          padding: '8px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px'
+              <CardContent className="p-0">
+                <div className="w-full overflow-hidden">
+                  <ChartContainer config={chartConfig} className="h-64 md:h-80 w-full min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart 
+                        data={attendanceStats?.weeklyData || []}
+                        margin={{ 
+                          top: 20, 
+                          right: 20, 
+                          left: 20, 
+                          bottom: 20 
                         }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="present" 
-                        stackId="1"
-                        stroke="#10b981" 
-                        fill="#10b981" 
-                        fillOpacity={0.6}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="late" 
-                        stackId="1"
-                        stroke="#f59e0b" 
-                        fill="#f59e0b" 
-                        fillOpacity={0.6}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="absent" 
-                        stackId="1"
-                        stroke="#ef4444" 
-                        fill="#ef4444" 
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                      >
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis 
+                          dataKey="day" 
+                          tick={{ fontSize: 10 }}
+                          tickLine={{ stroke: '#cbd5e1' }}
+                          axisLine={{ stroke: '#cbd5e1' }}
+                          interval={0}
+                          height={60}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 10 }}
+                          tickLine={{ stroke: '#cbd5e1' }}
+                          axisLine={{ stroke: '#cbd5e1' }}
+                          width={40}
+                        />
+                        <ChartTooltip 
+                          content={<ChartTooltipContent />}
+                          contentStyle={{
+                            fontSize: '12px',
+                            padding: '8px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            maxWidth: '200px'
+                          }}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="present" 
+                          stackId="1"
+                          stroke="#10b981" 
+                          fill="#10b981" 
+                          fillOpacity={0.6}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="late" 
+                          stackId="1"
+                          stroke="#f59e0b" 
+                          fill="#f59e0b" 
+                          fillOpacity={0.6}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="absent" 
+                          stackId="1"
+                          stroke="#ef4444" 
+                          fill="#ef4444" 
+                          fillOpacity={0.6}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
               </CardContent>
             </Card>
 
