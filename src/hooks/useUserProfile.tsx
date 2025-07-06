@@ -105,18 +105,27 @@ export function useUserProfile() {
         .eq('id', currentUser.id)
         .single();
 
+      let currentProfile: UserProfile;
+
       if (profileError) {
         console.error('Profile error:', profileError);
         
         // If profile doesn't exist, try to create one
         if (profileError.code === 'PGRST116') {
+          const newProfileData = {
+            id: currentUser.id,
+            role: 'siswa',
+            full_name: currentUser.email || 'Unknown User',
+            student_id: null,
+            teacher_id: null,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
-            .insert({
-              id: currentUser.id,
-              role: 'siswa',
-              full_name: currentUser.email || 'Unknown User'
-            })
+            .insert(newProfileData)
             .select()
             .single();
 
@@ -126,19 +135,20 @@ export function useUserProfile() {
             return;
           }
 
-          setProfile(newProfile as UserProfile);
+          currentProfile = newProfile as UserProfile;
         } else {
           setError('Profil tidak ditemukan. Hubungi admin untuk bantuan.');
           setIsLoading(false);
           return;
         }
       } else {
-        setProfile(profileData as UserProfile);
+        currentProfile = profileData as UserProfile;
       }
 
+      setProfile(currentProfile);
+
       // 3. If role is 'siswa', get or create student data
-      const currentProfile = profileData || profile;
-      if (currentProfile?.role === 'siswa') {
+      if (currentProfile.role === 'siswa') {
         let studentDetails = null;
 
         if (currentProfile.student_id) {
@@ -173,17 +183,19 @@ export function useUserProfile() {
             studentDetails = studentByEmail;
           } else {
             // Create new student record
+            const newStudentData = {
+              user_id: currentUser.id,
+              full_name: currentProfile.full_name || currentUser.email || 'Siswa Baru',
+              nis: `AUTO${Date.now()}`, // Generate temporary NIS
+              gender: 'L' as const, // Default gender, can be updated later
+              status: 'active' as const,
+              admission_date: new Date().toISOString().split('T')[0],
+              email: currentUser.email
+            };
+
             const { data: newStudent, error: createStudentError } = await supabase
               .from('students')
-              .insert({
-                user_id: currentUser.id,
-                full_name: currentProfile.full_name || currentUser.email || 'Siswa Baru',
-                nis: `AUTO${Date.now()}`, // Generate temporary NIS
-                gender: 'L', // Default gender, can be updated later
-                status: 'active',
-                admission_date: new Date().toISOString().split('T')[0],
-                email: currentUser.email
-              })
+              .insert(newStudentData)
               .select()
               .single();
 
