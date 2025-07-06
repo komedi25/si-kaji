@@ -25,7 +25,7 @@ interface CounselorSchedule {
   max_sessions_per_slot: number;
   counselor: {
     full_name: string;
-  };
+  } | null;
 }
 
 interface ExistingBooking {
@@ -67,16 +67,23 @@ export const EnhancedCounselingBooking = () => {
         .from('counseling_schedules')
         .select(`
           *,
-          counselor:profiles!counseling_schedules_counselor_id_fkey (
-            full_name
-          )
+          counselor:profiles(full_name)
         `)
         .eq('is_active', true);
 
       if (error) throw error;
-      setCounselorSchedules(data || []);
+      
+      // Type guard to ensure counselor data is properly structured
+      const validData = data?.filter(schedule => 
+        schedule.counselor && 
+        typeof schedule.counselor === 'object' && 
+        'full_name' in schedule.counselor
+      ) as CounselorSchedule[] || [];
+      
+      setCounselorSchedules(validData);
     } catch (error) {
       console.error('Error fetching counselor schedules:', error);
+      setCounselorSchedules([]);
     }
   };
 
@@ -100,20 +107,28 @@ export const EnhancedCounselingBooking = () => {
       // Check existing bookings for this date and counselor
       const { data: bookings, error } = await supabase
         .from('counseling_bookings')
-        .select('requested_time, status')
+        .select('requested_date, requested_time, status')
         .eq('counselor_id', selectedCounselor)
         .eq('requested_date', format(selectedDate, 'yyyy-MM-dd'))
         .in('status', ['pending', 'confirmed']);
 
       if (error) throw error;
 
-      const bookedTimes = bookings?.map(b => b.requested_time) || [];
+      const validBookings: ExistingBooking[] = bookings?.map(booking => ({
+        requested_date: booking.requested_date,
+        requested_time: booking.requested_time,
+        status: booking.status
+      })) || [];
+
+      const bookedTimes = validBookings.map(b => b.requested_time);
       const availableSlots = slots.filter(slot => !bookedTimes.includes(slot));
       
       setAvailableSlots(availableSlots);
-      setExistingBookings(bookings || []);
+      setExistingBookings(validBookings);
     } catch (error) {
       console.error('Error fetching available slots:', error);
+      setAvailableSlots([]);
+      setExistingBookings([]);
     }
   };
 
@@ -209,10 +224,10 @@ export const EnhancedCounselingBooking = () => {
     
     const dayOfWeek = selectedDate.getDay();
     const counselors = counselorSchedules
-      .filter(schedule => schedule.day_of_week === dayOfWeek)
+      .filter(schedule => schedule.day_of_week === dayOfWeek && schedule.counselor)
       .map(schedule => ({
         id: schedule.counselor_id,
-        name: schedule.counselor.full_name,
+        name: schedule.counselor?.full_name || 'Unknown',
         schedule: `${schedule.start_time} - ${schedule.end_time}`
       }));
     
