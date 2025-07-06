@@ -38,6 +38,42 @@ export interface StudentData {
   email?: string | null;
 }
 
+// Separate interface for database row to avoid circular references
+interface StudentDatabaseRow {
+  id: string;
+  user_id: string | null;
+  nis: string;
+  nisn: string | null;
+  full_name: string;
+  gender: string;
+  birth_place: string | null;
+  birth_date: string | null;
+  religion: string | null;
+  address: string | null;
+  phone: string | null;
+  parent_name: string | null;
+  parent_phone: string | null;
+  parent_address: string | null;
+  admission_date: string;
+  graduation_date: string | null;
+  status: string;
+  photo_url: string | null;
+  created_at: string;
+  updated_at: string;
+  email?: string | null;
+}
+
+// Helper function to convert database row to StudentData
+const convertToStudentData = (row: StudentDatabaseRow): StudentData => {
+  return {
+    ...row,
+    gender: (row.gender === 'L' || row.gender === 'P') ? row.gender : 'L',
+    status: (['active', 'graduated', 'transferred', 'dropped'].includes(row.status)) 
+      ? row.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
+      : 'active'
+  };
+};
+
 export function useUserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -67,7 +103,7 @@ export function useUserProfile() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as UserProfile;
     } catch (err) {
       console.error('Error creating profile:', err);
       throw err;
@@ -78,7 +114,7 @@ export function useUserProfile() {
     try {
       console.log('Finding/creating student record for:', userId, userEmail);
       
-      // 1. Cari student yang sudah terhubung dengan user_id
+      // 1. Check for existing student linked to this user
       const { data: existingStudent, error: findError } = await supabase
         .from('students')
         .select('*')
@@ -92,16 +128,10 @@ export function useUserProfile() {
 
       if (existingStudent) {
         console.log('Found existing linked student:', existingStudent);
-        return {
-          ...existingStudent,
-          gender: (existingStudent.gender === 'L' || existingStudent.gender === 'P') ? existingStudent.gender : 'L',
-          status: (['active', 'graduated', 'transferred', 'dropped'].includes(existingStudent.status)) 
-            ? existingStudent.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
-            : 'active'
-        };
+        return convertToStudentData(existingStudent);
       }
 
-      // 2. Cari student berdasarkan email
+      // 2. Look for student by email (unlinked)
       const { data: studentByEmail, error: emailError } = await supabase
         .from('students')
         .select('*')
@@ -116,7 +146,7 @@ export function useUserProfile() {
       if (studentByEmail) {
         console.log('Found student by email, linking:', studentByEmail);
         
-        // Link student dengan user
+        // Link student to user
         const { error: linkError } = await supabase
           .from('students')
           .update({ user_id: userId })
@@ -128,17 +158,10 @@ export function useUserProfile() {
         }
 
         console.log('Successfully linked student to user');
-        return {
-          ...studentByEmail,
-          user_id: userId,
-          gender: (studentByEmail.gender === 'L' || studentByEmail.gender === 'P') ? studentByEmail.gender : 'L',
-          status: (['active', 'graduated', 'transferred', 'dropped'].includes(studentByEmail.status)) 
-            ? studentByEmail.status as 'active' | 'graduated' | 'transferred' | 'dropped' 
-            : 'active'
-        };
+        return convertToStudentData({ ...studentByEmail, user_id: userId });
       }
 
-      // 3. Buat student baru jika tidak ditemukan
+      // 3. Create new student record
       console.log('Creating new student record for:', userEmail);
       const newStudentData = {
         user_id: userId,
@@ -162,11 +185,7 @@ export function useUserProfile() {
       }
 
       console.log('Created new student:', newStudent);
-      return {
-        ...newStudent,
-        gender: 'L' as 'L' | 'P',
-        status: 'active' as 'active' | 'graduated' | 'transferred' | 'dropped'
-      };
+      return convertToStudentData(newStudent);
 
     } catch (error) {
       console.error('Error in findOrCreateStudentRecord:', error);
@@ -195,7 +214,7 @@ export function useUserProfile() {
       const currentUser = session.user;
       setUser(currentUser);
 
-      // Fetch atau create profile
+      // Fetch or create profile
       let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -205,25 +224,25 @@ export function useUserProfile() {
       let currentProfile: UserProfile;
 
       if (profileError?.code === 'PGRST116') {
-        // Profile tidak ada, buat baru
+        // Profile doesn't exist, create new one
         currentProfile = await createProfile(currentUser.id, currentUser.email || '');
       } else if (profileError) {
         setError('Error fetching profile');
         setIsLoading(false);
         return;
       } else {
-        currentProfile = profileData;
+        currentProfile = profileData as UserProfile;
       }
 
       setProfile(currentProfile);
 
-      // Jika role adalah siswa, pastikan data siswa tersedia
+      // If role is siswa, ensure student data is available
       if (currentProfile.role === 'siswa' && currentUser.email) {
         try {
           const studentRecord = await findOrCreateStudentRecord(currentUser.id, currentUser.email);
           setStudentData(studentRecord);
           
-          // Update profile dengan student_id jika belum ada
+          // Update profile with student_id if not set
           if (!currentProfile.student_id) {
             await supabase
               .from('profiles')

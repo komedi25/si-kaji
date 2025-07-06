@@ -17,6 +17,7 @@ export type AppRole =
 
 export interface UserProfile {
   id: string;
+  role: string; // Added the missing role property
   full_name: string;
   nip?: string;
   nis?: string;
