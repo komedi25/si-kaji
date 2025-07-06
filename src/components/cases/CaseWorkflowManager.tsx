@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { AppRole } from '@/types/auth';
 import { 
   Users, 
   Clock, 
@@ -52,6 +53,12 @@ interface CaseActivity {
   new_value: string | null;
   created_at: string;
   performed_by: string | null;
+}
+
+interface TeamMember {
+  user_id: string;
+  role: string;
+  full_name: string;
 }
 
 export const CaseWorkflowManager = () => {
@@ -111,20 +118,37 @@ export const CaseWorkflowManager = () => {
   const { data: teamMembers } = useQuery({
     queryKey: ['team-members'],
     queryFn: async () => {
-      const roles = ['tppk', 'p4gn', 'arps', 'guru_bk', 'waka_kesiswaan'];
+      const targetRoles: AppRole[] = ['tppk', 'p4gn', 'arps', 'guru_bk', 'waka_kesiswaan'];
       
-      const { data, error } = await supabase
+      // First get user roles
+      const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          profiles!inner(full_name)
-        `)
-        .in('role', roles)
+        .select('user_id, role')
+        .in('role', targetRoles)
         .eq('is_active', true);
 
-      if (error) throw error;
-      return data;
+      if (rolesError) throw rolesError;
+
+      // Then get profiles for these users
+      const userIds = userRoles.map(ur => ur.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Combine the data
+      const teamMembers: TeamMember[] = userRoles.map(ur => {
+        const profile = profiles.find(p => p.id === ur.user_id);
+        return {
+          user_id: ur.user_id,
+          role: ur.role,
+          full_name: profile?.full_name || 'Unknown User'
+        };
+      });
+
+      return teamMembers;
     }
   });
 
@@ -230,7 +254,7 @@ export const CaseWorkflowManager = () => {
     return false;
   };
 
-  if (!user || !hasRole(['admin', 'tppk', 'p4gn', 'arps'])) {
+  if (!user || !hasRole('admin') && !hasRole('tppk') && !hasRole('p4gn') && !hasRole('arps')) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-32">
@@ -395,7 +419,7 @@ export const CaseWorkflowManager = () => {
                                         <SelectContent>
                                           {teamMembers.map((member) => (
                                             <SelectItem key={member.user_id} value={member.user_id}>
-                                              {member.profiles.full_name} ({member.role.toUpperCase()})
+                                              {member.full_name} ({member.role.toUpperCase()})
                                             </SelectItem>
                                           ))}
                                         </SelectContent>
