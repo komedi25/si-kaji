@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -326,19 +325,46 @@ export const StudentDashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <TrendingUp className="h-4 w-4 md:h-5 md:w-5" />
                   Tren Kehadiran Mingguan
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-80">
+              <CardContent className="p-3 md:p-6">
+                <ChartContainer config={chartConfig} className="h-64 md:h-80 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={attendanceStats?.weeklyData || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                    <AreaChart 
+                      data={attendanceStats?.weeklyData || []}
+                      margin={{ 
+                        top: 10, 
+                        right: 10, 
+                        left: 0, 
+                        bottom: 0 
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis 
+                        dataKey="day" 
+                        tick={{ fontSize: 10 }}
+                        tickLine={{ stroke: '#cbd5e1' }}
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        interval={0}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 10 }}
+                        tickLine={{ stroke: '#cbd5e1' }}
+                        axisLine={{ stroke: '#cbd5e1' }}
+                        width={30}
+                      />
+                      <ChartTooltip 
+                        content={<ChartTooltipContent />}
+                        contentStyle={{
+                          fontSize: '12px',
+                          padding: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px'
+                        }}
+                      />
                       <Area 
                         type="monotone" 
                         dataKey="present" 
@@ -371,7 +397,7 @@ export const StudentDashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Ringkasan Kehadiran</CardTitle>
+                <CardTitle className="text-base md:text-lg">Ringkasan Kehadiran</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
@@ -386,13 +412,13 @@ export const StudentDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4 pt-4">
                   <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-600">
+                    <div className="text-xl md:text-2xl font-bold text-yellow-600">
                       {attendanceStats?.late || 0}
                     </div>
                     <div className="text-xs text-yellow-600">Terlambat</div>
                   </div>
                   <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-xl md:text-2xl font-bold text-red-600">
                       {attendanceStats?.absent || 0}
                     </div>
                     <div className="text-xs text-red-600">Tidak Hadir</div>

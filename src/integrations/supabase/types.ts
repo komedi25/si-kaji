@@ -926,6 +926,47 @@ export type Database = {
         }
         Relationships: []
       }
+      extracurricular_coaches: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          coach_id: string
+          created_at: string | null
+          extracurricular_id: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          coach_id: string
+          created_at?: string | null
+          extracurricular_id: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          coach_id?: string
+          created_at?: string | null
+          extracurricular_id?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracurricular_coaches_extracurricular_id_fkey"
+            columns: ["extracurricular_id"]
+            isOneToOne: false
+            referencedRelation: "extracurriculars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extracurricular_enrollments: {
         Row: {
           created_at: string
@@ -1524,35 +1565,55 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           created_at: string | null
           full_name: string
           id: string
           nip: string | null
           nis: string | null
           phone: string | null
+          role: string | null
+          student_id: string | null
+          teacher_id: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           full_name: string
           id: string
           nip?: string | null
           nis?: string | null
           phone?: string | null
+          role?: string | null
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
           nip?: string | null
           nis?: string | null
           phone?: string | null
+          role?: string | null
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_approvals: {
         Row: {
@@ -2312,6 +2373,7 @@ export type Database = {
           description: string | null
           id: string
           point_deduction: number
+          recorded_by: string | null
           reported_by: string | null
           resolution_notes: string | null
           resolved_at: string | null
@@ -2327,6 +2389,7 @@ export type Database = {
           description?: string | null
           id?: string
           point_deduction?: number
+          recorded_by?: string | null
           reported_by?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -2342,6 +2405,7 @@ export type Database = {
           description?: string | null
           id?: string
           point_deduction?: number
+          recorded_by?: string | null
           reported_by?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
@@ -2683,6 +2747,10 @@ export type Database = {
       }
       is_within_location_radius: {
         Args: { student_lat: number; student_lng: number; location_id: string }
+        Returns: boolean
+      }
+      link_profile_to_student: {
+        Args: { profile_id: string; student_identifier: string }
         Returns: boolean
       }
       log_activity: {
