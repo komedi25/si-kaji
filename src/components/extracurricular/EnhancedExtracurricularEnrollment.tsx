@@ -1,36 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ExtracurricularService, type ExtracurricularData, type StudentData } from './ExtracurricularService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Search } from 'lucide-react';
 import { ExtracurricularCard } from './ExtracurricularCard';
 import { EnrollmentRequestsList } from './EnrollmentRequestsList';
-
-// Simplified local interfaces to avoid type recursion
-interface SimpleExtracurricular {
-  id: string;
-  name: string;
-  description?: string;
-  schedule_day?: string;
-  schedule_time?: string;
-  location?: string;
-  max_participants?: number;
-  current_participants: number;
-  enrollments: SimpleEnrollment[];
-}
-
-interface SimpleEnrollment {
-  id: string;
-  student_name: string;
-  student_nis: string;
-  student_class?: string;
-  enrollment_date: string;
-  status: string;
-}
 
 interface SimpleEnrollmentRequest {
   id: string;
@@ -44,20 +22,13 @@ interface SimpleEnrollmentRequest {
   notes?: string;
 }
 
-interface SimpleStudent {
-  id: string;
-  full_name: string;
-  nis: string;
-  class_name?: string;
-}
-
 export const EnhancedExtracurricularEnrollment = () => {
   const { user, hasRole } = useAuth();
   const { toast } = useToast();
-  const [extracurriculars, setExtracurriculars] = useState<SimpleExtracurricular[]>([]);
+  const [extracurriculars, setExtracurriculars] = useState<ExtracurricularData[]>([]);
   const [enrollmentRequests, setEnrollmentRequests] = useState<SimpleEnrollmentRequest[]>([]);
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [students, setStudents] = useState<SimpleStudent[]>([]);
+  const [students, setStudents] = useState<StudentData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -73,55 +44,8 @@ export const EnhancedExtracurricularEnrollment = () => {
 
   const fetchExtracurriculars = async () => {
     try {
-      const { data, error } = await supabase
-        .from('extracurriculars')
-        .select(`
-          id,
-          name,
-          description,
-          schedule_day,
-          schedule_time,
-          location,
-          max_participants
-        `)
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      const extracurricularsWithEnrollments: SimpleExtracurricular[] = [];
-      
-      for (const extra of data || []) {
-        const { data: enrollments } = await supabase
-          .from('extracurricular_enrollments')
-          .select(`
-            id,
-            enrollment_date,
-            status,
-            students (
-              id,
-              full_name,
-              nis
-            )
-          `)
-          .eq('extracurricular_id', extra.id)
-          .eq('status', 'active');
-
-        const processedEnrollments: SimpleEnrollment[] = (enrollments || []).map(enrollment => ({
-          id: enrollment.id,
-          student_name: (enrollment.students as any)?.full_name || '',
-          student_nis: (enrollment.students as any)?.nis || '',
-          enrollment_date: enrollment.enrollment_date,
-          status: enrollment.status
-        }));
-
-        extracurricularsWithEnrollments.push({
-          ...extra,
-          current_participants: processedEnrollments.length,
-          enrollments: processedEnrollments
-        });
-      }
-
-      setExtracurriculars(extracurricularsWithEnrollments);
+      const data = await ExtracurricularService.fetchExtracurriculars();
+      setExtracurriculars(data);
     } catch (error) {
       console.error('Error fetching extracurriculars:', error);
       toast({
@@ -136,20 +60,11 @@ export const EnhancedExtracurricularEnrollment = () => {
 
   const fetchEnrollmentRequests = async () => {
     try {
-      const sampleRequests: SimpleEnrollmentRequest[] = [
-        {
-          id: '1',
-          student_id: 'std1',
-          student_name: 'Ahmad Rizki',
-          student_nis: '12345',
-          student_class: 'XI RPL 1',
-          extracurricular_name: 'Pramuka',
-          requested_at: new Date().toISOString(),
-          status: 'pending'
-        }
-      ];
+      // For now, we'll implement a simple pending requests system
+      // This could be expanded to have a separate enrollment_requests table
+      const requests: SimpleEnrollmentRequest[] = [];
       
-      setEnrollmentRequests(sampleRequests);
+      setEnrollmentRequests(requests);
     } catch (error) {
       console.error('Error fetching enrollment requests:', error);
     }
@@ -157,14 +72,8 @@ export const EnhancedExtracurricularEnrollment = () => {
 
   const fetchStudents = async () => {
     try {
-      // Mock data to avoid Supabase type recursion issue
-      const mockStudents: SimpleStudent[] = [
-        { id: '1', full_name: 'Ahmad Rizki', nis: '12345', class_name: 'XI RPL 1' },
-        { id: '2', full_name: 'Siti Aminah', nis: '12346', class_name: 'XI RPL 2' },
-        { id: '3', full_name: 'Budi Santoso', nis: '12347', class_name: 'XI TKJ 1' }
-      ];
-      
-      setStudents(mockStudents);
+      const data = await ExtracurricularService.fetchStudents();
+      setStudents(data);
     } catch (error) {
       console.error('Error fetching students:', error);
     }
@@ -181,15 +90,7 @@ export const EnhancedExtracurricularEnrollment = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('extracurricular_enrollments')
-        .insert({
-          student_id: selectedStudent,
-          extracurricular_id: extracurricularId,
-          status: 'active'
-        });
-
-      if (error) throw error;
+      await ExtracurricularService.enrollStudent(selectedStudent, extracurricularId);
 
       toast({
         title: "Berhasil",
