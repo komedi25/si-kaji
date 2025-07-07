@@ -1840,6 +1840,47 @@ export type Database = {
           },
         ]
       }
+      permit_qr_codes: {
+        Row: {
+          generated_at: string
+          id: string
+          is_active: boolean
+          last_verified_at: string | null
+          permit_id: string
+          qr_data: string
+          qr_url: string
+          verification_count: number
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          is_active?: boolean
+          last_verified_at?: string | null
+          permit_id: string
+          qr_data: string
+          qr_url: string
+          verification_count?: number
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          is_active?: boolean
+          last_verified_at?: string | null
+          permit_id?: string
+          qr_data?: string
+          qr_url?: string
+          verification_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_qr_codes_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "student_permits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -3152,6 +3193,10 @@ export type Database = {
           _channels?: string[]
         }
         Returns: string
+      }
+      verify_permit_qr: {
+        Args: { _permit_id: string }
+        Returns: boolean
       }
     }
     Enums: {
