@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CheckCircle, XCircle, Clock, FileText, User, Calendar, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { PermitLetterGenerator } from './PermitLetterGenerator';
 
 type PermitApprovalStatus = 'pending' | 'approved' | 'rejected' | 'skipped';
 
@@ -32,6 +33,7 @@ interface PermitApproval {
     activity_location?: string;
     emergency_contact?: string;
     current_approval_stage: number;
+    status?: string;
     student: {
       full_name: string;
       nis: string;
@@ -335,6 +337,22 @@ export const PermitApprovalWorkflow = () => {
                           Tolak
                         </Button>
                       </div>
+
+                      {/* Show letter generator for approved permits at final stage */}
+                      {approval.permit.status === 'approved' && (
+                        <PermitLetterGenerator
+                          permitId={approval.permit.id}
+                          permitData={{
+                            permit_type: approval.permit.permit_type,
+                            student_name: approval.permit.student.full_name,
+                            student_nis: approval.permit.student.nis,
+                            start_date: approval.permit.start_date,
+                            end_date: approval.permit.end_date,
+                            reason: approval.permit.reason,
+                            approved_at: new Date().toISOString()
+                          }}
+                        />
+                      )}
                     </div>
                   </CardContent>
                 </Card>

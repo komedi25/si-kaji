@@ -29,6 +29,7 @@ import HomeroomJournalManagement from '@/pages/HomeroomJournalManagement';
 import ParentPortal from '@/pages/ParentPortal';
 import AIManagement from '@/pages/AIManagement';
 import PermitManagement from '@/pages/PermitManagement';
+import PermitVerificationPage from '@/pages/PermitVerification';
 import CounselingManagement from '@/pages/CounselingManagement';
 
 // New Student-specific components
@@ -143,6 +144,10 @@ export function AppRoutes() {
           <PermitManagement />
         </ProtectedRoute>
       } />
+      
+      {/* Public permit verification */}
+      <Route path="/verify-permit" element={<PermitVerificationPage />} />
+      <Route path="/verify-permit/:permitId" element={<PermitVerificationPage />} />
       
       <Route path="/counseling" element={
         <ProtectedRoute requiredRoles={['admin', 'guru_bk', 'siswa']}>

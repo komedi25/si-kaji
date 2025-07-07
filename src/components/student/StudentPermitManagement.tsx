@@ -25,6 +25,7 @@ interface StudentPermit {
   review_notes?: string;
   supporting_document_url?: string;
   approval_letter_url?: string;
+  qr_code_url?: string;
 }
 
 export const StudentPermitManagement = () => {
@@ -195,15 +196,26 @@ export const StudentPermitManagement = () => {
                   </div>
                 )}
 
-                {permit.status === 'approved' && permit.approval_letter_url && (
+                {permit.status === 'approved' && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="text-green-700 text-sm">
-                      ✅ Izin disetujui! 
-                      <Button variant="link" className="p-0 h-auto text-green-600" asChild>
-                        <a href={permit.approval_letter_url} target="_blank" rel="noopener noreferrer">
-                          Download Surat Izin
-                        </a>
-                      </Button>
+                    <div className="text-green-700 text-sm mb-2">
+                      ✅ Izin disetujui! Dokumen resmi tersedia:
+                    </div>
+                    <div className="flex gap-2">
+                      {permit.approval_letter_url && (
+                        <Button variant="link" className="p-0 h-auto text-green-600" asChild>
+                          <a href={permit.approval_letter_url} target="_blank" rel="noopener noreferrer">
+                            📄 Download Surat Izin
+                          </a>
+                        </Button>
+                      )}
+                      {permit.qr_code_url && (
+                        <Button variant="link" className="p-0 h-auto text-green-600" asChild>
+                          <a href={permit.qr_code_url} target="_blank" rel="noopener noreferrer">
+                            📱 QR Code Verifikasi
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
