@@ -12,8 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnhancedCaseReportForm } from './EnhancedCaseReportForm';
 import { CaseWorkflowManager } from './CaseWorkflowManager';
 import { CaseTrackingDashboard } from './CaseTrackingDashboard';
+import { EnhancedCaseTrackingDashboard } from './EnhancedCaseTrackingDashboard';
 import { CaseDetails } from './CaseDetails';
 import { CaseTracker } from './CaseTracker';
+import { AutomatedCaseAssignment } from './AutomatedCaseAssignment';
+import { SecureAnonymousReporting } from './SecureAnonymousReporting';
 import { Search, Plus, Filter, BarChart3, Users, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -179,13 +182,13 @@ export const CaseManagement = () => {
 
         {hasManagementAccess && (
           <TabsContent value="dashboard">
-            <CaseTrackingDashboard />
+            <EnhancedCaseTrackingDashboard />
           </TabsContent>
         )}
 
         {hasManagementAccess && (
           <TabsContent value="workflow">
-            <CaseWorkflowManager />
+            <AutomatedCaseAssignment />
           </TabsContent>
         )}
 
@@ -318,11 +321,11 @@ export const CaseManagement = () => {
         )}
 
         <TabsContent value="report">
-          <EnhancedCaseReportForm />
+          <SecureAnonymousReporting />
         </TabsContent>
 
         <TabsContent value="track">
-          <CaseTrackingDashboard />
+          <EnhancedCaseTrackingDashboard />
         </TabsContent>
       </Tabs>
     </div>

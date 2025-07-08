@@ -529,6 +529,201 @@ export type Database = {
           },
         ]
       }
+      case_escalations: {
+        Row: {
+          automated: boolean
+          case_id: string
+          escalated_at: string
+          escalated_by: string | null
+          escalated_from: string | null
+          escalated_to: string
+          escalation_reason: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          automated?: boolean
+          case_id: string
+          escalated_at?: string
+          escalated_by?: string | null
+          escalated_from?: string | null
+          escalated_to: string
+          escalation_reason: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          automated?: boolean
+          case_id?: string
+          escalated_at?: string
+          escalated_by?: string | null
+          escalated_from?: string | null
+          escalated_to?: string
+          escalation_reason?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_escalations_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_escalations_escalated_by_fkey"
+            columns: ["escalated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_notifications: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          read_at: string | null
+          recipient_id: string | null
+          recipient_role: string | null
+          sent_at: string | null
+          title: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_role?: string | null
+          sent_at?: string | null
+          title: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_role?: string | null
+          sent_at?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_notifications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_timeline: {
+        Row: {
+          case_id: string
+          event_data: Json | null
+          event_date: string
+          event_type: string
+          id: string
+          notes: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          case_id: string
+          event_data?: Json | null
+          event_date?: string
+          event_type: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          case_id?: string
+          event_data?: Json | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_timeline_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "student_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_timeline_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_workflow_rules: {
+        Row: {
+          auto_assign_to: string | null
+          category: string | null
+          created_at: string
+          escalation_conditions: Json
+          escalation_to: string | null
+          id: string
+          is_active: boolean
+          max_response_hours: number | null
+          name: string
+          priority: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_assign_to?: string | null
+          category?: string | null
+          created_at?: string
+          escalation_conditions?: Json
+          escalation_to?: string | null
+          id?: string
+          is_active?: boolean
+          max_response_hours?: number | null
+          name: string
+          priority?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_assign_to?: string | null
+          category?: string | null
+          created_at?: string
+          escalation_conditions?: Json
+          escalation_to?: string | null
+          id?: string
+          is_active?: boolean
+          max_response_hours?: number | null
+          name?: string
+          priority?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       classes: {
         Row: {
           academic_year_id: string | null
@@ -3012,6 +3207,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_case_escalations: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_notification: {
         Args: {
           _user_id: string

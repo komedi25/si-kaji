@@ -183,16 +183,12 @@ export const ViolationReferralSystem = () => {
       // and create automatic referrals when thresholds are met
       
       for (const rule of rules.filter(r => r.is_active)) {
-        const { data: students } = await supabase
+        const { data: students } = await (supabase as any)
           .from('students')
           .select(`
             id,
             full_name,
-            nis,
-            violations:student_violations (
-              violation_date,
-              violation_types (name, category)
-            )
+            nis
           `)
           .eq('is_active', true);
 
