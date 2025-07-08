@@ -1917,6 +1917,127 @@ export type Database = {
           },
         ]
       }
+      parent_communications: {
+        Row: {
+          attachments: Json | null
+          created_at: string
+          id: string
+          message: string
+          parent_user_id: string
+          priority: string
+          read_at: string | null
+          recipient_id: string | null
+          recipient_type: string
+          replied_at: string | null
+          reply_message: string | null
+          status: string
+          student_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          message: string
+          parent_user_id: string
+          priority?: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_type: string
+          replied_at?: string | null
+          reply_message?: string | null
+          status?: string
+          student_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          message?: string
+          parent_user_id?: string
+          priority?: string
+          read_at?: string | null
+          recipient_id?: string | null
+          recipient_type?: string
+          replied_at?: string | null
+          reply_message?: string | null
+          status?: string
+          student_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_communications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          notification_type: string
+          parent_user_id: string
+          priority: string
+          read_at: string | null
+          reference_id: string | null
+          reference_table: string | null
+          student_id: string
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          notification_type: string
+          parent_user_id: string
+          priority?: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          student_id: string
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          notification_type?: string
+          parent_user_id?: string
+          priority?: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_table?: string | null
+          student_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           action: string
@@ -2841,6 +2962,62 @@ export type Database = {
           },
         ]
       }
+      student_progress_tracking: {
+        Row: {
+          academic_notes: string | null
+          achievement_count: number | null
+          attendance_percentage: number | null
+          behavioral_notes: string | null
+          created_at: string
+          discipline_score: number | null
+          id: string
+          monthly_summary: Json | null
+          semester_summary: Json | null
+          student_id: string
+          tracking_date: string
+          updated_at: string
+          violation_count: number | null
+        }
+        Insert: {
+          academic_notes?: string | null
+          achievement_count?: number | null
+          attendance_percentage?: number | null
+          behavioral_notes?: string | null
+          created_at?: string
+          discipline_score?: number | null
+          id?: string
+          monthly_summary?: Json | null
+          semester_summary?: Json | null
+          student_id: string
+          tracking_date?: string
+          updated_at?: string
+          violation_count?: number | null
+        }
+        Update: {
+          academic_notes?: string | null
+          achievement_count?: number | null
+          attendance_percentage?: number | null
+          behavioral_notes?: string | null
+          created_at?: string
+          discipline_score?: number | null
+          id?: string
+          monthly_summary?: Json | null
+          semester_summary?: Json | null
+          student_id?: string
+          tracking_date?: string
+          updated_at?: string
+          violation_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_progress_tracking_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_self_attendances: {
         Row: {
           attendance_date: string
@@ -3221,6 +3398,20 @@ export type Database = {
         }
         Returns: string
       }
+      create_parent_notification: {
+        Args: {
+          _student_id: string
+          _notification_type: string
+          _title: string
+          _message: string
+          _reference_id?: string
+          _reference_table?: string
+          _priority?: string
+          _action_url?: string
+          _metadata?: Json
+        }
+        Returns: undefined
+      }
       debug_user_schedule_permissions: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3392,6 +3583,10 @@ export type Database = {
           _channels?: string[]
         }
         Returns: string
+      }
+      update_student_progress_tracking: {
+        Args: { _student_id: string }
+        Returns: undefined
       }
       verify_permit_qr: {
         Args: { _permit_id: string }

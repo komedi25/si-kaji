@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ParentNotificationCenter } from './ParentNotificationCenter';
-import { ParentCommunicationHub } from './ParentCommunicationHub';
+import { RealTimeNotifications } from './RealTimeNotifications';
+import { StudentProgressMonitor } from './StudentProgressMonitor';
+import { EnhancedCommunicationHub } from './EnhancedCommunicationHub';
 import { 
   User, Award, AlertTriangle, Calendar, TrendingUp, Clock, 
   Phone, Users, Activity
@@ -83,6 +84,14 @@ export const EnhancedParentDashboard = () => {
   useEffect(() => {
     fetchAllData();
   }, [user]);
+
+  useEffect(() => {
+    // Re-fetch dependent data when student data changes
+    if (studentData?.id) {
+      fetchAttendanceData();
+      fetchDisciplineData();
+    }
+  }, [studentData]);
 
   const fetchAllData = async () => {
     if (!user?.id) return;
@@ -533,7 +542,14 @@ export const EnhancedParentDashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Real-time Notifications Widget */}
+            <Card>
+              <CardContent className="p-0">
+                <RealTimeNotifications isWidget={true} maxHeight="300px" />
+              </CardContent>
+            </Card>
+
             {/* Attendance Overview */}
             <Card>
               <CardHeader>
@@ -648,15 +664,19 @@ export const EnhancedParentDashboard = () => {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <ParentNotificationCenter />
+          <RealTimeNotifications />
         </TabsContent>
 
         <TabsContent value="communication">
-          <ParentCommunicationHub />
+          <EnhancedCommunicationHub />
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <StudentProgressMonitor />
         </TabsContent>
 
         {/* Placeholder for other tabs */}
-        {['attendance', 'discipline', 'achievements', 'activities'].map((tab) => (
+        {['discipline', 'achievements', 'activities'].map((tab) => (
           <TabsContent key={tab} value={tab}>
             <Card>
               <CardContent className="flex items-center justify-center h-32">
