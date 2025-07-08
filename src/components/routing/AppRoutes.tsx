@@ -36,6 +36,7 @@ import CounselingManagement from '@/pages/CounselingManagement';
 // New Student-specific components
 import { StudentAchievementForm } from '@/components/achievements/StudentAchievementForm';
 import { StudentCaseReports } from '@/components/cases/StudentCaseReports';
+import MyProfile from '@/pages/MyProfile';
 
 export function AppRoutes() {
   const { user, loading } = useAuth();
@@ -183,6 +184,16 @@ export function AppRoutes() {
         <Route path="/document-management" element={
           <ProtectedRoute requiredRoles={['admin', 'siswa', 'wali_kelas', 'waka_kesiswaan']}>
             <DocumentManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/letter-request" element={
+          <ProtectedRoute requiredRoles={['siswa', 'admin', 'wali_kelas', 'waka_kesiswaan']}>
+            <DocumentManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/my-profile" element={
+          <ProtectedRoute requiredRoles={['siswa']}>
+            <MyProfile />
           </ProtectedRoute>
         } />
         <Route path="/enhanced-document-management" element={

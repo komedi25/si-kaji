@@ -99,7 +99,7 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
     },
     {
       title: 'Permohonan Surat',
-      href: '/documents?tab=student-letters',
+      href: '/letter-request',
       icon: FileCheck,
       requiredRoles: ['siswa'],
     },
@@ -136,8 +136,8 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
       requiredRoles: ['siswa'],
     },
     {
-      title: 'Data Pribadi',
-      href: '/user-management?tab=students&filter=my-profile',
+      title: 'Profil Saya',
+      href: '/my-profile',
       icon: User,
       requiredRoles: ['siswa'],
     },
