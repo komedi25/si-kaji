@@ -3574,15 +3574,39 @@ export type Database = {
         Returns: undefined
       }
       send_multi_channel_notification: {
+        Args:
+          | {
+              _user_id: string
+              _title: string
+              _message: string
+              _type?: string
+              _channels?: string[]
+              _data?: Json
+            }
+          | {
+              _user_id: string
+              _title: string
+              _message: string
+              _type?: string
+              _data?: Json
+              _channels?: string[]
+            }
+        Returns: string
+      }
+      send_notification_by_role: {
         Args: {
-          _user_id: string
+          _role: string
           _title: string
           _message: string
           _type?: string
-          _data?: Json
           _channels?: string[]
+          _data?: Json
         }
-        Returns: string
+        Returns: number
+      }
+      update_notification_queue_status: {
+        Args: { _queue_id: string; _status: string; _error_message?: string }
+        Returns: boolean
       }
       update_student_progress_tracking: {
         Args: { _student_id: string }

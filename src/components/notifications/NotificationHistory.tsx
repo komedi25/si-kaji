@@ -67,7 +67,7 @@ export const NotificationHistory = () => {
         .limit(50);
 
       if (error) throw error;
-      setNotifications(data || []);
+      setNotifications((data || []) as Notification[]);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
