@@ -67,7 +67,7 @@ export const DocumentWorkflowManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkflows(data || []);
+      setWorkflows((data as any) || []);
     } catch (error) {
       console.error('Error fetching workflows:', error);
     }
@@ -95,7 +95,7 @@ export const DocumentWorkflowManager = () => {
       const { data, error } = await supabase.rpc('approve_workflow_step', {
         _workflow_id: workflowId,
         _approver_id: user?.id,
-        _status: status,
+        _status: status as any,
         _comments: comments || null
       });
 
@@ -189,7 +189,7 @@ export const DocumentWorkflowManager = () => {
   };
 
   const canApprove = (workflow: WorkflowStep) => {
-    return hasRole(workflow.approver_role) && workflow.status === 'pending_review';
+    return hasRole(workflow.approver_role as any) && workflow.status === 'pending_review';
   };
 
   const getDocumentTitle = (documentId: string) => {

@@ -91,7 +91,7 @@ export const VersionControlManager: React.FC<VersionControlManagerProps> = ({
         .order('version_number', { ascending: false });
 
       if (error) throw error;
-      setVersions(data || []);
+      setVersions((data as any) || []);
     } catch (error) {
       console.error('Error fetching versions:', error);
     } finally {

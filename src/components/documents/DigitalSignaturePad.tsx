@@ -23,7 +23,7 @@ interface Signature {
   signature_position: any;
   profiles?: {
     full_name: string;
-  };
+  } | null;
 }
 
 interface Document {
@@ -85,7 +85,7 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
         .order('signature_timestamp', { ascending: false });
 
       if (error) throw error;
-      setSignatures(data || []);
+      setSignatures((data as any) || []);
     } catch (error) {
       console.error('Error fetching signatures:', error);
     }
