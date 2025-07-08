@@ -14,6 +14,7 @@ import DisciplinePointsManagement from '@/pages/DisciplinePointsManagement';
 import AttendanceManagement from '@/pages/AttendanceManagement';
 import CaseManagement from '@/pages/CaseManagement';
 import DocumentManagement from '@/pages/DocumentManagement';
+import EnhancedDocumentManagement from '@/pages/EnhancedDocumentManagement';
 import DocumentRepositoryManagement from '@/pages/DocumentRepositoryManagement';
 import NotificationManagement from '@/pages/NotificationManagement';
 import UserManagement from '@/pages/UserManagement';
@@ -179,17 +180,21 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/documents" element={
-        <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'siswa']}>
-          <DocumentManagement />
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/document-repository" element={
-        <ProtectedRoute requiredRoles={['admin', 'siswa']}>
-          <DocumentRepositoryManagement />
-        </ProtectedRoute>
-      } />
+        <Route path="/document-management" element={
+          <ProtectedRoute requiredRoles={['admin', 'siswa', 'wali_kelas', 'waka_kesiswaan']}>
+            <DocumentManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/enhanced-document-management" element={
+          <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'waka_kesiswaan']}>
+            <EnhancedDocumentManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/document-repository" element={
+          <ProtectedRoute requiredRoles={['admin', 'siswa']}>
+            <DocumentRepositoryManagement />
+          </ProtectedRoute>
+        } />
       
       <Route path="/notifications" element={
         <ProtectedRoute requiredRoles={['admin']}>

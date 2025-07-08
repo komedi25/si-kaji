@@ -1281,37 +1281,194 @@ export type Database = {
         }
         Relationships: []
       }
+      document_reviews: {
+        Row: {
+          annotations: Json | null
+          comments: string | null
+          created_at: string
+          document_id: string
+          id: string
+          review_type: string
+          reviewed_at: string | null
+          reviewer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          annotations?: Json | null
+          comments?: string | null
+          created_at?: string
+          document_id: string
+          id?: string
+          review_type?: string
+          reviewed_at?: string | null
+          reviewer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          annotations?: Json | null
+          comments?: string | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          review_type?: string
+          reviewed_at?: string | null
+          reviewer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_reviews_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signatures: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          signature_data: string | null
+          signature_position: Json | null
+          signature_timestamp: string
+          signer_id: string
+          signer_role: string
+          status: Database["public"]["Enums"]["signature_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          signature_data?: string | null
+          signature_position?: Json | null
+          signature_timestamp?: string
+          signer_id: string
+          signer_role: string
+          status?: Database["public"]["Enums"]["signature_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          signature_data?: string | null
+          signature_position?: Json | null
+          signature_timestamp?: string
+          signer_id?: string
+          signer_role?: string
+          status?: Database["public"]["Enums"]["signature_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_repository"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
+          change_type: string | null
           changes_description: string | null
           created_at: string
           document_id: string
           file_url: string
           id: string
+          is_major_version: boolean | null
+          parent_version_id: string | null
           uploaded_by: string | null
           version_number: number
         }
         Insert: {
+          change_type?: string | null
           changes_description?: string | null
           created_at?: string
           document_id: string
           file_url: string
           id?: string
+          is_major_version?: boolean | null
+          parent_version_id?: string | null
           uploaded_by?: string | null
           version_number: number
         }
         Update: {
+          change_type?: string | null
           changes_description?: string | null
           created_at?: string
           document_id?: string
           file_url?: string
           id?: string
+          is_major_version?: boolean | null
+          parent_version_id?: string | null
           uploaded_by?: string | null
           version_number?: number
         }
         Relationships: [
           {
             foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_repository"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_versions_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_workflows: {
+        Row: {
+          approved_at: string | null
+          approver_id: string | null
+          approver_role: string
+          comments: string | null
+          created_at: string
+          document_id: string
+          id: string
+          status: Database["public"]["Enums"]["document_workflow_status"]
+          updated_at: string
+          workflow_step: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role: string
+          comments?: string | null
+          created_at?: string
+          document_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["document_workflow_status"]
+          updated_at?: string
+          workflow_step?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approver_id?: string | null
+          approver_role?: string
+          comments?: string | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["document_workflow_status"]
+          updated_at?: string
+          workflow_step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_workflows_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "document_repository"
@@ -1577,6 +1734,57 @@ export type Database = {
             columns: ["journal_id"]
             isOneToOne: false
             referencedRelation: "homeroom_journals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      letter_generation_queue: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          generated_at: string | null
+          generation_data: Json | null
+          id: string
+          letter_request_id: string
+          pdf_url: string | null
+          status: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          generated_at?: string | null
+          generation_data?: Json | null
+          id?: string
+          letter_request_id: string
+          pdf_url?: string | null
+          status?: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          generated_at?: string | null
+          generation_data?: Json | null
+          id?: string
+          letter_request_id?: string
+          pdf_url?: string | null
+          status?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "letter_generation_queue_letter_request_id_fkey"
+            columns: ["letter_request_id"]
+            isOneToOne: false
+            referencedRelation: "letter_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "letter_generation_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "letter_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -3384,9 +3592,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_workflow_step: {
+        Args: {
+          _workflow_id: string
+          _approver_id: string
+          _status: Database["public"]["Enums"]["document_workflow_status"]
+          _comments?: string
+        }
+        Returns: boolean
+      }
       check_case_escalations: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      create_document_version: {
+        Args: {
+          _document_id: string
+          _file_url: string
+          _changes_description: string
+          _change_type?: string
+          _is_major_version?: boolean
+        }
+        Returns: string
+      }
+      create_document_workflow: {
+        Args: { _document_id: string; _workflow_steps: Json }
+        Returns: string
       }
       create_notification: {
         Args: {
@@ -3565,6 +3796,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      queue_letter_generation: {
+        Args: { _letter_request_id: string }
+        Returns: string
+      }
       recalculate_discipline_points: {
         Args: {
           _student_id: string
@@ -3651,6 +3886,13 @@ export type Database = {
         | "escalated"
         | "resolved"
         | "closed"
+      document_workflow_status:
+        | "draft"
+        | "pending_review"
+        | "approved"
+        | "rejected"
+        | "published"
+      signature_status: "pending" | "signed" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3814,6 +4056,14 @@ export const Constants = {
         "resolved",
         "closed",
       ],
+      document_workflow_status: [
+        "draft",
+        "pending_review",
+        "approved",
+        "rejected",
+        "published",
+      ],
+      signature_status: ["pending", "signed", "rejected"],
     },
   },
 } as const
