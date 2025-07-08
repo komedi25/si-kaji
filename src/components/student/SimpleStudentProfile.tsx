@@ -92,7 +92,6 @@ export const SimpleStudentProfile = () => {
         .update({
           full_name: formData.full_name,
           phone: formData.phone,
-          email: formData.email,
           address: formData.address,
           parent_name: formData.parent_name,
           parent_phone: formData.parent_phone,
