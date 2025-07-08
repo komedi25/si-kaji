@@ -283,9 +283,10 @@ export const ViolationReferralSystem = () => {
           student_id: studentId,
           counselor_id: user?.id,
           session_type: 'individual',
-          reason: 'Follow-up dari referral pelanggaran',
+          topic: 'Follow-up dari referral pelanggaran',
           status: 'scheduled',
-          session_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Tomorrow
+          session_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+          session_time: '08:00'
         });
 
       if (sessionError) throw sessionError;

@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertTriangle, Users, Clock, TrendingUp, FileText, Eye } from 'lucide-react';
 import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { id as localeId } from 'date-fns/locale';
 
 interface StudentProgress {
   student_id: string;
@@ -52,52 +52,53 @@ export const StudentProgressTracker = () => {
     try {
       setLoading(true);
       
-      // Complex query to get students with behavioral issues
-      const { data: studentsData, error } = await supabase
+      // Get students basic data first
+      const { data: studentsData, error } = await (supabase as any)
         .from('students')
-        .select(`
-          id,
-          full_name,
-          nis,
-          current_class:classes(name),
-          violations:student_violations(
-            id,
-            violation_date,
-            point_deduction,
-            status
-          ),
-          counseling_sessions(
-            id,
-            session_date,
-            status
-          ),
-          referrals:counseling_referrals(
-            id,
-            referral_type,
-            urgency_level,
-            status,
-            assigned_counselor,
-            created_at
-          )
-        `)
+        .select('id, full_name, nis')
         .eq('is_active', true);
 
       if (error) throw error;
 
-      // Process data to calculate risk levels and progress
-      const processedStudents = studentsData
-        ?.map(student => {
-          const activeViolations = student.violations?.filter(v => v.status === 'active') || [];
+      if (!studentsData) {
+        setStudents([]);
+        return;
+      }
+
+      // Process each student to calculate risk levels and progress
+      const processedStudents = await Promise.all(
+        studentsData.map(async (student) => {
+          // Get violations for this student
+          const { data: violations } = await supabase
+            .from('student_violations')
+            .select('violation_date, status')
+            .eq('student_id', student.id)
+            .eq('status', 'active');
+
+          const activeViolations = violations || [];
           const recentViolations = activeViolations.filter(v => 
             new Date(v.violation_date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
           );
-          
-          const sessions = student.counseling_sessions || [];
-          const lastSession = sessions.length > 0 
-            ? sessions.sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime())[0]
+
+          // Get counseling sessions for this student
+          const { data: sessions } = await supabase
+            .from('counseling_sessions')
+            .select('session_date, status')
+            .eq('student_id', student.id);
+
+          const counselingSessions = sessions || [];
+          const lastSession = counselingSessions.length > 0 
+            ? counselingSessions.sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime())[0]
             : null;
 
-          const activeReferrals = student.referrals?.filter(r => r.status === 'active') || [];
+          // Get referrals for this student
+          const { data: referrals } = await supabase
+            .from('counseling_referrals')
+            .select('referral_type, status, assigned_counselor')
+            .eq('student_id', student.id)
+            .eq('status', 'active');
+
+          const activeReferrals = referrals || [];
           
           // Calculate risk level
           let riskLevel = 'low';
@@ -113,7 +114,7 @@ export const StudentProgressTracker = () => {
           let progressStatus = 'stable';
           if (recentViolations.length > activeViolations.length / 2) {
             progressStatus = 'declining';
-          } else if (sessions.length > 0 && recentViolations.length === 0) {
+          } else if (counselingSessions.length > 0 && recentViolations.length === 0) {
             progressStatus = 'improving';
           }
 
@@ -121,9 +122,9 @@ export const StudentProgressTracker = () => {
           let nextAction = 'monitor';
           if (riskLevel === 'critical') {
             nextAction = 'immediate_intervention';
-          } else if (riskLevel === 'high' && sessions.length === 0) {
+          } else if (riskLevel === 'high' && counselingSessions.length === 0) {
             nextAction = 'schedule_counseling';
-          } else if (sessions.length > 0 && !lastSession) {
+          } else if (counselingSessions.length > 0 && !lastSession) {
             nextAction = 'follow_up';
           }
 
@@ -131,13 +132,11 @@ export const StudentProgressTracker = () => {
             student_id: student.id,
             student_name: student.full_name,
             student_nis: student.nis,
-            student_class: Array.isArray(student.current_class) 
-              ? (student.current_class[0] as any)?.name || 'Tidak ada kelas'
-              : (student.current_class as any)?.name || 'Tidak ada kelas',
+            student_class: 'Kelas tidak tersedia',
             risk_level: riskLevel,
             total_violations: activeViolations.length,
             recent_violations: recentViolations.length,
-            counseling_sessions: sessions.length,
+            counseling_sessions: counselingSessions.length,
             last_session: lastSession?.session_date || null,
             progress_status: progressStatus,
             next_action: nextAction,
@@ -145,6 +144,10 @@ export const StudentProgressTracker = () => {
             assigned_counselor: activeReferrals[0]?.assigned_counselor || ''
           };
         })
+      );
+
+      // Filter students based on criteria
+      const filteredStudents = processedStudents
         .filter(student => {
           // Filter out students with no issues unless showing all
           if (filter === 'all') return true;
@@ -163,9 +166,9 @@ export const StudentProgressTracker = () => {
           // Sort by risk level and recent activity
           const riskOrder = { critical: 4, high: 3, medium: 2, low: 1 };
           return riskOrder[b.risk_level as keyof typeof riskOrder] - riskOrder[a.risk_level as keyof typeof riskOrder];
-        }) || [];
+        });
 
-      setStudents(processedStudents);
+      setStudents(filteredStudents);
     } catch (error) {
       console.error('Error fetching problematic students:', error);
       toast({
@@ -407,7 +410,7 @@ export const StudentProgressTracker = () => {
 
                         <div className="text-sm text-gray-600 space-y-1">
                           {student.last_session && (
-                            <p>Sesi terakhir: {format(new Date(student.last_session), 'dd MMM yyyy', { locale: id })}</p>
+                            <p>Sesi terakhir: {format(new Date(student.last_session), 'dd MMM yyyy', { locale: localeId })}</p>
                           )}
                           {student.referral_source !== 'none' && (
                             <p>Sumber referral: {student.referral_source}</p>
@@ -476,7 +479,7 @@ export const StudentProgressTracker = () => {
             </div>
             
             <div className="mt-4 text-xs text-gray-500 text-center">
-              Data terakhir diperbarui: {format(new Date(progressMetrics.last_updated), 'dd MMM yyyy, HH:mm', { locale: id })}
+              Data terakhir diperbarui: {format(new Date(progressMetrics.last_updated), 'dd MMM yyyy, HH:mm', { locale: localeId })}
             </div>
           </CardContent>
         </Card>
