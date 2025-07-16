@@ -141,12 +141,12 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
       icon: User,
       requiredRoles: ['siswa'],
     },
-    // Admin & Staff Menu Items
+    // Admin & Staff Menu Items (only show for authorized roles)
     {
       title: 'Manajemen Pengguna',
       href: '/user-management',
       icon: Users,
-      requiredRoles: ['admin', 'wali_kelas', 'guru_bk'],
+      requiredRoles: ['admin'],
     },
     {
       title: 'Akademik',
@@ -548,6 +548,25 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
 
   const filteredItems = sidebarItems.filter(item => {
     if (!item.requiredRoles) return true;
+    
+    // Special filtering for TPPK role - only show relevant menus
+    if (hasRole('tppk') && !hasRole('admin')) {
+      const tppkRelevantMenus = [
+        'Dashboard',
+        'Presensi',
+        'Input Presensi',
+        'Laporan Presensi',
+        'Pelanggaran',
+        'Input Pelanggaran',
+        'Laporan Pelanggaran',
+        'Poin Disiplin',
+        'Manajemen Kasus'
+      ];
+      if (!tppkRelevantMenus.includes(item.title)) {
+        return false;
+      }
+    }
+    
     return item.requiredRoles.some(role => hasRole(role as any));
   });
 

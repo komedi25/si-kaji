@@ -8,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, AlertTriangle, AlertCircle, FileText } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, AlertCircle, FileText, QrCode } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { StudentSearchWithQR } from '@/components/common/StudentSearchWithQR';
+import { QRScanner } from '@/components/common/QRScanner';
 import { id } from 'date-fns/locale';
 
 interface ViolationType {
@@ -29,6 +30,7 @@ export const ViolationRecorder = () => {
   const [violationTypes, setViolationTypes] = useState<ViolationType[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
     violation_type_id: '',
@@ -142,6 +144,55 @@ export const ViolationRecorder = () => {
     }
   };
 
+  const handleQRScan = async (qrData: string) => {
+    try {
+      // Extract NIS from QR data
+      // Assuming QR format: "student_nis_12345" or just "12345"
+      const nis = qrData.includes('_') ? qrData.split('_').pop() : qrData;
+      
+      if (!nis) {
+        toast({
+          title: "QR Code Tidak Valid",
+          description: "QR code tidak mengandung data NIS yang valid",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Find student by NIS
+      const { data: student, error } = await supabase
+        .from('students')
+        .select('id, full_name, nis')
+        .eq('nis', nis)
+        .single();
+
+      if (error || !student) {
+        toast({
+          title: "Siswa Tidak Ditemukan",
+          description: `Tidak ada siswa dengan NIS: ${nis}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Set student in form
+      setFormData(prev => ({ ...prev, student_id: student.id }));
+      
+      toast({
+        title: "Berhasil",
+        description: `Siswa ${student.full_name} (${student.nis}) berhasil dipilih`,
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error processing QR scan:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memproses hasil scan QR code",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
       case 'ringan':
@@ -201,11 +252,22 @@ export const ViolationRecorder = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="student">Siswa *</Label>
-            <StudentSearchWithQR
-              value={formData.student_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}
-              placeholder="Cari siswa berdasarkan nama atau NIS"
-            />
+            <div className="space-y-2">
+              <StudentSearchWithQR
+                value={formData.student_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, student_id: value }))}
+                placeholder="Cari siswa berdasarkan nama atau NIS"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowQRScanner(true)}
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Scan QR Code Kartu Siswa
+              </Button>
+            </div>
           </div>
 
           <div>
@@ -311,6 +373,13 @@ export const ViolationRecorder = () => {
             {submitting ? 'Menyimpan...' : 'Catat Pelanggaran'}
           </Button>
         </form>
+
+        {/* QR Scanner Modal */}
+        <QRScanner
+          isOpen={showQRScanner}
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
       </CardContent>
     </Card>
   );

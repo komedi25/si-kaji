@@ -2,6 +2,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { StudentDashboard } from './StudentDashboard';
 import { HomeroomTeacherDashboard } from './HomeroomTeacherDashboard';
+import { TPPKDashboard } from './TPPKDashboard';
 import { RoleBasedStats } from './RoleBasedStats';
 import { DashboardCharts } from './DashboardCharts';
 import { RealtimeUpdates } from './RealtimeUpdates';
@@ -34,6 +35,11 @@ export const DashboardHome = () => {
   // Show specialized dashboard for students
   if (user?.roles?.includes('siswa')) {
     return <StudentDashboard />;
+  }
+
+  // Show specialized dashboard for TPPK
+  if (user?.roles?.includes('tppk')) {
+    return <TPPKDashboard />;
   }
 
   // Show specialized dashboard for homeroom teachers
