@@ -107,24 +107,23 @@ export const AddUserDialog: React.FC<AddUserDialogProps> = ({
         await supabase.auth.setSession(currentSession.session);
       }
 
-      // Create profile with the actual user ID
+      // Update the profile created by trigger with additional data
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: authData.user.id,
-          full_name: formData.full_name,
+        .update({
           nip: formData.role === 'siswa' ? null : formData.nip || null,
           nis: formData.role === 'siswa' ? formData.nis || null : null,
           phone: formData.phone || null,
           address: formData.address || null
-        });
+        })
+        .eq('id', authData.user.id);
 
       if (profileError) {
-        console.error('Profile error:', profileError);
+        console.error('Profile update error:', profileError);
         throw profileError;
       }
 
-      console.log('Profile created successfully');
+      console.log('Profile updated successfully');
 
       // Create user role - with explicit type casting
       const { error: roleError } = await supabase
