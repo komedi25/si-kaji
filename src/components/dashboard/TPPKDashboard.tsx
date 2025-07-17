@@ -269,7 +269,7 @@ export const TPPKDashboard = () => {
 
           {/* Violations Tab */}
           <TabsContent value="violations" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm md:text-base flex items-center gap-2">
@@ -278,23 +278,41 @@ export const TPPKDashboard = () => {
                   </CardTitle>
                   <CardDescription className="text-xs md:text-sm">7 hari terakhir</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ChartContainer config={chartConfig} className="h-48 md:h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={violationStats?.weeklyData || []}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" className="text-xs" />
-                        <YAxis className="text-xs" />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Line 
-                          type="monotone" 
-                          dataKey="count" 
-                          stroke="#ef4444" 
-                          strokeWidth={2}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                <CardContent className="p-2 sm:p-4 md:p-6">
+                  <div className="w-full overflow-hidden">
+                    <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart 
+                          data={violationStats?.weeklyData || []}
+                          margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis 
+                            dataKey="date" 
+                            tick={{ fontSize: 11 }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 11 }}
+                            width={30}
+                          />
+                          <ChartTooltip 
+                            content={<ChartTooltipContent />}
+                            labelStyle={{ fontSize: '12px' }}
+                            contentStyle={{ fontSize: '12px' }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="count" 
+                            stroke="#ef4444" 
+                            strokeWidth={2}
+                            dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
+                            activeDot={{ r: 5, stroke: '#ef4444', strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -303,29 +321,33 @@ export const TPPKDashboard = () => {
                   <CardTitle className="text-sm md:text-base">Kategori Pelanggaran</CardTitle>
                   <CardDescription className="text-xs md:text-sm">30 hari terakhir</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ChartContainer config={chartConfig} className="h-48 md:h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={violationChartData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ category, count }) => `${category}: ${count}`}
-                          outerRadius={60}
-                          fill="#8884d8"
-                          dataKey="count"
-                          className="text-xs md:text-sm"
-                        >
-                          {violationChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                <CardContent className="p-2 sm:p-4 md:p-6">
+                  <div className="w-full overflow-hidden">
+                    <ChartContainer config={chartConfig} className="h-[200px] sm:h-[250px] md:h-[300px] lg:h-[350px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={violationChartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ category, count }) => `${category}: ${count}`}
+                            outerRadius="70%"
+                            fill="#8884d8"
+                            dataKey="count"
+                          >
+                            {violationChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Pie>
+                          <ChartTooltip 
+                            content={<ChartTooltipContent />}
+                            contentStyle={{ fontSize: '12px' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
                 </CardContent>
               </Card>
             </div>
