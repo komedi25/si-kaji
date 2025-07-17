@@ -114,7 +114,7 @@ export const HomeroomTeacherDashboard = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('status, attendance_date, student_id')
         .eq('class_id', classData.id)
         .gte('attendance_date', thirtyDaysAgo.toISOString().split('T')[0])

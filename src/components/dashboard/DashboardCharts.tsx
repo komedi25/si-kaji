@@ -111,7 +111,7 @@ export const DashboardCharts = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('attendance_date, status')
         .gte('attendance_date', thirtyDaysAgo.toISOString().split('T')[0])
         .order('attendance_date', { ascending: true });

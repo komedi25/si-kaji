@@ -80,7 +80,7 @@ export const PredictiveAnalytics = () => {
 
       // Get attendance patterns
       const { data: attendanceData } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select(`
           attendance_date,
           status,

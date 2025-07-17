@@ -110,7 +110,7 @@ export function AttendanceRecorder() {
 
     try {
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('student_id, status')
         .eq('class_id', selectedClass)
         .eq('attendance_date', selectedDate);
@@ -162,14 +162,14 @@ export function AttendanceRecorder() {
 
       // Delete existing records for this date and class
       await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .delete()
         .eq('class_id', selectedClass)
         .eq('attendance_date', selectedDate);
 
       // Insert new records
       const { error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .insert(attendanceRecords);
 
       if (error) throw error;

@@ -44,7 +44,7 @@ export const RoleBasedStats = () => {
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('status')
         .eq('attendance_date', today);
       

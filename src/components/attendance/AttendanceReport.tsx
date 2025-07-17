@@ -94,7 +94,7 @@ export function AttendanceReport() {
 
     try {
       const { data: attendanceData, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select(`
           attendance_date,
           status,
@@ -136,7 +136,7 @@ export function AttendanceReport() {
     try {
       // Get overall stats
       const { data: attendanceData, error: attendanceError } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('status, student_id')
         .eq('class_id', selectedClass)
         .gte('attendance_date', startDate)
@@ -181,7 +181,7 @@ export function AttendanceReport() {
 
       // Get daily attendance data
       const { data: dailyAttendanceData, error: dailyError } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('attendance_date, status')
         .eq('class_id', selectedClass)
         .gte('attendance_date', startDate)

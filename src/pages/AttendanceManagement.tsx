@@ -6,6 +6,7 @@ import { AttendanceReport } from '@/components/attendance/AttendanceReport';
 import { StudentSelfAttendance } from '@/components/student/StudentSelfAttendance';
 import { EnhancedLocationManager } from '@/components/attendance/EnhancedLocationManager';
 import { GlobalScheduleManager } from '@/components/attendance/GlobalScheduleManager';
+import { PolygonLocationManager } from '@/components/attendance/PolygonLocationManager';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -54,6 +55,11 @@ const AttendanceManagement = () => {
           return <GlobalScheduleManager />;
         }
         break;
+      case 'polygon':
+        if (hasRole('admin')) {
+          return <PolygonLocationManager />;
+        }
+        break;
       default:
         return (
           <div className="max-w-md mx-auto">
@@ -83,6 +89,8 @@ const AttendanceManagement = () => {
         return 'Kelola Lokasi';
       case 'schedule':
         return 'Kelola Jadwal';
+      case 'polygon':
+        return 'Kelola Polygon';
       default:
         return 'Manajemen Presensi';
     }

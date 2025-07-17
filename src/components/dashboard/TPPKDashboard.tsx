@@ -127,7 +127,7 @@ export const TPPKDashboard = () => {
       const today = new Date().toISOString().split('T')[0];
       
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select(`
           *,
           students (full_name, nis)

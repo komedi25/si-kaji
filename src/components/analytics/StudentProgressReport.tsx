@@ -71,7 +71,7 @@ export const StudentProgressReport = () => {
 
       // Get attendance data
       const { data: attendance } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('attendance_date, status')
         .eq('student_id', selectedStudent)
         .gte('attendance_date', startDate.split('T')[0])

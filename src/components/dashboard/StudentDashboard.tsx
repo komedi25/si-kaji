@@ -78,7 +78,7 @@ export const StudentDashboard = () => {
       if (!studentData?.id) return null;
 
       const { data, error } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('status, attendance_date')
         .eq('student_id', studentData.id)
         .order('attendance_date', { ascending: false })

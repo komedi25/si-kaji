@@ -84,7 +84,7 @@ export const AdvancedAnalytics = () => {
         .eq('status', 'active');
 
       const { data: attendance } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('*')
         .gte('attendance_date', dateRange.from.toISOString().split('T')[0])
         .lte('attendance_date', dateRange.to.toISOString().split('T')[0]);
@@ -119,7 +119,7 @@ export const AdvancedAnalytics = () => {
     queryKey: ['attendance-trend', dateRange, selectedClass],
     queryFn: async (): Promise<AttendanceData[]> => {
       const { data } = await supabase
-        .from('student_attendances')
+        .from('unified_attendances')
         .select('attendance_date, status')
         .gte('attendance_date', dateRange.from.toISOString().split('T')[0])
         .lte('attendance_date', dateRange.to.toISOString().split('T')[0])
