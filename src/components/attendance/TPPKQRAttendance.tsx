@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { QRScanner } from '@/components/common/QRScanner';
-import { QrCode, User, Clock, CheckCircle, AlertTriangle, Camera } from 'lucide-react';
+import { QrCode, User, Clock, CheckCircle, AlertTriangle, Camera, Home, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -165,7 +166,10 @@ export const TPPKQRAttendance = () => {
         variant: isLate ? 'destructive' : 'default'
       });
 
-      setIsScanning(false);
+      // Auto restart scanner after successful scan
+      setTimeout(() => {
+        setIsScanning(true);
+      }, 1000);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -203,6 +207,24 @@ export const TPPKQRAttendance = () => {
 
   return (
     <div className="space-y-6">
+      {/* Navigation Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/dashboard" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Dashboard
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Presensi QR Code - TPPK</h1>
+            <p className="text-sm text-muted-foreground">
+              Scan kartu pelajar untuk input presensi otomatis
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header & Scanner */}
       <Card>
         <CardHeader>

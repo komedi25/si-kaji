@@ -163,7 +163,7 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
               title: 'Presensi Mandiri',
               href: '/attendance/self',
               icon: MapPin,
-              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa'],
+              requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'siswa'],
             },
             {
               title: 'Input Presensi',

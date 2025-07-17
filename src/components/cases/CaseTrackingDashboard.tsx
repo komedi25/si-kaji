@@ -59,10 +59,13 @@ export const CaseTrackingDashboard = () => {
         .from('student_cases')
         .select('category, priority, status, assigned_handler');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching case stats:', error);
+        throw error;
+      }
 
       const stats: CaseStats = {
-        total: data.length,
+        total: data?.length || 0,
         pending: 0,
         under_review: 0,
         investigating: 0,
@@ -72,7 +75,7 @@ export const CaseTrackingDashboard = () => {
         by_priority: {}
       };
 
-      data.forEach((item) => {
+      data?.forEach((item) => {
         // Count by status
         switch (item.status) {
           case 'pending':
