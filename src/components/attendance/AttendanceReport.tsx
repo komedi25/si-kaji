@@ -99,24 +99,36 @@ export function AttendanceReport() {
           attendance_date,
           status,
           notes,
-          student_id,
-          students!inner(full_name),
-          classes!inner(name)
+          student_id
         `)
         .eq('class_id', selectedClass)
         .gte('attendance_date', startDate)
         .lte('attendance_date', endDate)
         .order('attendance_date', { ascending: false });
 
+      // Get students data separately  
+      const { data: studentsData } = await supabase
+        .from('students')
+        .select('id, full_name');
+
+      // Get classes data separately
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id, name');
+
       if (error) throw error;
 
-      const formattedData: AttendanceExportData[] = attendanceData?.map(record => ({
-        student_name: record.students?.full_name || '',
-        class_name: record.classes?.name || '',
-        attendance_date: new Date(record.attendance_date).toLocaleDateString('id-ID'),
-        status: record.status,
-        notes: record.notes || ''
-      })) || [];
+      const formattedData: AttendanceExportData[] = attendanceData?.map(record => {
+        const student = studentsData?.find(s => s.id === record.student_id);
+        const classInfo = classesData?.find(c => c.id === selectedClass);
+        return {
+          student_name: student?.full_name || '',
+          class_name: classInfo?.name || '',
+          attendance_date: new Date(record.attendance_date).toLocaleDateString('id-ID'),
+          status: record.status,
+          notes: record.notes || ''
+        };
+      }) || [];
 
       setExportData(formattedData);
     } catch (error) {
