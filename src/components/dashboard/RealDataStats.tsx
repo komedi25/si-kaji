@@ -25,6 +25,10 @@ export const RealDataStats = () => {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['real-database-stats'],
     queryFn: async (): Promise<DatabaseStats> => {
+      // Calculate this month's data first
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+
       // Get student counts
       const { data: students } = await supabase
         .from('students')
@@ -53,10 +57,6 @@ export const RealDataStats = () => {
         .from('extracurriculars')
         .select('id')
         .eq('is_active', true);
-
-      // Calculate this month's data first
-      const thisMonth = new Date();
-      thisMonth.setDate(1);
 
       // Get pending cases
       const { data: pendingCases } = await supabase
