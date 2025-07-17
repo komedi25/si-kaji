@@ -153,32 +153,39 @@ export const CaseManagement = () => {
       </div>
 
       <Tabs defaultValue={hasManagementAccess ? "dashboard" : "report"} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-          {hasManagementAccess && (
-            <>
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Dashboard
-              </TabsTrigger>
-              <TabsTrigger value="workflow" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Workflow
-              </TabsTrigger>
-              <TabsTrigger value="list" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Daftar Kasus
-              </TabsTrigger>
-            </>
-          )}
-          <TabsTrigger value="report" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Lapor Kasus
-          </TabsTrigger>
-          <TabsTrigger value="track" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Lacak Kasus
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full min-w-fit grid-cols-2 lg:grid-cols-5 h-auto">
+            {hasManagementAccess && (
+              <>
+                <TabsTrigger value="dashboard" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+                  <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="sm:hidden">Dash</span>
+                </TabsTrigger>
+                <TabsTrigger value="workflow" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+                  <Users className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Workflow</span>
+                  <span className="sm:hidden">Work</span>
+                </TabsTrigger>
+                <TabsTrigger value="list" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+                  <FileText className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Daftar Kasus</span>
+                  <span className="sm:hidden">List</span>
+                </TabsTrigger>
+              </>
+            )}
+            <TabsTrigger value="report" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+              <Plus className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Lapor Kasus</span>
+              <span className="sm:hidden">Lapor</span>
+            </TabsTrigger>
+            <TabsTrigger value="track" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+              <Search className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Lacak Kasus</span>
+              <span className="sm:hidden">Lacak</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {hasManagementAccess && (
           <TabsContent value="dashboard">

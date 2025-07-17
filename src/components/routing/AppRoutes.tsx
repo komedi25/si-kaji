@@ -36,6 +36,7 @@ import CounselingManagement from '@/pages/CounselingManagement';
 // New Student-specific components
 import { StudentAchievementForm } from '@/components/achievements/StudentAchievementForm';
 import { StudentCaseReports } from '@/components/cases/StudentCaseReports';
+import { TPPKQRAttendance } from '@/components/attendance/TPPKQRAttendance';
 import MyProfile from '@/pages/MyProfile';
 
 export function AppRoutes() {
@@ -113,6 +114,13 @@ export function AppRoutes() {
       <Route path="/attendance" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'guru_bk', 'tppk', 'siswa']}>
           <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance-qr" element={
+        <ProtectedRoute requiredRoles={['tppk']}>
+          <div className="space-y-6">
+            <TPPKQRAttendance />
+          </div>
         </ProtectedRoute>
       } />
       <Route path="/attendance/self" element={

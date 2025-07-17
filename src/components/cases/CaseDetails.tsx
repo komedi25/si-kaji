@@ -309,6 +309,23 @@ export const CaseDetails = ({ caseData, onBack, onUpdate }: CaseDetailsProps) =>
               >
                 {updateCaseMutation.isPending ? 'Menyimpan...' : 'Perbarui Kasus'}
               </Button>
+
+              {/* Escalation Button */}
+              {caseData.status !== 'escalated' && caseData.status !== 'resolved' && caseData.status !== 'closed' && (
+                <Button 
+                  onClick={() => {
+                    setNewStatus('escalated');
+                    setAssignedHandler('waka_kesiswaan');
+                    handleStatusUpdate();
+                  }}
+                  variant="destructive"
+                  className="w-full flex items-center gap-2"
+                  disabled={updateCaseMutation.isPending}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Eskalasi ke Waka Kesiswaan
+                </Button>
+              )}
             </CardContent>
           </Card>
 

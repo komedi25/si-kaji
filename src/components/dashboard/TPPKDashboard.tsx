@@ -406,7 +406,7 @@ export const TPPKDashboard = () => {
                 <CardTitle className="text-sm md:text-base">Input Presensi Manual Hari Ini</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4">
                   <div className="text-center p-2 md:p-3 bg-green-50 rounded-lg">
                     <div className="text-lg md:text-xl font-bold text-green-600">
                       {attendanceToday?.present || 0}
@@ -431,6 +431,15 @@ export const TPPKDashboard = () => {
                     </div>
                     <div className="text-xs text-blue-600">Izin</div>
                   </div>
+                </div>
+                
+                <div className="mt-4">
+                  <Button 
+                    onClick={() => window.location.href = '/attendance-qr'}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    🔍 Buka Scanner QR Presensi
+                  </Button>
                 </div>
               </CardContent>
             </Card>

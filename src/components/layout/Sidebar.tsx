@@ -172,6 +172,12 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
               requiredRoles: ['admin', 'wali_kelas', 'guru_bk', 'tppk'],
             },
             {
+              title: 'Presensi QR Code',
+              href: '/attendance-qr',
+              icon: MapPin,
+              requiredRoles: ['tppk'],
+            },
+            {
               title: 'Laporan Presensi',
               href: '/attendance/report',
               icon: FileText,
@@ -555,6 +561,7 @@ export const Sidebar = ({ isMobile = false, onItemClick }: SidebarProps) => {
         'Dashboard',
         'Presensi',
         'Input Presensi',
+        'Presensi QR Code',
         'Laporan Presensi',
         'Pelanggaran',
         'Input Pelanggaran',
