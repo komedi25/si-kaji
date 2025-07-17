@@ -15,6 +15,8 @@ interface DatabaseStats {
   pendingCases: number;
   thisMonthViolations: number;
   thisMonthAchievements: number;
+  attendanceToday: number;
+  attendanceThisMonth: number;
 }
 
 export const RealDataStats = () => {
@@ -58,6 +60,18 @@ export const RealDataStats = () => {
         .select('id')
         .eq('status', 'pending');
 
+      // Get attendance data (from student_self_attendances)
+      const { data: attendanceToday } = await supabase
+        .from('student_self_attendances')
+        .select('id, status')
+        .eq('attendance_date', new Date().toISOString().split('T')[0]);
+
+      // Get total attendance this month
+      const { data: attendanceThisMonth } = await supabase
+        .from('student_self_attendances')
+        .select('id, attendance_date')
+        .gte('attendance_date', thisMonth.toISOString().split('T')[0]);
+
       // Calculate this month's data
       const thisMonth = new Date();
       thisMonth.setDate(1);
@@ -79,7 +93,9 @@ export const RealDataStats = () => {
         totalExtracurriculars: extracurriculars?.length || 0,
         pendingCases: pendingCases?.length || 0,
         thisMonthViolations,
-        thisMonthAchievements
+        thisMonthAchievements,
+        attendanceToday: attendanceToday?.length || 0,
+        attendanceThisMonth: attendanceThisMonth?.length || 0
       };
     },
     enabled: !!user,
@@ -146,6 +162,20 @@ export const RealDataStats = () => {
       description: "Memerlukan tindak lanjut",
       icon: AlertTriangle,
       color: "text-orange-600"
+    },
+    {
+      title: "Presensi Hari Ini",
+      value: stats?.attendanceToday || 0,
+      description: "Siswa yang sudah presensi",
+      icon: UserCheck,
+      color: "text-emerald-600"
+    },
+    {
+      title: "Presensi Bulan Ini", 
+      value: stats?.attendanceThisMonth || 0,
+      description: "Total presensi bulan ini",
+      icon: UserCheck,
+      color: "text-cyan-600"
     }
   ];
 
