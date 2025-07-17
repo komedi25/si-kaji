@@ -98,22 +98,61 @@ export const EnhancedCaseTrackingDashboard = () => {
     const daysAgo = parseInt(timeRange);
     const startDate = subDays(new Date(), daysAgo);
 
-    // Get case counts by status
+    // Get case counts by status with student data
     const { data: statusCounts } = await supabase
       .from('student_cases')
-      .select('status')
+      .select(`
+        status,
+        reported_student_id,
+        students:reported_student_id (
+          id,
+          nis,
+          full_name,
+          class_id,
+          classes:class_id (
+            name,
+            grade
+          )
+        )
+      `)
       .gte('created_at', startDate.toISOString());
 
-    // Get cases by category
+    // Get cases by category with student data
     const { data: categoryData } = await supabase
       .from('student_cases')
-      .select('category')
+      .select(`
+        category,
+        reported_student_id,
+        students:reported_student_id (
+          id,
+          nis,
+          full_name,
+          class_id,
+          classes:class_id (
+            name,
+            grade
+          )
+        )
+      `)
       .gte('created_at', startDate.toISOString());
 
-    // Get cases by handler
+    // Get cases by handler with student data
     const { data: handlerData } = await supabase
       .from('student_cases')
-      .select('assigned_handler')
+      .select(`
+        assigned_handler,
+        reported_student_id,
+        students:reported_student_id (
+          id,
+          nis,
+          full_name,
+          class_id,
+          classes:class_id (
+            name,
+            grade
+          )
+        )
+      `)
       .gte('created_at', startDate.toISOString())
       .not('assigned_handler', 'is', null);
 
@@ -171,7 +210,18 @@ export const EnhancedCaseTrackingDashboard = () => {
         assigned_handler,
         assigned_to,
         created_at,
-        profiles:assigned_to (full_name)
+        reported_student_id,
+        profiles:assigned_to (full_name),
+        students:reported_student_id (
+          id,
+          nis,
+          full_name,
+          class_id,
+          classes:class_id (
+            name,
+            grade
+          )
+        )
       `)
       .in('status', ['pending', 'under_review'])
       .order('created_at', { ascending: true });

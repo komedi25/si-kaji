@@ -58,14 +58,30 @@ export const CaseTrackingDashboard = () => {
       console.log('Fetching case stats...');
       const { data, error } = await supabase
         .from('student_cases')
-        .select('category, priority, status, assigned_handler');
+        .select(`
+          category, 
+          priority, 
+          status, 
+          assigned_handler,
+          reported_student_id,
+          students:reported_student_id (
+            id,
+            nis,
+            full_name,
+            class_id,
+            classes:class_id (
+              name,
+              grade
+            )
+          )
+        `);
 
       if (error) {
         console.error('Error fetching case stats:', error);
         throw error;
       }
 
-      console.log('Raw case data:', data);
+      console.log('Raw case data with students:', data);
 
       const stats: CaseStats = {
         total: data?.length || 0,
@@ -93,6 +109,12 @@ export const CaseTrackingDashboard = () => {
             break;
           case 'resolved':
             stats.resolved++;
+            break;
+          case 'escalated':
+            stats.under_review++; // Count escalated as under_review for display
+            break;
+          case 'closed':
+            stats.resolved++; // Count closed as resolved for display
             break;
         }
 

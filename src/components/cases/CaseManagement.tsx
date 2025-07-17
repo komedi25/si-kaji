@@ -15,6 +15,7 @@ import { CaseTrackingDashboard } from './CaseTrackingDashboard';
 import { EnhancedCaseTrackingDashboard } from './EnhancedCaseTrackingDashboard';
 import { CaseDetails } from './CaseDetails';
 import { CaseTracker } from './CaseTracker';
+import { SimpleCaseTracker } from './SimpleCaseTracker';
 import { AutomatedCaseAssignment } from './AutomatedCaseAssignment';
 import { SecureAnonymousReporting } from './SecureAnonymousReporting';
 import { Search, Plus, Filter, BarChart3, Users, FileText } from 'lucide-react';
@@ -154,7 +155,7 @@ export const CaseManagement = () => {
 
       <Tabs defaultValue={hasManagementAccess ? "dashboard" : "report"} className="space-y-4">
         <div className="overflow-x-auto">
-          <TabsList className="grid w-full min-w-fit grid-cols-2 lg:grid-cols-5 h-auto">
+          <TabsList className={`grid w-full min-w-fit ${hasRole('admin') ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'} h-auto`}>
             {hasManagementAccess && (
               <>
                 <TabsTrigger value="dashboard" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
@@ -162,11 +163,13 @@ export const CaseManagement = () => {
                   <span className="hidden sm:inline">Dashboard</span>
                   <span className="sm:hidden">Dash</span>
                 </TabsTrigger>
-                <TabsTrigger value="workflow" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
-                  <Users className="h-3 w-3 md:h-4 md:w-4" />
-                  <span className="hidden sm:inline">Workflow</span>
-                  <span className="sm:hidden">Work</span>
-                </TabsTrigger>
+                {hasRole('admin') && (
+                  <TabsTrigger value="workflow" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
+                    <Users className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Workflow</span>
+                    <span className="sm:hidden">Work</span>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="list" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 text-xs md:text-sm whitespace-nowrap">
                   <FileText className="h-3 w-3 md:h-4 md:w-4" />
                   <span className="hidden sm:inline">Daftar Kasus</span>
@@ -193,7 +196,7 @@ export const CaseManagement = () => {
           </TabsContent>
         )}
 
-        {hasManagementAccess && (
+        {hasManagementAccess && hasRole('admin') && (
           <TabsContent value="workflow">
             <AutomatedCaseAssignment />
           </TabsContent>
@@ -332,7 +335,7 @@ export const CaseManagement = () => {
         </TabsContent>
 
         <TabsContent value="track">
-          <EnhancedCaseTrackingDashboard />
+          <SimpleCaseTracker />
         </TabsContent>
       </Tabs>
     </div>
