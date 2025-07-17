@@ -22,6 +22,7 @@ const AttendanceManagement = () => {
     if (path === '/attendance/report') return 'report';
     if (path === '/attendance/location') return 'location';
     if (path === '/attendance/schedule') return 'schedule';
+    if (path === '/attendance/polygon') return 'polygon';
     return 'self'; // default
   };
 

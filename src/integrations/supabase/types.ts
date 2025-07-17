@@ -3519,6 +3519,7 @@ export type Database = {
           check_out_longitude: number | null
           check_out_method: string | null
           check_out_time: string | null
+          class_id: string | null
           created_at: string
           early_leave_minutes: number | null
           id: string
@@ -3542,6 +3543,7 @@ export type Database = {
           check_out_longitude?: number | null
           check_out_method?: string | null
           check_out_time?: string | null
+          class_id?: string | null
           created_at?: string
           early_leave_minutes?: number | null
           id?: string
@@ -3565,6 +3567,7 @@ export type Database = {
           check_out_longitude?: number | null
           check_out_method?: string | null
           check_out_time?: string | null
+          class_id?: string | null
           created_at?: string
           early_leave_minutes?: number | null
           id?: string
@@ -3576,7 +3579,15 @@ export type Database = {
           updated_at?: string
           violation_created?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "unified_attendances_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_notification_preferences: {
         Row: {
