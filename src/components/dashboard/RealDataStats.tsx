@@ -54,6 +54,10 @@ export const RealDataStats = () => {
         .select('id')
         .eq('is_active', true);
 
+      // Calculate this month's data first
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+
       // Get pending cases
       const { data: pendingCases } = await supabase
         .from('student_cases')
@@ -71,10 +75,6 @@ export const RealDataStats = () => {
         .from('student_self_attendances')
         .select('id, attendance_date')
         .gte('attendance_date', thisMonth.toISOString().split('T')[0]);
-
-      // Calculate this month's data
-      const thisMonth = new Date();
-      thisMonth.setDate(1);
       
       const thisMonthViolations = violations?.filter(v => 
         new Date(v.violation_date) >= thisMonth

@@ -337,14 +337,73 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_global_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          setting_name: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          setting_name: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          setting_name?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      attendance_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          holiday_name: string
+          holiday_type: string
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          holiday_name: string
+          holiday_type?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          holiday_name?: string
+          holiday_type?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_locations: {
         Row: {
           created_at: string
           id: string
           is_active: boolean
           latitude: number
+          location_type: string | null
           longitude: number
           name: string
+          polygon_coordinates: Json | null
           radius_meters: number
           updated_at: string
         }
@@ -353,8 +412,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           latitude: number
+          location_type?: string | null
           longitude: number
           name: string
+          polygon_coordinates?: Json | null
           radius_meters?: number
           updated_at?: string
         }
@@ -363,8 +424,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           latitude?: number
+          location_type?: string | null
           longitude?: number
           name?: string
+          polygon_coordinates?: Json | null
           radius_meters?: number
           updated_at?: string
         }
