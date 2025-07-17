@@ -133,7 +133,7 @@ export const TPPKQRAttendance = () => {
         throw new Error('Siswa tidak terdaftar di kelas aktif');
       }
       
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('student_attendances')
         .insert({
           student_id: studentData.id,
@@ -143,9 +143,16 @@ export const TPPKQRAttendance = () => {
           recorded_by: userData.user?.id,
           recorded_at: now.toISOString(),
           notes: isLate ? `Terlambat ${lateMinutes} menit` : null
-        });
+        })
+        .select()
+        .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Database error:', insertError);
+        throw new Error(`Gagal menyimpan presensi: ${insertError.message}`);
+      }
+
+      console.log('Attendance saved successfully:', insertData);
 
       // Update local state
       const newRecord: AttendanceRecord = {
