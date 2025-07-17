@@ -4,8 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { AttendanceRecorder } from '@/components/attendance/AttendanceRecorder';
 import { AttendanceReport } from '@/components/attendance/AttendanceReport';
 import { StudentSelfAttendance } from '@/components/student/StudentSelfAttendance';
-import { LocationManager } from '@/components/attendance/LocationManager';
-import { ScheduleManager } from '@/components/attendance/ScheduleManager';
+import { EnhancedLocationManager } from '@/components/attendance/EnhancedLocationManager';
+import { GlobalScheduleManager } from '@/components/attendance/GlobalScheduleManager';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -46,12 +46,12 @@ const AttendanceManagement = () => {
         break;
       case 'location':
         if (hasRole('admin')) {
-          return <LocationManager />;
+          return <EnhancedLocationManager />;
         }
         break;
       case 'schedule':
         if (hasRole('admin')) {
-          return <ScheduleManager />;
+          return <GlobalScheduleManager />;
         }
         break;
       default:

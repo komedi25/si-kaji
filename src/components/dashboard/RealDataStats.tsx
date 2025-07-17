@@ -64,15 +64,15 @@ export const RealDataStats = () => {
         .select('id')
         .eq('status', 'pending');
 
-      // Get attendance data (from student_self_attendances)
+      // Get attendance data (from unified_attendances)
       const { data: attendanceToday } = await supabase
-        .from('student_self_attendances')
+        .from('unified_attendances')
         .select('id, status')
         .eq('attendance_date', new Date().toISOString().split('T')[0]);
 
       // Get total attendance this month
       const { data: attendanceThisMonth } = await supabase
-        .from('student_self_attendances')
+        .from('unified_attendances')
         .select('id, attendance_date')
         .gte('attendance_date', thisMonth.toISOString().split('T')[0]);
       

@@ -435,6 +435,7 @@ export type Database = {
       }
       attendance_schedules: {
         Row: {
+          applies_to_all_classes: boolean | null
           check_in_end: string
           check_in_start: string
           check_out_end: string
@@ -449,6 +450,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          applies_to_all_classes?: boolean | null
           check_in_end: string
           check_in_start: string
           check_out_end: string
@@ -463,6 +465,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          applies_to_all_classes?: boolean | null
           check_in_end?: string
           check_in_start?: string
           check_out_end?: string
@@ -3500,6 +3503,78 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      unified_attendances: {
+        Row: {
+          attendance_date: string
+          check_in_latitude: number | null
+          check_in_location_id: string | null
+          check_in_longitude: number | null
+          check_in_method: string | null
+          check_in_time: string | null
+          check_out_latitude: number | null
+          check_out_location_id: string | null
+          check_out_longitude: number | null
+          check_out_method: string | null
+          check_out_time: string | null
+          created_at: string
+          early_leave_minutes: number | null
+          id: string
+          late_minutes: number | null
+          notes: string | null
+          recorded_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+          violation_created: boolean | null
+        }
+        Insert: {
+          attendance_date: string
+          check_in_latitude?: number | null
+          check_in_location_id?: string | null
+          check_in_longitude?: number | null
+          check_in_method?: string | null
+          check_in_time?: string | null
+          check_out_latitude?: number | null
+          check_out_location_id?: string | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          early_leave_minutes?: number | null
+          id?: string
+          late_minutes?: number | null
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          violation_created?: boolean | null
+        }
+        Update: {
+          attendance_date?: string
+          check_in_latitude?: number | null
+          check_in_location_id?: string | null
+          check_in_longitude?: number | null
+          check_in_method?: string | null
+          check_in_time?: string | null
+          check_out_latitude?: number | null
+          check_out_location_id?: string | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          early_leave_minutes?: number | null
+          id?: string
+          late_minutes?: number | null
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          violation_created?: boolean | null
         }
         Relationships: []
       }
