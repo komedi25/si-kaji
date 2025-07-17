@@ -52,9 +52,10 @@ export const CaseTrackingDashboard = () => {
   const [notFound, setNotFound] = useState(false);
 
   // Get overall case statistics
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['case-stats'],
     queryFn: async () => {
+      console.log('Fetching case stats...');
       const { data, error } = await supabase
         .from('student_cases')
         .select('category, priority, status, assigned_handler');
@@ -63,6 +64,8 @@ export const CaseTrackingDashboard = () => {
         console.error('Error fetching case stats:', error);
         throw error;
       }
+
+      console.log('Raw case data:', data);
 
       const stats: CaseStats = {
         total: data?.length || 0,
@@ -76,6 +79,7 @@ export const CaseTrackingDashboard = () => {
       };
 
       data?.forEach((item) => {
+        console.log('Processing item:', item);
         // Count by status
         switch (item.status) {
           case 'pending':
@@ -98,15 +102,24 @@ export const CaseTrackingDashboard = () => {
         }
 
         // Count by category
-        stats.by_category[item.category] = (stats.by_category[item.category] || 0) + 1;
+        if (item.category) {
+          stats.by_category[item.category] = (stats.by_category[item.category] || 0) + 1;
+        }
 
         // Count by priority
-        stats.by_priority[item.priority] = (stats.by_priority[item.priority] || 0) + 1;
+        if (item.priority) {
+          stats.by_priority[item.priority] = (stats.by_priority[item.priority] || 0) + 1;
+        }
       });
 
+      console.log('Final stats:', stats);
       return stats;
     }
   });
+
+  if (statsError) {
+    console.error('Stats query error:', statsError);
+  }
 
   const handleSearch = async () => {
     if (!trackingNumber.trim()) return;

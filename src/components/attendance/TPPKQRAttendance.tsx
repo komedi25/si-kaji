@@ -161,8 +161,8 @@ export const TPPKQRAttendance = () => {
       setTodayRecords(prev => [newRecord, ...prev]);
 
       toast({
-        title: 'Berhasil!',
-        description: `Presensi ${studentData.full_name} (${studentData.nis}) berhasil dicatat${isLate ? ` - Terlambat ${lateMinutes} menit` : ''}`,
+        title: 'Presensi Berhasil!',
+        description: `Presensi atas nama siswa ${studentData.full_name} (${studentData.nis}) berhasil dicatat${isLate ? ` - Terlambat ${lateMinutes} menit` : ''}`,
         variant: isLate ? 'destructive' : 'default'
       });
 

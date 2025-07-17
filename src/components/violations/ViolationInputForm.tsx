@@ -89,7 +89,7 @@ export const ViolationInputForm = () => {
         .from('student_violations')
         .insert({
           ...formData,
-          reported_by: user.id
+          recorded_by: user.id
         });
 
       if (error) throw error;
