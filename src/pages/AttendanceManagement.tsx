@@ -7,6 +7,7 @@ import { StudentSelfAttendance } from '@/components/student/StudentSelfAttendanc
 import { EnhancedLocationManager } from '@/components/attendance/EnhancedLocationManager';
 import { GlobalScheduleManager } from '@/components/attendance/GlobalScheduleManager';
 import { PolygonLocationManager } from '@/components/attendance/PolygonLocationManager';
+import { AutoAbsenceDetector } from '@/components/attendance/AutoAbsenceDetector';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
 
@@ -23,6 +24,7 @@ const AttendanceManagement = () => {
     if (path === '/attendance/location') return 'location';
     if (path === '/attendance/schedule') return 'schedule';
     if (path === '/attendance/polygon') return 'polygon';
+    if (path === '/attendance/auto-detector') return 'auto-detector';
     return 'self'; // default
   };
 
@@ -61,6 +63,11 @@ const AttendanceManagement = () => {
           return <PolygonLocationManager />;
         }
         break;
+      case 'auto-detector':
+        if (hasRole('admin') || hasRole('tppk')) {
+          return <AutoAbsenceDetector />;
+        }
+        break;
       default:
         return (
           <div className="max-w-md mx-auto">
@@ -92,6 +99,8 @@ const AttendanceManagement = () => {
         return 'Kelola Jadwal';
       case 'polygon':
         return 'Kelola Polygon';
+      case 'auto-detector':
+        return 'Auto-Deteksi Absen';
       default:
         return 'Manajemen Presensi';
     }

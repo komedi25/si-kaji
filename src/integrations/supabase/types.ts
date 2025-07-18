@@ -3757,6 +3757,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      auto_generate_absent_records: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       check_case_escalations: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -3797,6 +3801,10 @@ export type Database = {
           _action_url?: string
           _metadata?: Json
         }
+        Returns: undefined
+      }
+      daily_attendance_check: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       debug_user_schedule_permissions: {
