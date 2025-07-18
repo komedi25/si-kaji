@@ -4,10 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, FileText, TrendingUp, Users } from 'lucide-react';
+import { Calendar, FileText, TrendingUp, Users, UserCheck, UserX, Clock, User } from 'lucide-react';
 import { AttendanceReportExport } from './AttendanceReportExport';
 
 interface Class {
@@ -42,32 +44,53 @@ interface AttendanceExportData {
   notes?: string;
 }
 
+interface Student {
+  id: string;
+  full_name: string;
+  nis: string;
+  class_name?: string;
+}
+
+interface DetailedAttendanceData {
+  present: Student[];
+  absent: Student[];
+  late: Student[];
+  sick: Student[];
+  permission: Student[];
+}
+
 export function AttendanceReport() {
   const { toast } = useToast();
   const [classes, setClasses] = useState<Class[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [reportType, setReportType] = useState<'overall' | 'class' | 'individual'>('overall');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [stats, setStats] = useState<AttendanceStats | null>(null);
   const [dailyData, setDailyData] = useState<DailyAttendance[]>([]);
   const [exportData, setExportData] = useState<AttendanceExportData[]>([]);
+  const [detailedData, setDetailedData] = useState<DetailedAttendanceData | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchClasses();
-    // Set default date range (last 30 days)
+    fetchStudents();
+    // Set default date range (last 7 days)
     const today = new Date();
-    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
     setEndDate(today.toISOString().split('T')[0]);
-    setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+    setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
   }, []);
 
   useEffect(() => {
-    if (selectedClass && startDate && endDate) {
+    if (startDate && endDate) {
       fetchAttendanceReport();
       fetchExportData();
+      fetchDetailedData();
     }
-  }, [selectedClass, startDate, endDate]);
+  }, [selectedClass, selectedStudent, reportType, startDate, endDate]);
 
   const fetchClasses = async () => {
     try {
@@ -89,22 +112,66 @@ export function AttendanceReport() {
     }
   };
 
+  const fetchStudents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select(`
+          id, 
+          full_name, 
+          nis,
+          student_enrollments!inner(
+            class_id,
+            classes!inner(name)
+          )
+        `)
+        .eq('student_enrollments.status', 'active')
+        .order('full_name');
+
+      if (error) throw error;
+      
+      const formattedStudents = data?.map(student => ({
+        id: student.id,
+        full_name: student.full_name,
+        nis: student.nis,
+        class_name: student.student_enrollments?.[0]?.classes?.name || ''
+      })) || [];
+      
+      setStudents(formattedStudents);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data siswa",
+        variant: "destructive"
+      });
+    }
+  };
+
   const fetchExportData = async () => {
-    if (!selectedClass || !startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
     try {
-      const { data: attendanceData, error } = await supabase
+      let query = supabase
         .from('unified_attendances')
         .select(`
           attendance_date,
           status,
           notes,
-          student_id
+          student_id,
+          class_id
         `)
-        .eq('class_id', selectedClass)
         .gte('attendance_date', startDate)
-        .lte('attendance_date', endDate)
-        .order('attendance_date', { ascending: false });
+        .lte('attendance_date', endDate);
+
+      // Apply filters based on report type
+      if (reportType === 'class' && selectedClass !== 'all') {
+        query = query.eq('class_id', selectedClass);
+      } else if (reportType === 'individual' && selectedStudent) {
+        query = query.eq('student_id', selectedStudent);
+      }
+
+      const { data: attendanceData, error } = await query.order('attendance_date', { ascending: false });
 
       // Get students data separately  
       const { data: studentsData } = await supabase
@@ -120,7 +187,7 @@ export function AttendanceReport() {
 
       const formattedData: AttendanceExportData[] = attendanceData?.map(record => {
         const student = studentsData?.find(s => s.id === record.student_id);
-        const classInfo = classesData?.find(c => c.id === selectedClass);
+        const classInfo = classesData?.find(c => c.id === record.class_id);
         return {
           student_name: student?.full_name || '',
           class_name: classInfo?.name || '',
@@ -142,30 +209,45 @@ export function AttendanceReport() {
   };
 
   const fetchAttendanceReport = async () => {
-    if (!selectedClass || !startDate || !endDate) return;
+    if (!startDate || !endDate) return;
 
     setLoading(true);
     try {
-      // Get overall stats
-      const { data: attendanceData, error: attendanceError } = await supabase
+      let attendanceQuery = supabase
         .from('unified_attendances')
-        .select('status, student_id')
-        .eq('class_id', selectedClass)
+        .select('status, student_id, class_id')
         .gte('attendance_date', startDate)
         .lte('attendance_date', endDate);
 
+      // Apply filters based on report type
+      if (reportType === 'class' && selectedClass !== 'all') {
+        attendanceQuery = attendanceQuery.eq('class_id', selectedClass);
+      } else if (reportType === 'individual' && selectedStudent) {
+        attendanceQuery = attendanceQuery.eq('student_id', selectedStudent);
+      }
+
+      const { data: attendanceData, error: attendanceError } = await attendanceQuery;
       if (attendanceError) throw attendanceError;
 
-      // Get total students in class
-      const { data: enrollmentData, error: enrollmentError } = await supabase
-        .from('student_enrollments')
-        .select('student_id')
-        .eq('class_id', selectedClass)
-        .eq('status', 'active');
-
-      if (enrollmentError) throw enrollmentError;
-
-      const totalStudents = enrollmentData?.length || 0;
+      // Get total students based on report type
+      let totalStudents = 0;
+      if (reportType === 'individual') {
+        totalStudents = 1;
+      } else if (reportType === 'class' && selectedClass !== 'all') {
+        const { data: enrollmentData } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .eq('class_id', selectedClass)
+          .eq('status', 'active');
+        totalStudents = enrollmentData?.length || 0;
+      } else {
+        // Overall - get all active students
+        const { data: allStudents } = await supabase
+          .from('student_enrollments')
+          .select('student_id')
+          .eq('status', 'active');
+        totalStudents = allStudents?.length || 0;
+      }
       
       // Calculate stats
       const statusCounts = {
@@ -192,14 +274,21 @@ export function AttendanceReport() {
       });
 
       // Get daily attendance data
-      const { data: dailyAttendanceData, error: dailyError } = await supabase
+      let dailyQuery = supabase
         .from('unified_attendances')
         .select('attendance_date, status')
-        .eq('class_id', selectedClass)
         .gte('attendance_date', startDate)
         .lte('attendance_date', endDate)
         .order('attendance_date', { ascending: true });
 
+      // Apply same filters for daily data
+      if (reportType === 'class' && selectedClass !== 'all') {
+        dailyQuery = dailyQuery.eq('class_id', selectedClass);
+      } else if (reportType === 'individual' && selectedStudent) {
+        dailyQuery = dailyQuery.eq('student_id', selectedStudent);
+      }
+
+      const { data: dailyAttendanceData, error: dailyError } = await dailyQuery;
       if (dailyError) throw dailyError;
 
       // Group by date
@@ -241,6 +330,73 @@ export function AttendanceReport() {
     }
   };
 
+  const fetchDetailedData = async () => {
+    if (!startDate || !endDate) return;
+
+    try {
+      let query = supabase
+        .from('unified_attendances')
+        .select(`
+          status,
+          student_id,
+          students!inner(id, full_name, nis)
+        `)
+        .gte('attendance_date', startDate)
+        .lte('attendance_date', endDate);
+
+      // Apply filters based on report type
+      if (reportType === 'class' && selectedClass !== 'all') {
+        query = query.eq('class_id', selectedClass);
+      } else if (reportType === 'individual' && selectedStudent) {
+        query = query.eq('student_id', selectedStudent);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Group students by status
+      const grouped: DetailedAttendanceData = {
+        present: [],
+        absent: [],
+        late: [],
+        sick: [],
+        permission: []
+      };
+
+      // Track unique students per status
+      const studentSets = {
+        present: new Set(),
+        absent: new Set(),
+        late: new Set(),
+        sick: new Set(),
+        permission: new Set()
+      };
+
+      data?.forEach(record => {
+        const student = {
+          id: record.students.id,
+          full_name: record.students.full_name,
+          nis: record.students.nis
+        };
+
+        const status = record.status as keyof DetailedAttendanceData;
+        if (status in grouped && !studentSets[status].has(student.id)) {
+          grouped[status].push(student);
+          studentSets[status].add(student.id);
+        }
+      });
+
+      setDetailedData(grouped);
+    } catch (error) {
+      console.error('Error fetching detailed data:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data detail",
+        variant: "destructive"
+      });
+    }
+  };
+
   const pieData = stats ? [
     { name: 'Hadir', value: stats.present, color: '#22c55e' },
     { name: 'Tidak Hadir', value: stats.absent, color: '#ef4444' },
@@ -258,36 +414,79 @@ export function AttendanceReport() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Laporan Presensi
+                Laporan Presensi Detail
               </CardTitle>
               <CardDescription>
-                Analisis kehadiran siswa berdasarkan periode waktu
+                Sistem laporan presensi lengkap dengan analisis per siswa, kelas, dan keseluruhan
               </CardDescription>
             </div>
             <AttendanceReportExport
               data={exportData}
-              disabled={!selectedClass || loading}
-              filename={`laporan_presensi_${selectedClass ? classes.find(c => c.id === selectedClass)?.name.replace(/\s+/g, '_') : 'semua'}`}
+              disabled={loading}
+              filename={`laporan_presensi_${reportType}_${new Date().toISOString().split('T')[0]}`}
             />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="class">Kelas</Label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kelas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name} (Kelas {cls.grade})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="space-y-6">
+          {/* Report Type Selection */}
+          <div className="space-y-2">
+            <Label>Jenis Laporan</Label>
+            <Tabs value={reportType} onValueChange={(value) => setReportType(value as any)} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overall" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Keseluruhan
+                </TabsTrigger>
+                <TabsTrigger value="class" className="flex items-center gap-2">
+                  <UserCheck className="h-4 w-4" />
+                  Per Kelas
+                </TabsTrigger>
+                <TabsTrigger value="individual" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Per Individu
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Dynamic Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {reportType === 'class' && (
+              <div className="space-y-2">
+                <Label htmlFor="class">Kelas</Label>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Kelas</SelectItem>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name} (Kelas {cls.grade})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {reportType === 'individual' && (
+              <div className="space-y-2">
+                <Label htmlFor="student">Siswa</Label>
+                <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih siswa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {students.map((student) => (
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.full_name} - {student.nis} ({student.class_name})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="start-date">Tanggal Mulai</Label>
@@ -308,6 +507,20 @@ export function AttendanceReport() {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+
+            <div className="flex items-end">
+              <Button 
+                onClick={() => {
+                  fetchAttendanceReport();
+                  fetchExportData();
+                  fetchDetailedData();
+                }}
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? 'Memuat...' : 'Refresh Data'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -323,7 +536,7 @@ export function AttendanceReport() {
       {!loading && stats && (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-2">
@@ -349,8 +562,8 @@ export function AttendanceReport() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-green-600" />
-                  <div className="text-sm font-medium text-muted-foreground">Total Hadir</div>
+                  <UserCheck className="h-4 w-4 text-green-600" />
+                  <div className="text-sm font-medium text-muted-foreground">Hadir</div>
                 </div>
                 <div className="text-2xl font-bold text-green-600">{stats.present}</div>
               </CardContent>
@@ -359,15 +572,94 @@ export function AttendanceReport() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-red-600" />
+                  <UserX className="h-4 w-4 text-red-600" />
                   <div className="text-sm font-medium text-muted-foreground">Tidak Hadir</div>
                 </div>
                 <div className="text-2xl font-bold text-red-600">{stats.absent}</div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                  <div className="text-sm font-medium text-muted-foreground">Terlambat</div>
+                </div>
+                <div className="text-2xl font-bold text-yellow-600">{stats.late}</div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Charts */}
+          {/* Detailed Student Lists */}
+          {detailedData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Detail Nama Siswa Per Status</CardTitle>
+                <CardDescription>
+                  Daftar lengkap siswa berdasarkan status kehadiran
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="present" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="present" className="flex items-center gap-2">
+                      <UserCheck className="h-4 w-4" />
+                      Hadir ({detailedData.present.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="absent" className="flex items-center gap-2">
+                      <UserX className="h-4 w-4" />
+                      Tidak Hadir ({detailedData.absent.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="late" className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Terlambat ({detailedData.late.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="sick" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Sakit ({detailedData.sick.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="permission" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Izin ({detailedData.permission.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {Object.entries(detailedData).map(([status, students]) => (
+                    <TabsContent key={status} value={status} className="mt-4">
+                      <div className="space-y-2">
+                        {students.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {students.map((student) => (
+                              <div key={student.id} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                                <Badge variant={
+                                  status === 'present' ? 'default' :
+                                  status === 'absent' ? 'destructive' :
+                                  status === 'late' ? 'secondary' :
+                                  'outline'
+                                }>
+                                  {student.nis}
+                                </Badge>
+                                <span className="text-sm font-medium">{student.full_name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            Tidak ada siswa dengan status {status === 'present' ? 'hadir' : 
+                              status === 'absent' ? 'tidak hadir' :
+                              status === 'late' ? 'terlambat' :
+                              status === 'sick' ? 'sakit' : 'izin'} dalam periode ini
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Charts Section */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* Pie Chart */}
             <Card>
@@ -375,14 +667,14 @@ export function AttendanceReport() {
                 <CardTitle>Distribusi Status Kehadiran</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
+                <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieData}
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
+                        outerRadius={100}
                         dataKey="value"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
@@ -400,36 +692,41 @@ export function AttendanceReport() {
             {/* Status Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Ringkasan Status</CardTitle>
+                <CardTitle>Ringkasan Status Detail</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Badge variant="default">Hadir</Badge>
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                    <span className="font-medium">Hadir</span>
                   </div>
                   <div className="font-bold text-green-600">{stats.present}</div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Badge variant="destructive">Tidak Hadir</Badge>
+                    <UserX className="h-5 w-5 text-red-600" />
+                    <span className="font-medium">Tidak Hadir</span>
                   </div>
                   <div className="font-bold text-red-600">{stats.absent}</div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Terlambat</Badge>
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                    <span className="font-medium">Terlambat</span>
                   </div>
                   <div className="font-bold text-yellow-600">{stats.late}</div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">Sakit</Badge>
+                    <User className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium">Sakit</span>
                   </div>
                   <div className="font-bold text-blue-600">{stats.sick}</div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">Izin</Badge>
+                    <User className="h-5 w-5 text-purple-600" />
+                    <span className="font-medium">Izin</span>
                   </div>
                   <div className="font-bold text-purple-600">{stats.permission}</div>
                 </div>
@@ -443,17 +740,20 @@ export function AttendanceReport() {
               <CardHeader>
                 <CardTitle>Trend Kehadiran Harian</CardTitle>
                 <CardDescription>
-                  Grafik tingkat kehadiran per hari dalam periode yang dipilih
+                  Grafik tingkat kehadiran per hari dalam periode yang dipilih (Responsif)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-64">
+                <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyData}>
+                    <BarChart data={dailyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
                         dataKey="date" 
                         tickFormatter={(value) => new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' })}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
                       />
                       <YAxis />
                       <Tooltip 
@@ -471,11 +771,17 @@ export function AttendanceReport() {
         </>
       )}
 
-      {!loading && selectedClass && startDate && endDate && !stats && (
+      {!loading && startDate && endDate && !stats && (
         <Card>
           <CardContent className="text-center py-12">
             <div className="text-muted-foreground">
-              Tidak ada data presensi untuk periode yang dipilih
+              Tidak ada data presensi untuk periode yang dipilih.
+              {reportType === 'individual' && !selectedStudent && (
+                <div className="mt-2 text-sm">Pilih siswa untuk melihat laporan individual.</div>
+              )}
+              {reportType === 'class' && selectedClass === 'all' && (
+                <div className="mt-2 text-sm">Pilih kelas atau ubah ke laporan keseluruhan.</div>
+              )}
             </div>
           </CardContent>
         </Card>
