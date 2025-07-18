@@ -236,7 +236,7 @@ export const DashboardCharts = () => {
       </TabsList>
 
       <TabsContent value="trends" className="space-y-6 mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Violation Trends */}
           {(user.roles.includes('admin') || user.roles.includes('tppk')) && violationTrends && (
             <Card className="border-red-200 bg-red-50/30">
@@ -247,8 +247,8 @@ export const DashboardCharts = () => {
                 </CardTitle>
                 <CardDescription>6 bulan terakhir</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-80">
+              <CardContent className="p-2 sm:p-6">
+                <ChartContainer config={chartConfig} className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={violationTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -285,8 +285,8 @@ export const DashboardCharts = () => {
                 </CardTitle>
                 <CardDescription>30 hari terakhir</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-80">
+              <CardContent className="p-2 sm:p-6">
+                <ChartContainer config={chartConfig} className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={attendanceTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -337,7 +337,7 @@ export const DashboardCharts = () => {
       </TabsContent>
 
       <TabsContent value="distribution" className="space-y-6 mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Achievements Distribution */}
           {(user.roles.includes('admin') || user.roles.includes('wali_kelas')) && achievementsByLevel && (
             <Card className="border-green-200 bg-green-50/30">
@@ -348,8 +348,8 @@ export const DashboardCharts = () => {
                 </CardTitle>
                 <CardDescription>Berdasarkan tingkat prestasi</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-80">
+              <CardContent className="p-2 sm:p-6">
+                <ChartContainer config={chartConfig} className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -390,8 +390,8 @@ export const DashboardCharts = () => {
                 </CardTitle>
                 <CardDescription>Performa disiplin siswa dari waktu ke waktu</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-80">
+              <CardContent className="p-2 sm:p-6">
+                <ChartContainer config={chartConfig} className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={disciplineTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />

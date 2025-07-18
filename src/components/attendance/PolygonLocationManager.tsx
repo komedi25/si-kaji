@@ -44,9 +44,19 @@ export const PolygonLocationManager: React.FC = () => {
     }
   }, [mapboxToken]);
 
-  const checkMapboxToken = () => {
-    // In production, this would come from Supabase Edge Function secrets
-    // For now, show input field for user to enter token
+  const checkMapboxToken = async () => {
+    try {
+      // Try to get token from Edge Function secrets
+      const { data, error } = await supabase.functions.invoke('get-mapbox-token');
+      if (data?.token) {
+        setMapboxToken(data.token);
+        setShowTokenInput(false);
+        return;
+      }
+    } catch (error) {
+      console.log('No Mapbox token in secrets, showing input field');
+    }
+    // Show input field for user to enter token
     setShowTokenInput(true);
   };
 
