@@ -48,22 +48,37 @@ export const PolygonLocationManager: React.FC = () => {
     try {
       // Try to get token from Edge Function secrets
       const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-      if (data?.token) {
-        setMapboxToken(data.token);
-        setShowTokenInput(false);
+      
+      if (error) {
+        console.log('Edge function error:', error);
+        setShowTokenInput(true);
         return;
       }
+      
+      if (data?.token && data.token.startsWith('pk.')) {
+        setMapboxToken(data.token);
+        setShowTokenInput(false);
+        console.log('Mapbox token loaded successfully');
+        return;
+      } else {
+        console.log('No valid token in response:', data);
+        setShowTokenInput(true);
+      }
     } catch (error) {
-      console.log('No Mapbox token in secrets, showing input field');
+      console.log('Error fetching Mapbox token:', error);
+      setShowTokenInput(true);
     }
-    // Show input field for user to enter token
-    setShowTokenInput(true);
   };
 
   const initializeMap = async () => {
-    if (!mapboxToken || !mapContainerRef.current) return;
+    if (!mapboxToken || !mapContainerRef.current) {
+      console.log('Cannot initialize map - missing token or container');
+      return;
+    }
 
     try {
+      console.log('Initializing map with token:', mapboxToken.substring(0, 10) + '...');
+      
       // Dynamically import mapbox-gl
       const mapboxgl = await import('mapbox-gl');
       
@@ -75,7 +90,7 @@ export const PolygonLocationManager: React.FC = () => {
         container: mapContainerRef.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: [mapCenter.lng, mapCenter.lat],
-        zoom: 18,
+        zoom: 16,
         pitch: 0,
         bearing: 0
       });
@@ -85,6 +100,23 @@ export const PolygonLocationManager: React.FC = () => {
 
       // Store map reference
       mapRef.current = map;
+
+      // Wait for map to load before adding features
+      map.on('load', () => {
+        console.log('Map loaded successfully');
+        
+        // Add existing polygons to map
+        locations.forEach(location => {
+          if (location.coordinates && location.coordinates.length > 0) {
+            addPolygonToMap(location);
+          }
+        });
+        
+        toast({
+          title: "Berhasil",
+          description: "Peta berhasil dimuat. Klik tombol 'Mulai Gambar' untuk membuat polygon.",
+        });
+      });
 
       // Add click handler for polygon drawing
       map.on('click', (e) => {
@@ -96,15 +128,17 @@ export const PolygonLocationManager: React.FC = () => {
           new mapboxgl.default.Marker({ color: '#ef4444' })
             .setLngLat([point.lng, point.lat])
             .addTo(map);
+            
+          console.log('Added point:', point);
         }
       });
 
-      map.on('load', () => {
-        // Add existing polygons to map
-        locations.forEach(location => {
-          if (location.coordinates && location.coordinates.length > 0) {
-            addPolygonToMap(location);
-          }
+      map.on('error', (e) => {
+        console.error('Map error:', e);
+        toast({
+          title: "Error",
+          description: "Terjadi kesalahan pada peta. Periksa token Mapbox Anda.",
+          variant: "destructive",
         });
       });
 
@@ -112,7 +146,7 @@ export const PolygonLocationManager: React.FC = () => {
       console.error('Error loading map:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat peta. Pastikan token Mapbox valid.",
+        description: "Gagal memuat peta. Pastikan token Mapbox valid dan koneksi internet stabil.",
         variant: "destructive",
       });
     }
@@ -467,12 +501,21 @@ export const PolygonLocationManager: React.FC = () => {
               <div 
                 ref={mapContainerRef}
                 className="w-full h-96 bg-gray-200 border border-gray-300 rounded-lg relative overflow-hidden"
+                style={{ minHeight: '384px' }}
               >
                 {!mapboxToken && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                     <div className="text-center">
                       <Navigation className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-600">Masukkan token Mapbox untuk melihat peta</p>
+                    </div>
+                  </div>
+                )}
+                {mapboxToken && !mapRef.current && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-gray-600">Memuat peta...</p>
                     </div>
                   </div>
                 )}
