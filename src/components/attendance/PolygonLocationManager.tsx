@@ -45,6 +45,15 @@ export const PolygonLocationManager: React.FC = () => {
   }, [mapboxToken]);
 
   const checkMapboxToken = async () => {
+    // First check localStorage for saved token
+    const savedToken = localStorage.getItem('mapbox_token');
+    if (savedToken && savedToken.startsWith('pk.')) {
+      setMapboxToken(savedToken);
+      setShowTokenInput(false);
+      console.log('Using saved Mapbox token');
+      return;
+    }
+    
     try {
       // Try to get token from Edge Function secrets
       const { data, error } = await supabase.functions.invoke('get-mapbox-token');
@@ -57,6 +66,7 @@ export const PolygonLocationManager: React.FC = () => {
       
       if (data?.token && data.token.startsWith('pk.')) {
         setMapboxToken(data.token);
+        localStorage.setItem('mapbox_token', data.token); // Save to localStorage
         setShowTokenInput(false);
         console.log('Mapbox token loaded successfully');
         return;
@@ -120,55 +130,121 @@ export const PolygonLocationManager: React.FC = () => {
 
       // Add click handler for polygon drawing
       map.on('click', (e) => {
-        if (isDrawing) {
-          const point = { lat: e.lngLat.lat, lng: e.lngLat.lng };
-          setTempPoints(prev => {
-            const newPoints = [...prev, point];
+        if (!isDrawing) {
+          console.log('Click ignored - not in drawing mode');
+          return;
+        }
+        
+        const point = { lat: e.lngLat.lat, lng: e.lngLat.lng };
+        console.log('Adding point:', point);
+        
+        setTempPoints(prev => {
+          const newPoints = [...prev, point];
+          
+          // Add marker for this point
+          const marker = new mapboxgl.Marker({ 
+            color: '#ef4444',
+            draggable: false 
+          })
+            .setLngLat([point.lng, point.lat])
+            .addTo(map);
             
-            // Add marker for this point
-            new mapboxgl.Marker({ color: '#ef4444' })
-              .setLngLat([point.lng, point.lat])
-              .addTo(map);
+          // Store marker reference for cleanup
+          marker.getElement().setAttribute('data-marker-type', 'temp');
+          
+          // Draw line between points if there are multiple points
+          if (newPoints.length > 1) {
+            const lineCoordinates = newPoints.map(p => [p.lng, p.lat]);
             
-            // Draw line between points if there are multiple points
-            if (newPoints.length > 1) {
-              const lineCoordinates = newPoints.map(p => [p.lng, p.lat]);
-              
-              // Remove existing temp line if any
-              if (map.getSource('temp-line')) {
-                map.removeLayer('temp-line');
-                map.removeSource('temp-line');
-              }
-              
-              // Add temp line
-              map.addSource('temp-line', {
-                type: 'geojson',
-                data: {
-                  type: 'Feature',
-                  properties: {},
-                  geometry: {
-                    type: 'LineString',
-                    coordinates: lineCoordinates
-                  }
-                }
-              });
-              
-              map.addLayer({
-                id: 'temp-line',
-                type: 'line',
-                source: 'temp-line',
-                paint: {
-                  'line-color': '#ef4444',
-                  'line-width': 2,
-                  'line-dasharray': [2, 2]
-                }
-              });
+            // Remove existing temp line if any
+            if (map.getSource('temp-line')) {
+              map.removeLayer('temp-line');
+              map.removeSource('temp-line');
             }
             
-            console.log('Added point:', point);
-            return newPoints;
-          });
-        }
+            // Add temp line
+            map.addSource('temp-line', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: lineCoordinates
+                }
+              }
+            });
+            
+            map.addLayer({
+              id: 'temp-line',
+              type: 'line',
+              source: 'temp-line',
+              paint: {
+                'line-color': '#ef4444',
+                'line-width': 3,
+                'line-dasharray': [4, 2]
+              }
+            });
+          }
+          
+          // Show completion polygon preview if 3+ points
+          if (newPoints.length >= 3) {
+            const polygonCoordinates = [...newPoints.map(p => [p.lng, p.lat]), [newPoints[0].lng, newPoints[0].lat]];
+            
+            // Remove existing temp polygon if any
+            if (map.getSource('temp-polygon')) {
+              map.removeLayer('temp-polygon-fill');
+              map.removeLayer('temp-polygon-outline');
+              map.removeSource('temp-polygon');
+            }
+            
+            // Add temp polygon
+            map.addSource('temp-polygon', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: [polygonCoordinates]
+                }
+              }
+            });
+            
+            map.addLayer({
+              id: 'temp-polygon-fill',
+              type: 'fill',
+              source: 'temp-polygon',
+              paint: {
+                'fill-color': '#ef4444',
+                'fill-opacity': 0.2
+              }
+            });
+            
+            map.addLayer({
+              id: 'temp-polygon-outline',
+              type: 'line',
+              source: 'temp-polygon',
+              paint: {
+                'line-color': '#dc2626',
+                'line-width': 2,
+                'line-dasharray': [4, 2]
+              }
+            });
+          }
+          
+          console.log('Total points:', newPoints.length);
+          
+          // Show success toast for first point
+          if (newPoints.length === 1) {
+            toast({
+              title: "Titik Pertama",
+              description: "Klik untuk menambah titik lainnya (minimal 3 titik).",
+            });
+          }
+          
+          return newPoints;
+        });
       });
 
       map.on('error', (e) => {
@@ -272,8 +348,15 @@ export const PolygonLocationManager: React.FC = () => {
       });
       return;
     }
+    
+    // Save token to localStorage for persistence
+    localStorage.setItem('mapbox_token', mapboxToken);
     setShowTokenInput(false);
-    initializeMap();
+    
+    toast({
+      title: "Berhasil",
+      description: "Token Mapbox berhasil disimpan dan akan diingat.",
+    });
   };
 
   const completePolygon = () => {
@@ -286,10 +369,22 @@ export const PolygonLocationManager: React.FC = () => {
       return;
     }
 
-    // Clear temporary markers
+    // Clear temporary markers and layers
     if (mapRef.current) {
-      const markers = document.querySelectorAll('.mapboxgl-marker');
+      // Remove temporary markers
+      const markers = document.querySelectorAll('.mapboxgl-marker[data-marker-type="temp"]');
       markers.forEach(marker => marker.remove());
+      
+      // Remove temporary layers
+      if (mapRef.current.getSource('temp-line')) {
+        mapRef.current.removeLayer('temp-line');
+        mapRef.current.removeSource('temp-line');
+      }
+      if (mapRef.current.getSource('temp-polygon')) {
+        mapRef.current.removeLayer('temp-polygon-fill');
+        mapRef.current.removeLayer('temp-polygon-outline');
+        mapRef.current.removeSource('temp-polygon');
+      }
     }
 
     setSelectedLocation({
@@ -299,6 +394,11 @@ export const PolygonLocationManager: React.FC = () => {
       isActive: true
     });
     setIsDrawing(false);
+    
+    toast({
+      title: "Berhasil",
+      description: `Polygon dengan ${tempPoints.length} titik siap disimpan.`,
+    });
   };
 
   const startDrawing = () => {
@@ -323,12 +423,29 @@ export const PolygonLocationManager: React.FC = () => {
   const cancelDrawing = () => {
     // Clear temporary markers
     if (mapRef.current) {
-      const markers = document.querySelectorAll('.mapboxgl-marker');
+      // Remove temporary markers
+      const markers = document.querySelectorAll('.mapboxgl-marker[data-marker-type="temp"]');
       markers.forEach(marker => marker.remove());
+      
+      // Remove temporary layers
+      if (mapRef.current.getSource('temp-line')) {
+        mapRef.current.removeLayer('temp-line');
+        mapRef.current.removeSource('temp-line');
+      }
+      if (mapRef.current.getSource('temp-polygon')) {
+        mapRef.current.removeLayer('temp-polygon-fill');
+        mapRef.current.removeLayer('temp-polygon-outline');
+        mapRef.current.removeSource('temp-polygon');
+      }
     }
     
     setTempPoints([]);
     setIsDrawing(false);
+    
+    toast({
+      title: "Dibatalkan",
+      description: "Mode gambar polygon dibatalkan.",
+    });
   };
 
   const saveLocation = async () => {

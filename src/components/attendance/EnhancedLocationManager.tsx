@@ -277,7 +277,13 @@ export const EnhancedLocationManager = () => {
             </Dialog>
             <Button 
               variant="outline" 
-              onClick={() => window.location.href = '/attendance/polygon'}
+              onClick={() => {
+                toast({
+                  title: "Navigasi",
+                  description: "Membuka halaman kelola polygon...",
+                });
+                window.location.href = '/attendance/polygon';
+              }}
             >
               <Navigation className="h-4 w-4 mr-2" />
               Kelola Polygon
