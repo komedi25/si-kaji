@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, Plus, Edit, Trash2, Circle, Pentagon, Map } from 'lucide-react';
+import { MapPin, Plus, Edit, Trash2, Circle, Pentagon, Map, Navigation } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface AttendanceLocation {
@@ -266,13 +266,24 @@ export const EnhancedLocationManager = () => {
             <MapPin className="h-5 w-5" />
             Manajemen Lokasi Presensi
           </div>
+          <div className="flex gap-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Lokasi
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = '/attendance/polygon'}
+            >
+              <Navigation className="h-4 w-4 mr-2" />
+              Kelola Polygon
+            </Button>
+          </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Lokasi
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
