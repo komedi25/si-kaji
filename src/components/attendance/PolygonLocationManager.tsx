@@ -95,6 +95,11 @@ export const PolygonLocationManager: React.FC = () => {
       // Set access token
       mapboxgl.default.accessToken = mapboxToken;
 
+      // Clear existing map if any
+      if (mapRef.current) {
+        mapRef.current.remove();
+      }
+
       // Initialize map
       const map = new mapboxgl.default.Map({
         container: mapContainerRef.current,
@@ -313,7 +318,7 @@ export const PolygonLocationManager: React.FC = () => {
         .from('attendance_locations')
         .select('*')
         .eq('location_type', 'polygon')
-        .eq('is_active', true);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -418,6 +423,11 @@ export const PolygonLocationManager: React.FC = () => {
     setTempPoints([]);
     setIsDrawing(true);
     setSelectedLocation(null);
+    
+    toast({
+      title: "Mode Gambar Aktif",
+      description: "Klik pada peta untuk menambahkan titik polygon. Minimal 3 titik diperlukan.",
+    });
   };
 
   const cancelDrawing = () => {
@@ -507,18 +517,22 @@ export const PolygonLocationManager: React.FC = () => {
     }
   };
 
-  const deleteLocation = async (id: string) => {
+  const deleteLocation = async (locationId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus lokasi polygon ini?')) return;
+
     try {
       const { error } = await supabase
         .from('attendance_locations')
-        .update({ is_active: false })
-        .eq('id', id);
+        .delete()
+        .eq('id', locationId);
 
       if (error) throw error;
+
       toast({
         title: "Berhasil",
         description: "Lokasi polygon berhasil dihapus.",
       });
+
       fetchLocations();
     } catch (error) {
       console.error('Error deleting location:', error);
@@ -532,17 +546,13 @@ export const PolygonLocationManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Mapbox Token Input */}
+      {/* Token Input */}
       {showTokenInput && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Navigation className="h-5 w-5" />
-              Konfigurasi Mapbox
-            </CardTitle>
+            <CardTitle>Konfigurasi Mapbox Token</CardTitle>
             <CardDescription>
-              Masukkan token Mapbox untuk menggunakan peta interaktif. 
-              Dapatkan token gratis di{' '}
+              Masukkan token Mapbox untuk menggunakan peta. Token akan disimpan untuk penggunaan selanjutnya. Dapatkan token gratis di{' '}
               <a 
                 href="https://mapbox.com/" 
                 target="_blank" 
@@ -571,173 +581,155 @@ export const PolygonLocationManager: React.FC = () => {
         </Card>
       )}
 
+      {!showTokenInput && !mapboxToken && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Memuat Konfigurasi...</CardTitle>
+            <CardDescription>
+              Sedang memuat konfigurasi Mapbox...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* Main Polygon Manager */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Pengaturan Lokasi Polygon
-          </CardTitle>
-          <CardDescription>
-            Buat dan kelola area polygon untuk presensi lokasi
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Form Section */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="locationName">Nama Lokasi</Label>
-                <Input
-                  id="locationName"
-                  value={selectedLocation?.name || ''}
-                  onChange={(e) => setSelectedLocation(prev => 
-                    prev 
-                      ? { ...prev, name: e.target.value }
-                      : { id: '', name: e.target.value, coordinates: [], isActive: true }
+      {mapboxToken && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Pengaturan Lokasi Polygon
+            </CardTitle>
+            <CardDescription>
+              Buat dan kelola area polygon untuk presensi lokasi
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Form Section */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="locationName">Nama Lokasi</Label>
+                  <Input
+                    id="locationName"
+                    value={selectedLocation?.name || ''}
+                    onChange={(e) => setSelectedLocation(prev => 
+                      prev ? { ...prev, name: e.target.value } : null
+                    )}
+                    placeholder="Contoh: Area Sekolah SMKN 1 Kendal"
+                  />
+                </div>
+
+                <div>
+                  <Label>Titik Polygon ({tempPoints.length} titik)</Label>
+                  <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                    {tempPoints.map((point, index) => (
+                      <div key={index} className="text-sm p-2 bg-gray-50 rounded">
+                        Titik {index + 1}: {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  {!isDrawing ? (
+                    <Button onClick={startDrawing} className="flex items-center gap-2">
+                      <Edit className="h-4 w-4" />
+                      Mulai Gambar
+                    </Button>
+                  ) : (
+                    <>
+                      <Button onClick={completePolygon} variant="outline">
+                        Selesai ({tempPoints.length} titik)
+                      </Button>
+                      <Button onClick={cancelDrawing} variant="destructive">
+                        Batal
+                      </Button>
+                    </>
                   )}
-                  placeholder="Masukkan nama lokasi"
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={saveLocation} 
+                    disabled={isLoading || !selectedLocation?.name}
+                    className="flex items-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isLoading ? "Menyimpan..." : "Simpan Lokasi"}
+                  </Button>
+                  {selectedLocation && (
+                    <Button 
+                      onClick={() => setSelectedLocation(null)} 
+                      variant="outline"
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Map Section */}
+              <div className="space-y-4">
+                <div>
+                  <Label>Peta Interaktif</Label>
+                  {isDrawing && (
+                    <Badge variant="destructive" className="ml-2">
+                      Mode Gambar Aktif
+                    </Badge>
+                  )}
+                </div>
+                <div 
+                  ref={mapContainerRef} 
+                  className="h-96 w-full border rounded-lg"
+                  style={{ minHeight: '384px' }}
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Koordinat Polygon</Label>
-                <div className="text-sm text-muted-foreground">
-                  {selectedLocation?.coordinates?.length || 0} titik
-                </div>
-                {selectedLocation?.coordinates?.map((point, index) => (
-                  <div key={index} className="text-xs text-muted-foreground">
-                    Titik {index + 1}: {point.lat.toFixed(6)}, {point.lng.toFixed(6)}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                {!isDrawing ? (
-                  <Button onClick={startDrawing} className="flex items-center gap-2">
-                    <Edit className="h-4 w-4" />
-                    Mulai Gambar
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={completePolygon} variant="outline">
-                      Selesai ({tempPoints.length} titik)
-                    </Button>
-                    <Button onClick={cancelDrawing} variant="destructive">
-                      Batal
-                    </Button>
-                  </>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  onClick={saveLocation} 
-                  disabled={isLoading || !selectedLocation?.name}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {isLoading ? "Menyimpan..." : "Simpan Lokasi"}
-                </Button>
-                {selectedLocation && (
-                  <Button 
-                    onClick={() => setSelectedLocation(null)} 
-                    variant="outline"
-                  >
-                    Reset
-                  </Button>
-                )}
-              </div>
             </div>
 
-            {/* Map Section */}
+            {/* Existing Locations */}
             <div className="space-y-4">
-              <Label>Peta Lokasi Polygon</Label>
-              <div 
-                ref={mapContainerRef}
-                className="w-full h-96 bg-gray-200 border border-gray-300 rounded-lg relative overflow-hidden"
-                style={{ minHeight: '384px' }}
-              >
-                {!mapboxToken && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-                    <div className="text-center">
-                      <Navigation className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600">Masukkan token Mapbox untuk melihat peta</p>
-                    </div>
-                  </div>
-                )}
-                {mapboxToken && !mapRef.current && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                      <p className="text-gray-600">Memuat peta...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {isDrawing && (
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    <strong>Mode Gambar Aktif:</strong> Klik pada peta untuk menambah titik polygon.
-                    Minimal 3 titik diperlukan.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Existing Locations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lokasi Polygon Tersimpan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {locations.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Belum ada lokasi polygon yang tersimpan
-              </p>
-            ) : (
-              locations.map((location) => (
-                <div key={location.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+              <Label>Lokasi Polygon Tersimpan</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {locations.map((location) => (
+                  <Card key={location.id} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">{location.name}</h4>
                       <Badge variant={location.isActive ? "default" : "secondary"}>
                         {location.isActive ? "Aktif" : "Nonaktif"}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {location.coordinates?.length || 0} titik polygon
+                    <p className="text-sm text-gray-600 mb-3">
+                      {location.coordinates.length} titik polygon
                     </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedLocation(location)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteLocation(location.id!)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+                {locations.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    Belum ada lokasi polygon tersimpan
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => setSelectedLocation(location)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                    >
-                      <Edit className="h-3 w-3" />
-                      Edit
-                    </Button>
-                    <Button
-                      onClick={() => location.id && deleteLocation(location.id)}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
