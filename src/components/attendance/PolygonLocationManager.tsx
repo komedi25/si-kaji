@@ -122,14 +122,52 @@ export const PolygonLocationManager: React.FC = () => {
       map.on('click', (e) => {
         if (isDrawing) {
           const point = { lat: e.lngLat.lat, lng: e.lngLat.lng };
-          setTempPoints(prev => [...prev, point]);
-          
-          // Add marker for this point
-          new mapboxgl.default.Marker({ color: '#ef4444' })
-            .setLngLat([point.lng, point.lat])
-            .addTo(map);
+          setTempPoints(prev => {
+            const newPoints = [...prev, point];
             
-          console.log('Added point:', point);
+            // Add marker for this point
+            new mapboxgl.Marker({ color: '#ef4444' })
+              .setLngLat([point.lng, point.lat])
+              .addTo(map);
+            
+            // Draw line between points if there are multiple points
+            if (newPoints.length > 1) {
+              const lineCoordinates = newPoints.map(p => [p.lng, p.lat]);
+              
+              // Remove existing temp line if any
+              if (map.getSource('temp-line')) {
+                map.removeLayer('temp-line');
+                map.removeSource('temp-line');
+              }
+              
+              // Add temp line
+              map.addSource('temp-line', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: lineCoordinates
+                  }
+                }
+              });
+              
+              map.addLayer({
+                id: 'temp-line',
+                type: 'line',
+                source: 'temp-line',
+                paint: {
+                  'line-color': '#ef4444',
+                  'line-width': 2,
+                  'line-dasharray': [2, 2]
+                }
+              });
+            }
+            
+            console.log('Added point:', point);
+            return newPoints;
+          });
         }
       });
 
