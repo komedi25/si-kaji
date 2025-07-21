@@ -148,6 +148,16 @@ export function AppRoutes() {
           <AttendanceManagement />
         </ProtectedRoute>
       } />
+      <Route path="/attendance/polygon" element={
+        <ProtectedRoute requiredRoles={['admin']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/attendance/auto-detector" element={
+        <ProtectedRoute requiredRoles={['admin', 'tppk']}>
+          <AttendanceManagement />
+        </ProtectedRoute>
+      } />
       
       <Route path="/permits" element={
         <ProtectedRoute requiredRoles={['admin', 'wali_kelas', 'siswa']}>
